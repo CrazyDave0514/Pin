@@ -7,9 +7,9 @@
       }
     },
     {
-      "path": "pages/create/index",
+      "path": "pages/project/index",
       "style": {
-        "navigationBarTitleText": "创作"
+        "navigationBarTitleText": "我的项目"
       }
     },
     {
@@ -47,6 +47,37 @@
       "style": {
         "navigationBarTitleText": "设置"
       }
+    },
+    {
+      "path": "pages/canvas-editor/index",
+      "style": {
+        "navigationBarTitleText": "画布编辑",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/canvas-settings/index",
+      "style": {
+        "navigationBarTitleText": "画布设置"
+      }
+    },
+    {
+      "path": "pages/image-import/index",
+      "style": {
+        "navigationBarTitleText": "导入图片"
+      }
+    },
+    {
+      "path": "pages/blueprint-import/index",
+      "style": {
+        "navigationBarTitleText": "导入图纸"
+      }
+    },
+    {
+      "path": "pages/agreement/index",
+      "style": {
+        "navigationBarTitleText": "协议"
+      }
     }
   ],
   "globalStyle": {
@@ -57,21 +88,27 @@
   },
   "tabBar": {
     "color": "#999999",
-    "selectedColor": "#2D2D2D",
+    "selectedColor": "#007AFF",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
       },
       {
-        "pagePath": "pages/create/index",
-        "text": "创作"
+        "pagePath": "pages/project/index",
+        "text": "项目",
+        "iconPath": "static/tabbar/project.png",
+        "selectedIconPath": "static/tabbar/project-active.png"
       },
       {
         "pagePath": "pages/mine/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "static/tabbar/mine.png",
+        "selectedIconPath": "static/tabbar/mine-active.png"
       }
     ]
   }

@@ -25,15 +25,26 @@
           :key="artwork.id"
           class="artwork-card"
         >
-          <image
-            class="artwork-cover"
-            :src="artwork.coverImage || defaultCover"
-            mode="widthFix"
-          />
-          <!-- 图片占位层 -->
-          <view v-if="!artwork.coverImage" class="artwork-cover-placeholder">
-            <text class="placeholder-text">拼豆图案</text>
+          <!-- 封面区域 - 固定宽高比容器 -->
+          <view class="cover-wrapper">
+            <image
+              v-if="artwork.coverImage"
+              class="artwork-cover"
+              :src="artwork.coverImage"
+              mode="aspectFill"
+              @load="onImageLoad($event, artwork.id)"
+            />
+            <!-- 图片占位层 -->
+            <view v-else class="artwork-cover-placeholder">
+              <text class="placeholder-text">拼豆图案</text>
+            </view>
+            <!-- 积分显示在封面右上角 -->
+            <view class="points-badge">
+              <text class="points-icon">⭐</text>
+              <text class="points-value">{{ artwork.points }}</text>
+            </view>
           </view>
+
           <view class="artwork-info">
             <text class="artwork-name">{{ artwork.name }}</text>
             <view class="artwork-meta">
@@ -46,7 +57,6 @@
                 <text class="like-count">{{ artwork.likes }}</text>
               </view>
             </view>
-            <text class="artwork-points">💎 {{ artwork.points }} 积分</text>
           </view>
         </view>
       </view>
@@ -122,6 +132,18 @@ const loadArtworks = () => {
 
 const goToSearch = () => {
   uni.navigateTo({ url: '/pages/search/index' })
+}
+
+/**
+ * 图片加载完成，检测图片宽高比
+ * @param e - 图片加载事件
+ * @param artworkId - 作品ID
+ */
+const onImageLoad = (e: any, artworkId: string) => {
+  const { width, height } = e.detail
+  const ratio = width / height
+  // 可以在这里根据宽高比做特殊处理
+  console.log(`图片 ${artworkId} 宽高比: ${ratio}`)
 }
 </script>
 
@@ -217,14 +239,24 @@ const goToSearch = () => {
   border-radius: 16rpx;
   overflow: hidden;
   box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.08);
+}
+
+/* 封面容器 - 固定 1:1 宽高比 */
+.cover-wrapper {
   position: relative;
+  width: 100%;
+  padding-bottom: 100%; /* 1:1 宽高比 */
+  overflow: hidden;
+  background-color: #F5F5F5;
 }
 
 .artwork-cover {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  display: block;
-  min-height: 240rpx;
-  background-color: #F5F5F5;
+  height: 100%;
+  object-fit: cover;
 }
 
 .artwork-cover-placeholder {
@@ -232,7 +264,7 @@ const goToSearch = () => {
   top: 0;
   left: 0;
   right: 0;
-  height: 240rpx;
+  bottom: 0;
   background: linear-gradient(135deg, #F0F0F0 0%, #E8E8E8 100%);
   display: flex;
   align-items: center;
@@ -242,6 +274,29 @@ const goToSearch = () => {
 .placeholder-text {
   font-size: 24rpx;
   color: #999999;
+}
+
+/* 积分徽章 - 封面右上角 */
+.points-badge {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 6rpx 12rpx;
+  border-radius: 20rpx;
+}
+
+.points-icon {
+  font-size: 20rpx;
+  margin-right: 4rpx;
+}
+
+.points-value {
+  font-size: 20rpx;
+  color: #FFFFFF;
+  font-weight: 500;
 }
 
 .artwork-info {
@@ -300,10 +355,7 @@ const goToSearch = () => {
   color: #999999;
 }
 
-.artwork-points {
-  font-size: 22rpx;
-  color: #FFB800;
-}
+
 
 .empty-state {
   display: flex;

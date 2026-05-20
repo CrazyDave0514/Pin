@@ -68,5 +68,11 @@
     "uniStatistics": {  
         "enable": false
     },
-    "vueVersion" : "3"
+    "h5": {
+        "devServer": {
+            "port": 8080
+        },
+        "sdkConfigs": {}
+    },
+    "vueVersion": "3"
 }
