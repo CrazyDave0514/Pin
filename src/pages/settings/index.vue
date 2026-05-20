@@ -130,6 +130,17 @@
       </view>
     </view>
 
+    <!-- 账号安全 -->
+    <view class="settings-section">
+      <view class="section-title">账号安全</view>
+      <view class="settings-list">
+        <view class="setting-item" @click="showDeleteAccount">
+          <text class="item-label" style="color: #FF3B30;">注销账号</text>
+          <text class="item-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
     <!-- 退出登录 -->
     <view v-if="isLoggedIn" class="logout-section">
       <view class="logout-btn" @click="logout">
@@ -176,6 +187,26 @@
         </view>
       </view>
     </view>
+
+    <!-- 注销账号确认弹窗 -->
+    <view v-if="showDeleteAccountModal" class="modal-overlay" @click="showDeleteAccountModal = false">
+      <view class="modal-content" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">注销账号</text>
+        </view>
+        <view class="modal-body">
+          <text class="modal-text">确定要注销账号吗？此操作将清除所有本地数据，且不可恢复。</text>
+        </view>
+        <view class="modal-footer">
+          <view class="modal-btn cancel" @click="showDeleteAccountModal = false">
+            <text class="btn-text">取消</text>
+          </view>
+          <view class="modal-btn confirm" @click="confirmDeleteAccount">
+            <text class="btn-text">确定</text>
+          </view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
@@ -183,7 +214,7 @@
 import { ref, onMounted } from 'vue'
 
 // 应用版本号
-const version = ref('0.1.0')
+const version = ref('0.1.1')
 
 // 缓存大小
 const cacheSize = ref('0 MB')
@@ -194,6 +225,7 @@ const isLoggedIn = ref(false)
 // 弹窗显示状态
 const showClearCacheModal = ref(false)
 const showLogoutModal = ref(false)
+const showDeleteAccountModal = ref(false)
 
 // 设置项
 const settings = ref({
@@ -340,15 +372,46 @@ const confirmLogout = () => {
   // 清除用户数据
   uni.removeStorageSync('pin_user')
   uni.removeStorageSync('pin_points')
-  
+
   showLogoutModal.value = false
   isLoggedIn.value = false
-  
+
   uni.showToast({ title: '已退出登录', icon: 'success' })
-  
+
   // 返回我的页面
   setTimeout(() => {
     uni.switchTab({ url: '/pages/mine/index' })
+  }, 1500)
+}
+
+/**
+ * 显示注销账号确认
+ */
+const showDeleteAccount = () => {
+  showDeleteAccountModal.value = true
+}
+
+/**
+ * 确认注销账号
+ */
+const confirmDeleteAccount = () => {
+  // 清除所有本地数据
+  uni.removeStorageSync('pin_user')
+  uni.removeStorageSync('pin_projects')
+  uni.removeStorageSync('pin_folders')
+  uni.removeStorageSync('pin_search_history')
+  uni.removeStorageSync('pin_favorite_colors')
+  uni.removeStorageSync('pin_recent_imports')
+  uni.removeStorageSync('pin_settings')
+
+  showDeleteAccountModal.value = false
+  isLoggedIn.value = false
+
+  uni.showToast({ title: '账号已注销', icon: 'success' })
+
+  // 延迟跳转到登录页
+  setTimeout(() => {
+    uni.navigateTo({ url: '/pages/login/index' })
   }, 1500)
 }
 

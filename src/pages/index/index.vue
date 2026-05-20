@@ -40,7 +40,7 @@
             </view>
             <!-- 积分显示在封面右上角 -->
             <view class="points-badge">
-              <text class="points-icon">⭐</text>
+              <text class="points-icon">💰</text>
               <text class="points-value">{{ artwork.points }}</text>
             </view>
           </view>

@@ -592,9 +592,16 @@ const saveCanvas = () => {
 
         uni.showToast({ title: '保存成功', icon: 'success' })
 
-        // 延迟返回
+        // 延迟返回项目列表并刷新
         setTimeout(() => {
-          uni.navigateBack()
+          // 返回到项目页面
+          uni.switchTab({
+            url: '/pages/project/index',
+            success: () => {
+              // 通知项目页面刷新
+              uni.$emit('projectSaved')
+            }
+          })
         }, 1000)
       }
     }

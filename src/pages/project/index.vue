@@ -186,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 // 项目列表
 const projects = ref<any[]>([])
@@ -487,7 +487,21 @@ const createNewFolderInPicker = () => {
 onMounted(() => {
   loadProjects()
   loadFolders()
+  // 监听项目保存事件
+  uni.$on('projectSaved', handleProjectSaved)
 })
+
+// 页面卸载
+onUnmounted(() => {
+  // 移除监听
+  uni.$off('projectSaved', handleProjectSaved)
+})
+
+// 处理项目保存事件
+const handleProjectSaved = () => {
+  // 刷新项目列表
+  loadProjects()
+}
 </script>
 
 <style scoped>

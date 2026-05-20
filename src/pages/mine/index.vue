@@ -6,9 +6,6 @@
         <template v-if="user">
           <view class="avatar-wrapper" @click="showAvatarMenu">
             <image class="user-avatar" :src="user.avatar || defaultAvatar" />
-            <view class="avatar-edit">
-              <text class="edit-icon">📷</text>
-            </view>
           </view>
           <text class="user-name">{{ user.username }}</text>
           <text class="user-uid">UID: {{ user.uid }}</text>
@@ -16,9 +13,6 @@
         <template v-else>
           <view class="avatar-wrapper" @click="handleLogin">
             <view class="user-avatar default" />
-            <view class="avatar-edit">
-              <text class="edit-icon">📷</text>
-            </view>
           </view>
           <text class="login-text" @click="handleLogin">点击登录</text>
         </template>
@@ -55,14 +49,7 @@
       </view>
     </view>
 
-    <!-- 注销账号入口 -->
-    <view v-if="user" class="danger-section">
-      <view class="function-item danger" @click="showDeleteAccount">
-        <text class="function-icon">🗑️</text>
-        <text class="function-name">注销账号</text>
-        <text class="function-arrow">→</text>
-      </view>
-    </view>
+
 
     <!-- 头像操作菜单 -->
     <view v-if="showAvatarAction" class="modal-overlay" @click="closeAvatarMenu">
@@ -254,45 +241,7 @@ const rotateRight = () => {
   uni.showToast({ title: '旋转功能开发中', icon: 'none' })
 }
 
-/**
- * 显示注销账号确认
- */
-const showDeleteAccount = () => {
-  uni.showModal({
-    title: '注销账号',
-    content: '确定要注销账号吗？此操作将清除所有本地数据，且不可恢复。',
-    confirmColor: '#FF3B30',
-    success: (res) => {
-      if (res.confirm) {
-        deleteAccount()
-      }
-    }
-  })
-}
 
-/**
- * 注销账号
- */
-const deleteAccount = () => {
-  // 清除所有本地数据
-  uni.removeStorageSync('pin_user')
-  uni.removeStorageSync('pin_projects')
-  uni.removeStorageSync('pin_folders')
-  uni.removeStorageSync('pin_search_history')
-  uni.removeStorageSync('pin_favorite_colors')
-  uni.removeStorageSync('pin_recent_imports')
-
-  // 重置状态
-  user.value = null
-  stats.value = { artworks: 0, favorites: 0, likes: 0 }
-
-  uni.showToast({ title: '账号已注销', icon: 'success' })
-
-  // 延迟跳转到登录页
-  setTimeout(() => {
-    uni.navigateTo({ url: '/pages/login/index' })
-  }, 1500)
-}
 
 /**
  * 处理功能点击
@@ -577,22 +526,22 @@ const handleFunctionClick = (path: string) => {
 .crop-mask.left {
   top: 150rpx;
   left: 0;
-  width: 75rpx;
+  width: 150rpx;
   bottom: 150rpx;
 }
 
 .crop-mask.right {
   top: 150rpx;
   right: 0;
-  width: 75rpx;
+  width: 150rpx;
   bottom: 150rpx;
 }
 
 .crop-circle {
   position: absolute;
   top: 150rpx;
-  left: 75rpx;
-  right: 75rpx;
+  left: 150rpx;
+  right: 150rpx;
   bottom: 150rpx;
   border: 4rpx solid #FFFFFF;
   border-radius: 50%;
