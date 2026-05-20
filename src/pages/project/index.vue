@@ -384,15 +384,16 @@ const copyProject = () => {
 
 // 删除项目
 const deleteProject = () => {
+  const projectToDelete = currentProject.value
   closeMenu()
-  if (!currentProject.value) return
+  if (!projectToDelete) return
   uni.showModal({
     title: '确认删除',
     content: '确定要删除此项目吗？此操作不可恢复。',
     success: (res) => {
       if (res.confirm) {
         const data = uni.getStorageSync('pin_projects') || []
-        const filtered = data.filter((p: any) => p.id !== currentProject.value.id)
+        const filtered = data.filter((p: any) => p.id !== projectToDelete.id)
         uni.setStorageSync('pin_projects', filtered)
         loadProjects()
         uni.showToast({ title: '删除成功', icon: 'success' })

@@ -539,12 +539,14 @@ const handleFunctionClick = (path: string) => {
 
 .crop-circle {
   position: absolute;
-  top: 150rpx;
-  left: 150rpx;
-  right: 150rpx;
-  bottom: 150rpx;
+  top: 50%;
+  left: 50%;
+  width: 450rpx;
+  height: 450rpx;
+  transform: translate(-50%, -50%);
   border: 4rpx solid #FFFFFF;
   border-radius: 50%;
+  box-sizing: border-box;
 }
 
 .crop-tools {
