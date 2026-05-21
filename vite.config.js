@@ -7,6 +7,7 @@ export default defineConfig({
     uni(),
   ],
   build: {
+    // 禁用代码分割，避免懒加载问题
     rollupOptions: {
       output: {
         // 避免生成以下划线开头的文件名（GitHub Pages 可能特殊处理）
@@ -19,6 +20,8 @@ export default defineConfig({
           return `assets/${name}-[hash].js`
         },
         entryFileNames: 'assets/[name]-[hash].js',
+        // 禁用动态导入，将所有代码打包到一个文件
+        inlineDynamicImports: true,
       },
     },
   },
