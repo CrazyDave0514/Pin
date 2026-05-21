@@ -2,19 +2,22 @@
   <view class="mine-page">
     <!-- 用户信息区 -->
     <view class="user-section">
-      <view class="user-info">
+      <view class="user-info" @click="goToEditProfile">
         <template v-if="user">
-          <view class="avatar-wrapper" @click="showAvatarMenu">
-            <image class="user-avatar" :src="user.avatar || defaultAvatar" />
+          <view class="avatar-wrapper">
+            <image class="user-avatar" :src="getAvatarUrl()" mode="aspectFill" />
           </view>
-          <text class="user-name">{{ user.username }}</text>
+          <view class="name-row">
+            <text class="user-name">{{ user.username }}</text>
+            <text class="gender-icon" :class="genderClass">{{ genderSymbol }}</text>
+          </view>
           <text class="user-uid">UID: {{ user.uid }}</text>
         </template>
         <template v-else>
-          <view class="avatar-wrapper" @click="handleLogin">
-            <view class="user-avatar default" />
+          <view class="avatar-wrapper">
+            <image class="user-avatar" src="/static/default-avatar.png" mode="aspectFill" />
           </view>
-          <text class="login-text" @click="handleLogin">点击登录</text>
+          <text class="login-text">点击登录</text>
         </template>
       </view>
     </view>
@@ -97,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 const user = ref<any>(null)
@@ -120,6 +123,7 @@ const rotation = ref(0)
 const functionList = [
   { icon: '💰', name: '积分中心', path: '/pages/points/index' },
   { icon: '🫘', name: '豆仓管理', path: '/pages/bead-inventory/index' },
+  { icon: '✏️', name: '编辑资料', path: '/pages/profile/edit' },
   { icon: '📞', name: '联系作者', path: '/pages/contact/index' },
   { icon: '⚙️', name: '更多设置', path: '/pages/settings/index' },
 ]
@@ -148,6 +152,51 @@ const loadUser = () => {
 const loadStats = () => {
   const projects = uni.getStorageSync('pin_projects') || []
   stats.value.artworks = projects.length
+}
+
+/**
+ * 获取性别标识符号
+ */
+const genderSymbol = computed(() => {
+  if (!user.value) return ''
+  switch (user.value.gender) {
+    case 'male': return '♂'
+    case 'female': return '♀'
+    default: return '⚪'
+  }
+})
+
+/**
+ * 获取性别标识样式类名
+ */
+const genderClass = computed(() => {
+  if (!user.value) return ''
+  switch (user.value.gender) {
+    case 'male': return 'gender-male'
+    case 'female': return 'gender-female'
+    default: return 'gender-secret'
+  }
+})
+
+/**
+ * 获取用户头像 URL，无自定义头像时返回默认头像
+ */
+const getAvatarUrl = () => {
+  if (user.value && user.value.avatar) {
+    return user.value.avatar
+  }
+  return '/static/default-avatar.png'
+}
+
+/**
+ * 跳转到编辑资料页面
+ */
+const goToEditProfile = () => {
+  if (!user.value) {
+    uni.navigateTo({ url: '/pages/login/index' })
+    return
+  }
+  uni.navigateTo({ url: '/pages/profile/edit' })
 }
 
 /**
@@ -312,6 +361,31 @@ const handleFunctionClick = (path: string) => {
   color: #2D2D2D;
   font-weight: 600;
   margin-bottom: 8rpx;
+}
+
+/* 昵称与性别标识行 */
+.name-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+/* 性别标识 */
+.gender-icon {
+  font-size: 30rpx;
+  margin-left: 12rpx;
+}
+
+.gender-icon.gender-male {
+  color: #007AFF;
+}
+
+.gender-icon.gender-female {
+  color: #FF6B9D;
+}
+
+.gender-icon.gender-secret {
+  color: #999999;
 }
 
 .user-uid {

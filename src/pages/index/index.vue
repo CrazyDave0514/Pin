@@ -69,7 +69,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { defaultArtworks } from '../../static/data/artworks.js'
 
 const activeTab = ref('recommend')
 const artworks = ref<any[]>([])
@@ -91,42 +92,13 @@ onMounted(() => {
 const loadArtworks = () => {
   // 从本地存储加载
   const data = uni.getStorageSync('pin_artworks') || []
-  artworks.value = data
   
-  // 如果没有数据，初始化示例数据
+  // 如果没有数据，使用预生成的 300 条假数据
   if (data.length === 0) {
-    const defaultArtworks = [
-      {
-        id: 'demo_001',
-        name: '可爱的小猫咪拼豆图案',
-        coverImage: '',
-        creatorId: 'system',
-        creatorName: 'Pin官方',
-        likes: 128,
-        points: 5,
-        createdAt: Date.now(),
-        tags: ['动物', '可爱', '入门'],
-        viewCount: 256,
-        useCount: 32,
-        isPublic: true,
-      },
-      {
-        id: 'demo_002',
-        name: '樱花图案',
-        coverImage: '',
-        creatorId: 'system',
-        creatorName: '小花',
-        likes: 86,
-        points: 3,
-        createdAt: Date.now(),
-        tags: ['植物', '粉色'],
-        viewCount: 120,
-        useCount: 15,
-        isPublic: true,
-      },
-    ]
     uni.setStorageSync('pin_artworks', defaultArtworks)
     artworks.value = defaultArtworks
+  } else {
+    artworks.value = data
   }
 }
 

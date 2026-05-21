@@ -78,6 +78,13 @@
       "style": {
         "navigationBarTitleText": "协议"
       }
+    },
+    {
+      "path": "pages/profile/edit",
+      "style": {
+        "navigationBarTitleText": "编辑资料",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

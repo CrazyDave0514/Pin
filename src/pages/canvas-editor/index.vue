@@ -5,7 +5,7 @@
       <view class="nav-left">
         <text class="nav-btn" @click="goBack">取消</text>
       </view>
-      <text class="nav-title">画布编辑</text>
+      <text class="nav-title">{{ isEditMode ? '编辑画布' : '画布编辑' }}</text>
       <view class="nav-right">
         <text class="nav-btn primary" @click="saveCanvas">保存</text>
       </view>
@@ -46,6 +46,23 @@
 
       <view class="tool-divider"></view>
 
+      <!-- 顶部工具按钮：定位 + 网格 -->
+      <view class="tool-group">
+        <view class="tool-item" @click="resetView">
+          <text class="tool-icon">🎯</text>
+          <text class="tool-label">定位</text>
+        </view>
+        <view
+          :class="['tool-item', canvasData.showGrid ? 'active' : '']"
+          @click="toggleGrid"
+        >
+          <text class="tool-icon">{{ canvasData.showGrid ? '📐' : '📐' }}</text>
+          <text class="tool-label">网格</text>
+        </view>
+      </view>
+
+      <view class="tool-divider"></view>
+
       <!-- 缩放控制 -->
       <view class="tool-group zoom-group">
         <view class="tool-item" @click="zoomOut">
@@ -63,8 +80,9 @@
       class="canvas-container"
       :style="{ backgroundColor: canvasData.backgroundColor }"
       @touchstart="onTouchStart"
-      @touchmove="onTouchMove"
+      @touchmove.prevent="onTouchMove"
       @touchend="onTouchEnd"
+      @touchcancel="onTouchEnd"
     >
       <view
         class="canvas-wrapper"
@@ -203,20 +221,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, getCurrentInstance } from 'vue'
+
+// ==================== 类型定义 ====================
+
+/** 拼豆数据结构 */
+interface Bead {
+  x: number
+  y: number
+  color: string
+}
+
+/** 画布数据结构 */
+interface CanvasData {
+  width: number
+  height: number
+  backgroundColor: string
+  showGrid: boolean
+  gridColor: string
+  beads: Bead[]
+  createdAt: number
+  updatedAt: number
+}
+
+/** 项目数据结构 */
+interface ProjectData {
+  id: string
+  name: string
+  canvasData: CanvasData
+  createdAt: number
+  updatedAt: number
+  thumbnail: string
+}
+
+/** 工具定义结构 */
+interface ToolItem {
+  id: string
+  label: string
+  icon: string
+}
 
 // ==================== 常量定义 ====================
-// 每个格子的像素大小
+
+/** 每个格子的像素大小 */
 const cellSize = 20
 
-// 常用颜色
+/** 常用颜色列表 */
 const commonColors = [
   '#FFFFFF', '#1A1A1A', '#FF0000', '#FF5500', '#FF8C00', '#FFD700', '#FFFF00', '#9ACD32',
   '#00FF00', '#00FA9A', '#00CED1', '#00BFFF', '#1E90FF', '#0000FF', '#8A2BE2', '#FF00FF',
   '#FF1493', '#FFB6C1', '#DDA0DD', '#D2691E', '#8B4513', '#A0522D', '#696969', '#2F4F4F',
 ]
 
-// 全部颜色（扩展版）
+/** 全部颜色列表（扩展版） */
 const allColors = [
   ...commonColors,
   '#F5F5DC', '#FFE4C4', '#DEB887', '#D2B48C', '#BC8F8F', '#F4A460', '#CD853F', '#B8860B',
@@ -224,70 +281,110 @@ const allColors = [
   '#40E0D0', '#7FFFD4', '#B0E0E6', '#87CEEB', '#87CEFA', '#ADD8E6', '#B0C4DE', '#778899',
 ]
 
-// 工具选项
-const tools = [
+/** 工具选项列表 */
+const tools: ToolItem[] = [
   { id: 'draw', label: '绘制', icon: '✏️' },
   { id: 'erase', label: '橡皮', icon: '🧹' },
   { id: 'fill', label: '填充', icon: '🪣' },
+  { id: 'pan', label: '拖动', icon: '✋' },
+  { id: 'picker', label: '取色', icon: '💉' },
 ]
 
+/** 缩放范围限制 */
+const SCALE_MIN = 0.25
+const SCALE_MAX = 5
+const SCALE_STEP = 0.25
+
 // ==================== 状态定义 ====================
-// 画布数据
-const canvasData = reactive({
+
+/** 画布数据 */
+const canvasData = reactive<CanvasData>({
   width: 30,
   height: 30,
   backgroundColor: '#FFFFFF',
   showGrid: true,
   gridColor: '#CCCCCC',
-  beads: [] as Array<{ x: number, y: number, color: string }>,
+  beads: [],
   createdAt: Date.now(),
   updatedAt: Date.now(),
 })
 
-// 当前选中的颜色
+/** 当前选中的颜色 */
 const selectedColor = ref('#FF0000')
 
-// 是否显示颜色选择器
+/** 是否显示颜色选择器 */
 const showColorPicker = ref(false)
 
-// 自定义颜色输入
+/** 自定义颜色输入 */
 const customColor = ref('#FF0000')
 
-// 当前工具
+/** 当前工具 */
 const activeTool = ref('draw')
 
-// 缩放比例
+/** 缩放比例 */
 const scale = ref(1)
 
-// 偏移量
+/** 画布偏移量（像素） */
 const offsetX = ref(0)
 const offsetY = ref(0)
 
-// 是否正在触摸
+/** 是否正在触摸 */
 const isTouching = ref(false)
 
-// 预览拼豆
+/** 是否正在拖动画布 */
+const isPanning = ref(false)
+
+/** 拖动起始位置 */
+const panStartX = ref(0)
+const panStartY = ref(0)
+const panStartOffsetX = ref(0)
+const panStartOffsetY = ref(0)
+
+/** 双指缩放状态 */
+const pinchStartDistance = ref(0)
+const pinchStartScale = ref(1)
+
+/** 预览拼豆 */
 const previewBead = reactive({
   visible: false,
   x: 0,
   y: 0,
 })
 
-// 历史记录（用于撤销/重做）
-const history = ref<Array<Array<{ x: number, y: number, color: string }>>>([])
+/** 历史记录（用于撤销/重做） */
+const history = ref<Bead[][]>([])
 const historyIndex = ref(-1)
 
-// 收藏颜色
+/** 收藏颜色 */
 const favoriteColors = ref<string[]>([])
 
+/** 编辑模式标志：是否为编辑已有项目 */
+const isEditMode = ref(false)
+
+/** 编辑中的项目 ID */
+const editingProjectId = ref('')
+
+/** 编辑中的项目名称 */
+const editingProjectName = ref('')
+
+/** requestAnimationFrame 节流标记 */
+let rafId: number | null = null
+
+/** 画布容器的位置缓存 */
+let containerRectCache: { left: number; top: number } | null = null
+
+/** 组件实例 */
+const instance = getCurrentInstance()
+
 // ==================== 计算属性 ====================
-// 画布总宽度
+
+/** 画布总宽度（像素） */
 const canvasWidth = computed(() => canvasData.width * cellSize)
 
-// 画布总高度
+/** 画布总高度（像素） */
 const canvasHeight = computed(() => canvasData.height * cellSize)
 
-// 判断颜色是否为浅色
+/** 判断当前选中颜色是否为浅色 */
 const selectedColorLight = computed(() => {
   const color = selectedColor.value.replace('#', '')
   const r = parseInt(color.substr(0, 2), 16)
@@ -297,13 +394,17 @@ const selectedColorLight = computed(() => {
 })
 
 // ==================== 生命周期 ====================
+
 onMounted(() => {
-  // 从 URL 参数获取画布数据
   const pages = getCurrentPages()
   const currentPage = pages[pages.length - 1] as any
   const options = currentPage?.options || {}
 
-  if (options.mode === 'create' && options.data) {
+  if (options.mode === 'edit' && options.projectId) {
+    /** 编辑已有项目：从本地存储加载 */
+    loadProject(options.projectId)
+  } else if (options.mode === 'create' && options.data) {
+    /** 新建项目：从 URL 参数解析画布数据 */
     try {
       const data = JSON.parse(decodeURIComponent(options.data))
       Object.assign(canvasData, data)
@@ -312,20 +413,43 @@ onMounted(() => {
     }
   }
 
-  // 加载收藏颜色
+  /** 加载收藏颜色 */
   const savedFavorites = uni.getStorageSync('pin_favorite_colors')
   if (savedFavorites) {
     favoriteColors.value = savedFavorites
   }
 
-  // 保存初始状态到历史
+  /** 保存初始状态到历史 */
   saveHistory()
 })
 
-// ==================== 方法定义 ====================
+// ==================== 项目加载 ====================
 
 /**
- * 选择颜色
+ * 从本地存储加载已有项目
+ * @param projectId - 项目 ID
+ */
+const loadProject = (projectId: string) => {
+  const projects: ProjectData[] = uni.getStorageSync('pin_projects') || []
+  const project = projects.find((p) => p.id === projectId)
+
+  if (project) {
+    isEditMode.value = true
+    editingProjectId.value = project.id
+    editingProjectName.value = project.name
+
+    /** 深拷贝画布数据，避免引用污染 */
+    const clonedData = JSON.parse(JSON.stringify(project.canvasData)) as CanvasData
+    Object.assign(canvasData, clonedData)
+  } else {
+    uni.showToast({ title: '项目不存在', icon: 'none' })
+  }
+}
+
+// ==================== 颜色选择 ====================
+
+/**
+ * 选择颜色并切换到绘制工具
  * @param color - 颜色值
  */
 const selectColor = (color: string) => {
@@ -334,7 +458,7 @@ const selectColor = (color: string) => {
 }
 
 /**
- * 确认自定义颜色
+ * 确认自定义颜色输入
  */
 const confirmCustomColor = () => {
   if (/^#[0-9A-Fa-f]{6}$/.test(customColor.value)) {
@@ -345,138 +469,314 @@ const confirmCustomColor = () => {
   }
 }
 
+// ==================== 触摸处理 ====================
+
 /**
- * 触摸开始
+ * 计算两指之间的距离
+ * @param touch1 - 第一个触摸点
+ * @param touch2 - 第二个触摸点
+ * @returns 两指之间的欧几里得距离
+ */
+const getTouchDistance = (touch1: Touch, touch2: Touch): number => {
+  const dx = touch1.clientX - touch2.clientX
+  const dy = touch1.clientY - touch2.clientY
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+/**
+ * 触摸开始事件处理
+ * - 双指触摸：初始化缩放
+ * - 单指触摸：根据工具类型执行对应操作
+ * @param e - 触摸事件
  */
 const onTouchStart = (e: TouchEvent) => {
+  const touches = e.touches
+
+  /** 双指触摸：进入缩放模式 */
+  if (touches.length === 2) {
+    pinchStartDistance.value = getTouchDistance(touches[0], touches[1])
+    pinchStartScale.value = scale.value
+    isPanning.value = false
+    isTouching.value = false
+    previewBead.visible = false
+    return
+  }
+
   isTouching.value = true
+
+  /** 拖动工具：记录起始位置 */
+  if (activeTool.value === 'pan') {
+    isPanning.value = true
+    panStartX.value = touches[0].clientX
+    panStartY.value = touches[0].clientY
+    panStartOffsetX.value = offsetX.value
+    panStartOffsetY.value = offsetY.value
+    return
+  }
+
+  /** 填充工具：仅在 touchstart 时触发一次 */
+  if (activeTool.value === 'fill') {
+    handleTouch(e)
+    return
+  }
+
+  /** 绘制/橡皮/取色工具：正常处理 */
   handleTouch(e)
 }
 
 /**
- * 触摸移动
+ * 触摸移动事件处理（已通过 @touchmove.prevent 阻止默认滚动）
+ * - 双指移动：处理缩放
+ * - 拖动工具：平移画布
+ * - 其他工具：使用 rAF 节流处理
+ * @param e - 触摸事件
  */
 const onTouchMove = (e: TouchEvent) => {
-  if (isTouching.value) {
+  const touches = e.touches
+
+  /** 双指缩放处理 */
+  if (touches.length === 2) {
+    const currentDistance = getTouchDistance(touches[0], touches[1])
+    const distanceDelta = currentDistance / pinchStartDistance.value
+    const newScale = Math.min(SCALE_MAX, Math.max(SCALE_MIN, pinchStartScale.value * distanceDelta))
+    scale.value = newScale
+    return
+  }
+
+  /** 拖动工具：平移画布 */
+  if (isPanning.value && activeTool.value === 'pan') {
+    const dx = (touches[0].clientX - panStartX.value) / scale.value
+    const dy = (touches[0].clientY - panStartY.value) / scale.value
+    offsetX.value = panStartOffsetX.value + dx
+    offsetY.value = panStartOffsetY.value + dy
+    return
+  }
+
+  if (!isTouching.value) return
+
+  /** 填充工具在 move 时不重复触发 */
+  if (activeTool.value === 'fill') return
+
+  /** 使用 requestAnimationFrame 节流 */
+  if (rafId !== null) return
+  rafId = requestAnimationFrame(() => {
     handleTouch(e)
+    rafId = null
+  })
+}
+
+/**
+ * 触摸结束事件处理
+ * - 保存历史记录
+ * - 清理预览状态
+ * @param _e - 触摸事件
+ */
+const onTouchEnd = (_e: TouchEvent) => {
+  isTouching.value = false
+  isPanning.value = false
+  pinchStartDistance.value = 0
+  previewBead.visible = false
+  containerRectCache = null
+
+  /** 仅在非拖动、非缩放时保存历史 */
+  if (activeTool.value !== 'pan') {
+    saveHistory()
   }
 }
 
 /**
- * 触摸结束
+ * 获取画布容器的位置信息（使用 uni.createSelectorQuery，兼容多端）
+ * @returns 容器的 left/top 坐标，获取失败返回 null
  */
-const onTouchEnd = (e: TouchEvent) => {
-  isTouching.value = false
-  previewBead.visible = false
-  saveHistory()
+const getContainerRect = (): Promise<{ left: number; top: number } | null> => {
+  return new Promise((resolve) => {
+    if (!instance) {
+      resolve(null)
+      return
+    }
+    const query = uni.createSelectorQuery().in(instance)
+    query
+      .select('.canvas-container')
+      .boundingClientRect((rect: any) => {
+        if (rect) {
+          containerRectCache = { left: rect.left, top: rect.top }
+          resolve({ left: rect.left, top: rect.top })
+        } else {
+          resolve(null)
+        }
+      })
+      .exec()
+  })
 }
 
 /**
- * 处理触摸逻辑
+ * 处理触摸逻辑的核心方法
+ * - 计算触摸点在画布网格中的坐标
+ * - 根据当前工具执行对应操作（绘制/橡皮/填充/取色）
+ * @param e - 触摸事件
  */
-const handleTouch = (e: TouchEvent) => {
+const handleTouch = async (e: TouchEvent) => {
   const touch = e.touches[0]
   if (!touch) return
 
-  // 获取画布容器的位置信息
-  const container = uni.createSelectorQuery().in(getCurrentInstance())
-  // 简化处理，直接计算位置
-  const rect = (e.target as any)?.getBoundingClientRect?.() || { left: 0, top: 0 }
+  /** 使用 uni.createSelectorQuery 获取容器位置 */
+  const rect = await getContainerRect()
+  if (!rect) return
 
-  // 计算相对于画布的位置（考虑缩放和偏移）
-  const canvasContainer = document.querySelector('.canvas-container')
-  if (!canvasContainer) return
+  /** 计算相对于画布的位置（考虑缩放和偏移） */
+  const relativeX = (touch.clientX - rect.left) / scale.value - offsetX.value
+  const relativeY = (touch.clientY - rect.top) / scale.value - offsetY.value
 
-  const containerRect = canvasContainer.getBoundingClientRect()
-  const relativeX = (touch.clientX - containerRect.left) / scale.value - offsetX.value
-  const relativeY = (touch.clientY - containerRect.top) / scale.value - offsetY.value
-
-  // 计算格子坐标
+  /** 计算格子坐标 */
   const gridX = Math.floor(relativeX / cellSize)
   const gridY = Math.floor(relativeY / cellSize)
 
-  // 边界检查
+  /** 边界检查 */
   if (gridX < 0 || gridX >= canvasData.width || gridY < 0 || gridY >= canvasData.height) {
     previewBead.visible = false
     return
   }
 
-  // 更新预览位置
+  /** 更新预览位置 */
   previewBead.x = gridX
   previewBead.y = gridY
   previewBead.visible = true
 
-  // 根据工具执行操作
-  if (activeTool.value === 'draw') {
-    placeBead(gridX, gridY, selectedColor.value)
-  } else if (activeTool.value === 'erase') {
-    eraseBead(gridX, gridY)
-  } else if (activeTool.value === 'fill') {
-    fillArea(gridX, gridY, selectedColor.value)
+  /** 根据工具执行操作 */
+  switch (activeTool.value) {
+    case 'draw':
+      placeBead(gridX, gridY, selectedColor.value)
+      break
+    case 'erase':
+      eraseBead(gridX, gridY)
+      break
+    case 'fill':
+      fillArea(gridX, gridY, selectedColor.value)
+      break
+    case 'picker':
+      pickColor(gridX, gridY)
+      break
+    default:
+      break
   }
 }
 
+// ==================== 画布操作 ====================
+
 /**
- * 放置拼豆
- * @param x - X坐标
- * @param y - Y坐标
- * @param color - 颜色
+ * 放置拼豆到指定位置
+ * - 如果该位置已有拼豆则更新颜色
+ * - 否则添加新拼豆
+ * @param x - 网格 X 坐标
+ * @param y - 网格 Y 坐标
+ * @param color - 拼豆颜色
  */
 const placeBead = (x: number, y: number, color: string) => {
-  // 检查是否已有相同位置的拼豆
-  const existingIndex = canvasData.beads.findIndex(b => b.x === x && b.y === y)
+  const existingIndex = canvasData.beads.findIndex((b) => b.x === x && b.y === y)
   if (existingIndex >= 0) {
-    // 更新颜色
     canvasData.beads[existingIndex].color = color
   } else {
-    // 添加新拼豆
     canvasData.beads.push({ x, y, color })
   }
 }
 
 /**
- * 擦除拼豆
- * @param x - X坐标
- * @param y - Y坐标
+ * 擦除指定位置的拼豆
+ * @param x - 网格 X 坐标
+ * @param y - 网格 Y 坐标
  */
 const eraseBead = (x: number, y: number) => {
-  const index = canvasData.beads.findIndex(b => b.x === x && b.y === y)
+  const index = canvasData.beads.findIndex((b) => b.x === x && b.y === y)
   if (index >= 0) {
     canvasData.beads.splice(index, 1)
   }
 }
 
 /**
- * 填充区域（简单版本，只填充单个格子）
- * @param x - X坐标
- * @param y - Y坐标
- * @param color - 颜色
+ * 填充区域（Flood Fill 洪水填充算法）
+ * - 从指定位置开始，将相邻且颜色相同的区域填充为目标颜色
+ * @param startX - 起始网格 X 坐标
+ * @param startY - 起始网格 Y 坐标
+ * @param fillColor - 填充颜色
  */
-const fillArea = (x: number, y: number, color: string) => {
-  placeBead(x, y, color)
+const fillArea = (startX: number, startY: number, fillColor: string) => {
+  /** 获取指定位置当前拼豆的颜色 */
+  const getBeadColor = (x: number, y: number): string | null => {
+    const bead = canvasData.beads.find((b) => b.x === x && b.y === y)
+    return bead ? bead.color : null
+  }
+
+  const targetColor = getBeadColor(startX, startY)
+
+  /** 如果目标颜色与填充颜色相同，无需操作 */
+  if (targetColor === fillColor) return
+
+  /** BFS 洪水填充 */
+  const visited = new Set<string>()
+  const queue: [number, number][] = [[startX, startY]]
+
+  while (queue.length > 0) {
+    const [x, y] = queue.shift()!
+    const key = `${x},${y}`
+
+    if (visited.has(key)) continue
+    if (x < 0 || x >= canvasData.width || y < 0 || y >= canvasData.height) continue
+
+    const currentColor = getBeadColor(x, y)
+    if (currentColor !== targetColor) continue
+
+    visited.add(key)
+    placeBead(x, y, fillColor)
+
+    /** 向四个方向扩展 */
+    queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1])
+  }
 }
 
 /**
- * 移除拼豆
- * @param index - 拼豆索引
+ * 从画布上吸取颜色（取色器工具）
+ * - 如果该位置有拼豆，则选中拼豆颜色
+ * - 如果没有拼豆，则选中画布背景色
+ * @param x - 网格 X 坐标
+ * @param y - 网格 Y 坐标
+ */
+const pickColor = (x: number, y: number) => {
+  const bead = canvasData.beads.find((b) => b.x === x && b.y === y)
+  if (bead) {
+    selectedColor.value = bead.color
+    uni.showToast({ title: `取色: ${bead.color}`, icon: 'none' })
+  } else {
+    selectedColor.value = canvasData.backgroundColor
+    uni.showToast({ title: `取色: ${canvasData.backgroundColor}`, icon: 'none' })
+  }
+  /** 取色后自动切回绘制工具 */
+  activeTool.value = 'draw'
+}
+
+/**
+ * 移除指定索引的拼豆
+ * @param index - 拼豆在 beads 数组中的索引
  */
 const removeBead = (index: number) => {
   canvasData.beads.splice(index, 1)
   saveHistory()
 }
 
+// ==================== 历史记录 ====================
+
 /**
- * 保存历史记录
+ * 保存当前拼豆状态到历史记录
+ * - 深拷贝当前 beads 数组
+ * - 截断当前位置之后的历史
+ * - 限制最大历史记录数为 50 条
  */
 const saveHistory = () => {
-  // 复制当前状态
-  const snapshot = JSON.parse(JSON.stringify(canvasData.beads))
-  // 删除当前位置之后的历史
+  const snapshot = JSON.parse(JSON.stringify(canvasData.beads)) as Bead[]
   history.value = history.value.slice(0, historyIndex.value + 1)
-  // 添加新状态
   history.value.push(snapshot)
   historyIndex.value = history.value.length - 1
-  // 限制历史记录数量
+
+  /** 限制历史记录数量 */
   if (history.value.length > 50) {
     history.value.shift()
     historyIndex.value--
@@ -484,27 +784,29 @@ const saveHistory = () => {
 }
 
 /**
- * 撤销
+ * 撤销操作：恢复到上一个历史状态
  */
 const undo = () => {
   if (historyIndex.value > 0) {
     historyIndex.value--
-    canvasData.beads = JSON.parse(JSON.stringify(history.value[historyIndex.value]))
+    canvasData.beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
   }
 }
 
 /**
- * 重做
+ * 重做操作：恢复到下一个历史状态
  */
 const redo = () => {
   if (historyIndex.value < history.value.length - 1) {
     historyIndex.value++
-    canvasData.beads = JSON.parse(JSON.stringify(history.value[historyIndex.value]))
+    canvasData.beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
   }
 }
 
+// ==================== 画布控制 ====================
+
 /**
- * 清空画布
+ * 清空画布（需用户确认）
  */
 const clearCanvas = () => {
   uni.showModal({
@@ -516,30 +818,49 @@ const clearCanvas = () => {
         canvasData.beads = []
         saveHistory()
       }
-    }
+    },
   })
 }
 
 /**
- * 放大
+ * 放大画布
  */
 const zoomIn = () => {
-  if (scale.value < 3) {
-    scale.value = Math.min(3, scale.value + 0.25)
+  if (scale.value < SCALE_MAX) {
+    scale.value = Math.min(SCALE_MAX, scale.value + SCALE_STEP)
   }
 }
 
 /**
- * 缩小
+ * 缩小画布
  */
 const zoomOut = () => {
-  if (scale.value > 0.5) {
-    scale.value = Math.max(0.5, scale.value - 0.25)
+  if (scale.value > SCALE_MIN) {
+    scale.value = Math.max(SCALE_MIN, scale.value - SCALE_STEP)
   }
 }
 
 /**
- * 返回
+ * 重置视图：回到画布中心，缩放比例归 1
+ */
+const resetView = () => {
+  scale.value = 1
+  offsetX.value = 0
+  offsetY.value = 0
+}
+
+/**
+ * 切换网格显示/隐藏
+ */
+const toggleGrid = () => {
+  canvasData.showGrid = !canvasData.showGrid
+}
+
+// ==================== 导航与保存 ====================
+
+/**
+ * 返回上一页
+ * - 如果画布有内容，提示用户确认
  */
 const goBack = () => {
   if (canvasData.beads.length > 0) {
@@ -551,7 +872,7 @@ const goBack = () => {
         if (res.confirm) {
           uni.navigateBack()
         }
-      }
+      },
     })
   } else {
     uni.navigateBack()
@@ -559,57 +880,77 @@ const goBack = () => {
 }
 
 /**
- * 保存画布
+ * 保存画布到本地存储
+ * - 编辑模式：更新已有项目数据
+ * - 新建模式：创建新项目并添加到列表头部
  */
 const saveCanvas = () => {
-  // 显示保存对话框
+  /** 编辑模式使用已有项目名称，新建模式弹出输入框 */
+  if (isEditMode.value) {
+    doSave(editingProjectName.value)
+    return
+  }
+
   uni.showModal({
     title: '保存画布',
     content: '请输入画布名称',
     editable: true,
     placeholderText: '我的拼豆作品',
-    success: async (res) => {
+    success: (res) => {
       if (res.confirm && res.content) {
-        const projectName = res.content || '未命名作品'
-
-        // 构建项目数据
-        const projectData = {
-          id: 'project_' + Date.now(),
-          name: projectName,
-          canvasData: {
-            ...canvasData,
-            updatedAt: Date.now(),
-          },
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          thumbnail: '', // 可以后续生成缩略图
-        }
-
-        // 保存到本地存储
-        const projects = uni.getStorageSync('pin_projects') || []
-        projects.unshift(projectData)
-        uni.setStorageSync('pin_projects', projects)
-
-        uni.showToast({ title: '保存成功', icon: 'success' })
-
-        // 延迟返回项目列表并刷新
-        setTimeout(() => {
-          // 返回到项目页面
-          uni.switchTab({
-            url: '/pages/project/index',
-            success: () => {
-              // 通知项目页面刷新
-              uni.$emit('projectSaved')
-            }
-          })
-        }, 1000)
+        doSave(res.content || '未命名作品')
       }
-    }
+    },
   })
 }
 
-// 获取当前组件实例（用于 uni.createSelectorQuery）
-import { getCurrentInstance } from 'vue'
+/**
+ * 执行保存操作
+ * - 深拷贝画布数据避免引用污染
+ * - 编辑模式更新已有项目，新建模式插入到列表头部
+ * @param projectName - 项目名称
+ */
+const doSave = (projectName: string) => {
+  /** 深拷贝画布数据，确保 beads 数组是独立副本 */
+  const clonedCanvasData = JSON.parse(JSON.stringify(canvasData)) as CanvasData
+  clonedCanvasData.updatedAt = Date.now()
+
+  const projects: ProjectData[] = uni.getStorageSync('pin_projects') || []
+
+  if (isEditMode.value && editingProjectId.value) {
+    /** 编辑模式：找到并更新已有项目 */
+    const index = projects.findIndex((p) => p.id === editingProjectId.value)
+    if (index >= 0) {
+      projects[index].name = projectName
+      projects[index].canvasData = clonedCanvasData
+      projects[index].updatedAt = Date.now()
+    }
+  } else {
+    /** 新建模式：创建新项目 */
+    const projectData: ProjectData = {
+      id: 'project_' + Date.now(),
+      name: projectName,
+      canvasData: clonedCanvasData,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      thumbnail: '',
+    }
+    projects.unshift(projectData)
+  }
+
+  uni.setStorageSync('pin_projects', projects)
+  uni.showToast({ title: '保存成功', icon: 'success' })
+
+  /** 延迟返回项目列表并刷新 */
+  setTimeout(() => {
+    uni.switchTab({
+      url: '/pages/project/index',
+      success: () => {
+        uni.$emit('projectSaved')
+      },
+    })
+  }, 1000)
+}
 </script>
 
 <style scoped>
@@ -621,13 +962,14 @@ import { getCurrentInstance } from 'vue'
   overflow: hidden;
 }
 
-/* 顶部导航 */
+/* 顶部导航 - 增加状态栏高度适配 */
 .editor-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 88rpx;
+  height: calc(88rpx + var(--status-bar-height));
   padding: 0 24rpx;
+  padding-top: var(--status-bar-height);
   background-color: #FFFFFF;
   border-bottom: 2rpx solid #E8E8E8;
   flex-shrink: 0;
@@ -637,9 +979,11 @@ import { getCurrentInstance } from 'vue'
   width: 120rpx;
 }
 
+/* 导航按钮 - 增加 padding 扩大热区 */
 .nav-btn {
   font-size: 28rpx;
   color: #666666;
+  padding: 16rpx 12rpx;
 }
 
 .nav-btn.primary {
@@ -671,11 +1015,12 @@ import { getCurrentInstance } from 'vue'
   flex-shrink: 0;
 }
 
+/* 工具项 - 增加 padding 扩大热区 */
 .tool-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8rpx 16rpx;
+  padding: 12rpx 16rpx;
   border-radius: 12rpx;
   min-width: 80rpx;
 }
