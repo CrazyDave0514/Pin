@@ -77,6 +77,10 @@
               @touchmove.prevent="onTouchMove"
               @touchend="onTouchEnd"
               @touchcancel="onTouchEnd"
+              @mousedown="onMouseDown"
+              @mousemove="onMouseMove"
+              @mouseup="onMouseUp"
+              @mouseleave="onMouseUp"
             >
               <!-- 网格背景（CSS 线性渐变） -->
               <view
@@ -1002,6 +1006,134 @@ const onTouchEnd = (_e: TouchEvent) => {
   /** 仅在非拖动、非缩放时保存历史 */
   if (activeTool.value !== 'pan') {
     saveHistory()
+  }
+}
+
+// ==================== PC端鼠标事件 ====================
+
+/** 鼠标是否按下 */
+const isMouseDown = ref(false)
+
+/** 鼠标按下起始位置（用于拖动） */
+const mouseStartX = ref(0)
+const mouseStartY = ref(0)
+const mouseStartOffsetX = ref(0)
+const mouseStartOffsetY = ref(0)
+
+/**
+ * 鼠标按下事件处理（PC端）
+ * @param e - 鼠标事件
+ */
+const onMouseDown = (e: MouseEvent) => {
+  isMouseDown.value = true
+
+  /** 拖动工具：记录起始位置 */
+  if (activeTool.value === 'pan') {
+    isPanning.value = true
+    mouseStartX.value = e.clientX
+    mouseStartY.value = e.clientY
+    mouseStartOffsetX.value = offsetX.value
+    mouseStartOffsetY.value = offsetY.value
+    return
+  }
+
+  /** 填充工具：仅触发一次 */
+  if (activeTool.value === 'fill') {
+    handleMouseClick(e)
+    saveHistory()
+    return
+  }
+
+  /** 绘制/橡皮/取色工具 */
+  handleMouseClick(e)
+}
+
+/**
+ * 鼠标移动事件处理（PC端）
+ * @param e - 鼠标事件
+ */
+const onMouseMove = (e: MouseEvent) => {
+  if (!isMouseDown.value) return
+
+  /** 拖动工具：平移画布 */
+  if (isPanning.value && activeTool.value === 'pan') {
+    const dx = (e.clientX - mouseStartX.value) / scale.value
+    const dy = (e.clientY - mouseStartY.value) / scale.value
+    offsetX.value = mouseStartOffsetX.value + dx
+    offsetY.value = mouseStartOffsetY.value + dy
+    return
+  }
+
+  /** 填充工具在 move 时不重复触发 */
+  if (activeTool.value === 'fill') return
+
+  /** 时间节流 */
+  const now = Date.now()
+  if (now - lastTouchTime < TOUCH_THROTTLE_MS) return
+  lastTouchTime = now
+
+  /** 绘制/橡皮/取色工具 */
+  handleMouseClick(e)
+}
+
+/**
+ * 鼠标释放事件处理（PC端）
+ * @param _e - 鼠标事件
+ */
+const onMouseUp = (_e: MouseEvent) => {
+  if (isMouseDown.value && activeTool.value !== 'pan') {
+    saveHistory()
+  }
+  isMouseDown.value = false
+  isPanning.value = false
+  previewBead.visible = false
+  containerRectCache = null
+}
+
+/**
+ * 处理鼠标点击逻辑（PC端）
+ * @param e - 鼠标事件
+ */
+const handleMouseClick = async (e: MouseEvent) => {
+  const rect = await getContainerRect()
+  if (!rect) return
+
+  /** 计算格子坐标 */
+  const localX = e.clientX - rect.left
+  const localY = e.clientY - rect.top
+  const gridX = Math.floor(localX / cellSize)
+  const gridY = Math.floor(localY / cellSize)
+
+  /** 边界检查 */
+  if (gridX < 0 || gridX >= canvasData.width || gridY < 0 || gridY >= canvasData.height) {
+    previewBead.visible = false
+    return
+  }
+
+  /** 更新预览位置 */
+  previewBead.x = gridX
+  previewBead.y = gridY
+  previewBead.visible = true
+
+  /** 根据工具执行操作 */
+  switch (activeTool.value) {
+    case 'draw':
+      placeBead(gridX, gridY, selectedColor.value)
+      break
+    case 'erase':
+      eraseBead(gridX, gridY)
+      break
+    case 'fill':
+      fillArea(gridX, gridY, selectedColor.value)
+      break
+    case 'picker':
+      pickColor(gridX, gridY)
+      break
+    case 'pan':
+      selectedCell.value = { x: gridX, y: gridY }
+      break
+    default:
+      break
   }
 }
 
