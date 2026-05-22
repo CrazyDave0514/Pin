@@ -1041,9 +1041,16 @@ const handleTouch = async (e: TouchEvent) => {
   const rect = await getContainerRect()
   if (!rect) return
 
-  /** 计算格子坐标（考虑缩放和偏移） */
-  const gridX = Math.floor(((touch.clientX - rect.left) / scale.value - offsetX.value) / cellSize)
-  const gridY = Math.floor(((touch.clientY - rect.top) / scale.value - offsetY.value) / cellSize)
+  /**
+   * 计算格子坐标
+   * 注意：rect 是 canvas-container 在屏幕上的位置（已受 transform 影响）
+   * touch.clientX/clientY 也是屏幕坐标
+   * 所以直接相减即可得到相对于画布左上角的像素坐标
+   */
+  const localX = touch.clientX - rect.left
+  const localY = touch.clientY - rect.top
+  const gridX = Math.floor(localX / cellSize)
+  const gridY = Math.floor(localY / cellSize)
 
   /** 边界检查 */
   if (gridX < 0 || gridX >= canvasData.width || gridY < 0 || gridY >= canvasData.height) {
