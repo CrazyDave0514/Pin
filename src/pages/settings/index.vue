@@ -214,7 +214,7 @@
 import { ref, onMounted } from 'vue'
 
 // 应用版本号
-const version = ref('0.1.1')
+const version = ref('0.1.3')
 
 // 缓存大小
 const cacheSize = ref('0 MB')
@@ -277,7 +277,7 @@ const toggleSetting = (key: keyof typeof settings.value) => {
  * 编辑资料
  */
 const editProfile = () => {
-  uni.showToast({ title: '功能开发中', icon: 'none' })
+  uni.navigateTo({ url: '/pages/profile/edit' })
 }
 
 /**

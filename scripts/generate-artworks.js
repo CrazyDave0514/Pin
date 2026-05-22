@@ -1,272 +1,140 @@
 /**
- * generate-artworks.js
- * 生成 300+ 条拼豆作品假数据
- * 输出：artworks.json（JSON 文件）和 artworks.js（ES Module 导出文件）
+ * 生成300条假数据，封面通过颜色方案+种子在客户端动态生成
+ * 数据量极小，封面由前端 Canvas 实时渲染
  */
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('fs')
+const path = require('path')
 
-// ============================================================
-// 配置常量
-// ============================================================
+/** 拼豆主题色板（16套） */
+const colorPalettes = [
+  ['#FF6B6B', '#FF8E8E', '#FFB4B4', '#FFD4D4', '#FFF0F0'],
+  ['#4ECDC4', '#6ED5CE', '#8EDED8', '#AEE7E2', '#D0F0EC'],
+  ['#45B7D1', '#65C3D9', '#85CFE1', '#A5DBE9', '#C5E7F1'],
+  ['#96CEB4', '#A6D6BE', '#B6DEC8', '#C6E6D2', '#D6EEDC'],
+  ['#FFEAA7', '#FFEDBA', '#FFF0CD', '#FFF4E0', '#FFF8F0'],
+  ['#DDA0DD', '#E3B0E3', '#E9C0E9', '#EFD0EF', '#F5E0F5'],
+  ['#F39C12', '#F5AD2E', '#F7BE4A', '#F9CF66', '#FBE082'],
+  ['#E74C3C', '#EC6356', '#F17A70', '#F6918A', '#FBA8A4'],
+  ['#3498DB', '#52A3DE', '#70AEE1', '#8EB9E4', '#ACC4E7'],
+  ['#2ECC71', '#4DD485', '#6CDC99', '#8BE4AD', '#AAECC1'],
+  ['#E91E63', '#EC407A', '#EF6291', '#F284A8', '#F5A6BF'],
+  ['#9B59B6', '#A96DC0', '#B781CA', '#C595D4', '#D3A9DE'],
+  ['#1ABC9C', '#3AB8A8', '#5AC4B4', '#7AD0C0', '#9ADCCC'],
+  ['#F1C40F', '#F3CD3B', '#F5D667', '#F7DF93', '#F9E8BF'],
+  ['#E67E22', '#EA903A', '#EEA252', '#F2B46A', '#F6C682'],
+  ['#8E44AD', '#9D56B8', '#AC68C3', '#BB7ACE', '#CA8CD9'],
+]
 
-/** 生成的作品总数 */
-const TOTAL_COUNT = 300;
+/** 图案类型 */
+const patternTypes = ['random', 'symmetric', 'circle', 'stripe', 'diamond']
 
-/** 热门作品数量（前 N 条点赞数偏高） */
-const HOT_COUNT = 50;
+/** 作品名称模板 */
+const nameTemplates = [
+  '可爱的{emoji}{subject}拼豆图案',
+  '梦幻{subject}拼豆作品',
+  '{emoji}{subject}拼豆图',
+  '精美的{subject}拼豆画',
+  '{subject}{emoji}拼豆创作',
+  '创意{subject}拼豆设计',
+  '{emoji}超萌{subject}拼豆',
+  '卡通{subject}拼豆图案',
+  '迷你{subject}{emoji}拼豆',
+  '{subject}拼豆{emoji}系列',
+]
 
-/** 创作者名称库（30 个中文昵称循环使用） */
-const CREATOR_NAMES = [
-  '拼豆达人小王', '像素艺术家', '豆豆创作者', '彩虹拼豆', '创意工坊',
-  '手作达人', '拼图小能手', '豆子画家', '像素小王子', '手工爱好者',
-  '拼豆大师', '创意拼图', '彩虹手工', '豆豆工坊', '像素达人',
-  '手作小屋', '拼豆新手', '创意画家', '豆子达人', '像素工坊',
-  '拼图达人', '手工小达人', '豆豆艺术家', '拼豆爱好者', '像素创作者',
-  '手作大师', '创意豆豆', '拼图小天才', '豆子工坊', '像素小天才',
-];
+const subjects = [
+  '小猫咪', '小狗狗', '小兔子', '小熊', '小企鹅',
+  '樱花', '向日葵', '玫瑰花', '郁金香', '薰衣草',
+  '独角兽', '小鲸鱼', '小海豚', '蝴蝶', '小瓢虫',
+  '小恐龙', '小狮子', '小熊猫', '小考拉', '小狐狸',
+  '草莓', '西瓜', '冰淇淋', '蛋糕', '甜甜圈',
+  '小星星', '月亮', '彩虹', '云朵', '雪花',
+  '小汽车', '小飞机', '火箭', '小船', '自行车',
+  '爱心', '小房子', '小树', '蘑菇', '小花朵',
+  '皮卡丘', '马里奥', '小黄人', '龙猫', 'HelloKitty',
+  '小金鱼', '小乌龟', '小青蛙', '小蜜蜂', '小蜗牛',
+]
 
-/** 作品名称 - 前缀词 */
-const PREFIX_WORDS = [
-  '可爱的', '帅气的', '精致的', '梦幻的', '复古的',
-  '萌萌的', '酷炫的', '简约的', '华丽的', '清新的',
-];
+const emojis = ['', '🌟', '💖', '🌈', '✨', '🎀', '🌸', '⭐', '💝', '🎨']
 
-/** 作品名称 - 主题词 */
-const THEME_WORDS = [
-  '小猫咪', '小狗狗', '小兔子', '樱花树', '向日葵',
-  '彩虹', '星星', '爱心', '蝴蝶', '独角兽',
-  '马里奥', '皮卡丘', '小熊', '小企鹅', '小恐龙',
-  '小狐狸', '草莓蛋糕', '冰淇淋', '棒棒糖', '小房子',
-  '小汽车', '小飞机', '机器人', '外星人', '小公主',
-  '小王子', '小美人鱼', '小精灵', '小蘑菇', '小花朵',
-];
-
-/** 作品名称 - 后缀词 */
-const SUFFIX_WORDS = [
-  '拼豆图', '像素画', '拼豆作品', '像素作品', '拼豆图案',
-];
-
-/** 标签库 */
-const TAG_LIBRARY = [
-  '动物', '植物', '动漫', '食物', '风景',
-  '人物', '交通工具', '花卉', '水果', '卡通',
-  '可爱', '简约', '复古', '梦幻', '创意',
-  '入门', '进阶', '节日', '情侣', '亲子',
-];
-
-/** 主题词与标签的映射关系（用于生成更合理的标签） */
-const THEME_TAG_MAP = {
-  '小猫咪': ['动物', '可爱'],
-  '小狗狗': ['动物', '可爱'],
-  '小兔子': ['动物', '可爱'],
-  '樱花树': ['植物', '花卉', '风景'],
-  '向日葵': ['植物', '花卉'],
-  '彩虹': ['风景', '梦幻'],
-  '星星': ['风景', '梦幻'],
-  '爱心': ['情侣', '可爱'],
-  '蝴蝶': ['动物', '花卉'],
-  '独角兽': ['动物', '梦幻', '卡通'],
-  '马里奥': ['动漫', '卡通', '进阶'],
-  '皮卡丘': ['动漫', '卡通', '可爱'],
-  '小熊': ['动物', '可爱'],
-  '小企鹅': ['动物', '可爱'],
-  '小恐龙': ['动物', '卡通'],
-  '小狐狸': ['动物', '可爱'],
-  '草莓蛋糕': ['食物', '可爱'],
-  '冰淇淋': ['食物', '可爱'],
-  '棒棒糖': ['食物', '可爱'],
-  '小房子': ['风景', '简约'],
-  '小汽车': ['交通工具', '卡通'],
-  '小飞机': ['交通工具', '卡通'],
-  '机器人': ['动漫', '卡通', '进阶'],
-  '外星人': ['动漫', '卡通', '创意'],
-  '小公主': ['人物', '可爱', '梦幻'],
-  '小王子': ['人物', '卡通'],
-  '小美人鱼': ['人物', '动漫', '梦幻'],
-  '小精灵': ['人物', '梦幻', '卡通'],
-  '小蘑菇': ['植物', '可爱'],
-  '小花朵': ['植物', '花卉', '可爱'],
-};
-
-// ============================================================
-// 工具函数
-// ============================================================
+/** 创作者名称 */
+const creators = [
+  '豆豆工坊', '手作达人', '拼豆爱好者', '小花', 'Pin官方',
+  '拼图小天才', '创意手工坊', '彩虹豆豆', '拼豆大师', '小艺术家',
+  '手工达人', '拼拼乐', '豆豆乐园', '像素艺术家', '创意拼豆',
+  '手工小铺', '拼豆世界', '豆豆工坊', '彩虹拼豆', '快乐拼豆',
+]
 
 /**
- * 生成指定范围内的随机整数 [min, max]
- * @param {number} min - 最小值（含）
- * @param {number} max - 最大值（含）
- * @returns {number} 随机整数
+ * 生成300条假数据
  */
-function randomInt(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+function generateArtworks() {
+  const artworks = []
+  const now = Date.now()
 
-/**
- * 从数组中随机选取一个元素
- * @param {Array} arr - 源数组
- * @returns {*} 随机选中的元素
- */
-function randomPick(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+  for (let i = 0; i < 300; i++) {
+    const seed = (i + 1) * 7919
+    const paletteIdx = i % colorPalettes.length
+    const patternType = patternTypes[i % patternTypes.length]
 
-/**
- * 从数组中随机选取 n 个不重复的元素
- * @param {Array} arr - 源数组
- * @param {number} n - 选取数量
- * @returns {Array} 选中的元素数组
- */
-function randomPickMultiple(arr, n) {
-  const shuffled = [...arr].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(n, arr.length));
-}
+    const nameTemplate = nameTemplates[i % nameTemplates.length]
+    const subject = subjects[i % subjects.length]
+    const emoji = emojis[i % emojis.length]
+    const name = nameTemplate.replace('{emoji}', emoji).replace('{subject}', subject)
 
-/**
- * 生成补零的序号字符串
- * @param {number} num - 序号
- * @param {number} digits - 总位数
- * @returns {string} 补零后的字符串
- */
-function padNumber(num, digits) {
-  return String(num).padStart(digits, '0');
-}
+    const creator = creators[i % creators.length]
+    const likes = Math.floor(Math.random() * 5000) + 10
+    const points = Math.floor(Math.random() * 50) + 10
+    const createdAt = now - Math.floor(Math.random() * 30 * 24 * 3600 * 1000)
+    const viewCount = likes * (2 + Math.floor(Math.random() * 3))
+    const useCount = Math.floor(likes * (0.05 + Math.random() * 0.15))
 
-/**
- * 生成作品名称
- * @returns {string} 组合后的作品名称
- */
-function generateArtworkName() {
-  const prefix = randomPick(PREFIX_WORDS);
-  const theme = randomPick(THEME_WORDS);
-  const suffix = randomPick(SUFFIX_WORDS);
-  return `${prefix}${theme}${suffix}`;
-}
+    const tagList = ['卡通', '可爱', '动物', '植物', '食物', '人物', '风景', '抽象', '节日', '创意']
+    const tags = []
+    const tagCount = 1 + Math.floor(Math.random() * 3)
+    for (let t = 0; t < tagCount; t++) {
+      const tag = tagList[(seed + t * 31) % tagList.length]
+      if (!tags.includes(tag)) tags.push(tag)
+    }
 
-/**
- * 根据主题词生成合理的标签（1~3 个）
- * @param {string} themeWord - 主题词
- * @returns {string[]} 标签数组
- */
-function generateTags(themeWord) {
-  // 优先使用主题词对应的标签
-  const mappedTags = THEME_TAG_MAP[themeWord] || [];
-  const tagCount = randomInt(1, 3);
-
-  if (mappedTags.length >= tagCount) {
-    // 映射标签足够，直接从中选取
-    return randomPickMultiple(mappedTags, tagCount);
+    artworks.push({
+      id: `artwork_${String(i + 1).padStart(3, '0')}`,
+      name,
+      creatorName: creator,
+      creatorAvatar: '',
+      likes,
+      points,
+      createdAt,
+      tags,
+      viewCount,
+      useCount,
+      isPublic: true,
+      description: '',
+      /** 封面渲染参数：由前端 Canvas 动态生成 */
+      cover: {
+        palette: colorPalettes[paletteIdx],
+        pattern: patternType,
+        seed: seed,
+      },
+    })
   }
 
-  // 映射标签不足，从标签库补充
-  const remaining = TAG_LIBRARY.filter(tag => !mappedTags.includes(tag));
-  const extra = randomPickMultiple(remaining, tagCount - mappedTags.length);
-  return [...mappedTags, ...extra];
+  return artworks
 }
 
-/**
- * 生成近 30 天内的随机时间戳
- * @returns {number} 毫秒级时间戳
+// 生成数据
+const artworks = generateArtworks()
+
+// 输出为 JS 模块
+const output = `/**
+ * 首页假数据 - 300条作品
+ * 封面由前端 Canvas 根据 cover 参数动态生成拼豆图案
+ * 自动生成，请勿手动修改
  */
-function generateTimestamp() {
-  const now = Date.now();
-  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-  return now - Math.floor(Math.random() * thirtyDaysMs);
-}
+export const defaultArtworks = ${JSON.stringify(artworks, null, 2)}
+`
 
-/**
- * 生成单条作品数据
- * @param {number} index - 作品序号（从 1 开始）
- * @param {boolean} isHot - 是否为热门作品
- * @returns {Object} 作品数据对象
- */
-function generateArtwork(index, isHot) {
-  const themeWord = randomPick(THEME_WORDS);
-  const likes = isHot
-    ? randomInt(1000, 5000)
-    : randomInt(0, 5000);
-
-  return {
-    id: `artwork_${padNumber(index, 3)}`,
-    name: generateArtworkName(),
-    coverImage: `https://picsum.photos/seed/pin${index}/400/400`,
-    creatorName: CREATOR_NAMES[(index - 1) % CREATOR_NAMES.length],
-    creatorAvatar: '',
-    likes,
-    points: randomInt(1, 50),
-    createdAt: generateTimestamp(),
-    tags: generateTags(themeWord),
-    viewCount: likes * 2 + randomInt(0, 500),
-    useCount: Math.floor(likes * 0.1) + randomInt(0, 20),
-    isPublic: true,
-    description: '',
-  };
-}
-
-// ============================================================
-// 主流程
-// ============================================================
-
-/**
- * 主函数：生成所有假数据并写入文件
- */
-function main() {
-  console.log(`开始生成 ${TOTAL_COUNT} 条拼豆作品假数据...`);
-
-  // 生成作品数据
-  const artworks = [];
-  for (let i = 1; i <= TOTAL_COUNT; i++) {
-    const isHot = i <= HOT_COUNT;
-    artworks.push(generateArtwork(i, isHot));
-  }
-
-  // 按 createdAt 倒序排列（最新的在前）
-  artworks.sort((a, b) => b.createdAt - a.createdAt);
-
-  // 确定输出路径
-  const projectRoot = path.resolve(__dirname, '..');
-  const outputDir = path.join(projectRoot, 'src', 'static', 'data');
-
-  // 确保输出目录存在
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-    console.log(`创建输出目录: ${outputDir}`);
-  }
-
-  // 写入 JSON 文件
-  const jsonPath = path.join(outputDir, 'artworks.json');
-  const jsonContent = JSON.stringify(artworks, null, 2);
-  fs.writeFileSync(jsonPath, jsonContent, 'utf-8');
-  console.log(`JSON 文件已写入: ${jsonPath} (${(Buffer.byteLength(jsonContent) / 1024).toFixed(1)} KB)`);
-
-  // 写入 JS 文件（ES Module 导出）
-  const jsPath = path.join(outputDir, 'artworks.js');
-  const jsContent = `export const defaultArtworks = ${jsonContent};\n`;
-  fs.writeFileSync(jsPath, jsContent, 'utf-8');
-  console.log(`JS 文件已写入: ${jsPath} (${(Buffer.byteLength(jsContent) / 1024).toFixed(1)} KB)`);
-
-  // 输出统计信息
-  const totalLikes = artworks.reduce((sum, a) => sum + a.likes, 0);
-  const totalViews = artworks.reduce((sum, a) => sum + a.viewCount, 0);
-  const avgLikes = Math.round(totalLikes / artworks.length);
-  const avgViews = Math.round(totalViews / artworks.length);
-  const newest = new Date(artworks[0].createdAt).toLocaleString('zh-CN');
-  const oldest = new Date(artworks[artworks.length - 1].createdAt).toLocaleString('zh-CN');
-
-  console.log('\n========== 数据统计 ==========');
-  console.log(`作品总数: ${artworks.length}`);
-  console.log(`热门作品: 前 ${HOT_COUNT} 条`);
-  console.log(`总点赞数: ${totalLikes.toLocaleString()}`);
-  console.log(`平均点赞数: ${avgLikes}`);
-  console.log(`总浏览量: ${totalViews.toLocaleString()}`);
-  console.log(`平均浏览量: ${avgViews}`);
-  console.log(`最新作品时间: ${newest}`);
-  console.log(`最早作品时间: ${oldest}`);
-  console.log(`涉及创作者: ${new Set(artworks.map(a => a.creatorName)).size} 人`);
-  console.log('==============================\n');
-  console.log('生成完成!');
-}
-
-main();
+const outputPath = path.join(__dirname, '..', 'src', 'utils', 'artworks.js')
+fs.writeFileSync(outputPath, output, 'utf-8')
+console.log(`✅ 已生成 ${artworks.length} 条假数据到 ${outputPath}`)

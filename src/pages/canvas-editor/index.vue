@@ -2,12 +2,12 @@
   <view class="canvas-editor-page">
     <!-- 自定义顶部导航 -->
     <view class="editor-nav">
-      <view class="nav-left">
-        <text class="nav-btn" @click="goBack">取消</text>
+      <view class="nav-left" @tap="goBack">
+        <text class="nav-btn-text">取消</text>
       </view>
       <text class="nav-title">{{ isEditMode ? '编辑画布' : '画布编辑' }}</text>
-      <view class="nav-right">
-        <text class="nav-btn primary" @click="saveCanvas">保存</text>
+      <view class="nav-right" @tap="saveCanvas">
+        <text class="nav-btn-text primary">保存</text>
       </view>
     </view>
 
@@ -75,66 +75,90 @@
       </view>
     </view>
 
-    <!-- 画布区域 -->
-    <view
-      class="canvas-container"
-      :style="{ backgroundColor: canvasData.backgroundColor }"
-      @touchstart="onTouchStart"
-      @touchmove.prevent="onTouchMove"
-      @touchend="onTouchEnd"
-      @touchcancel="onTouchEnd"
-    >
+    <!-- 画布区域（包含行列标注和画布内容，统一缩放和偏移） -->
+    <view class="canvas-area">
       <view
-        class="canvas-wrapper"
+        class="canvas-transform-wrapper"
         :style="{
-          width: canvasWidth + 'px',
-          height: canvasHeight + 'px',
           transform: `scale(${scale}) translate(${offsetX}px, ${offsetY}px)`,
         }"
       >
-        <!-- 网格背景 -->
-        <view
-          v-if="canvasData.showGrid"
-          class="grid-layer"
-          :style="{ gridTemplateColumns: `repeat(${canvasData.width}, ${cellSize}px)`, gridTemplateRows: `repeat(${canvasData.height}, ${cellSize}px)` }"
-        >
-          <view
-            v-for="i in canvasData.width * canvasData.height"
-            :key="i"
-            class="grid-cell"
-            :style="{ borderColor: canvasData.gridColor }"
-          ></view>
+        <!-- 列标注（顶部数字） -->
+        <view class="col-labels" :style="{ width: canvasWidth + 'px', paddingLeft: rowLabelWidth + 'px' }">
+          <text
+            v-for="col in canvasData.width"
+            :key="'cl-'+col"
+            class="col-label"
+            :style="{ width: cellSize + 'px' }"
+          >{{ col }}</text>
         </view>
-
-        <!-- 拼豆层 -->
-        <view class="beads-layer">
+        
+        <view class="canvas-with-row-labels">
+          <!-- 行标注（左侧数字） -->
+          <view class="row-labels" :style="{ width: rowLabelWidth + 'px' }">
+            <text
+              v-for="row in canvasData.height"
+              :key="'rl-'+row"
+              class="row-label"
+              :style="{ height: cellSize + 'px' }"
+            >{{ row }}</text>
+          </view>
+          
+          <!-- 画布容器 -->
           <view
-            v-for="(bead, index) in canvasData.beads"
-            :key="`bead-${index}`"
-            class="bead"
+            class="canvas-container"
             :style="{
-              left: (bead.x * cellSize) + 'px',
-              top: (bead.y * cellSize) + 'px',
-              width: cellSize + 'px',
-              height: cellSize + 'px',
-              backgroundColor: bead.color,
+              width: canvasWidth + 'px',
+              height: canvasHeight + 'px',
+              backgroundColor: canvasData.backgroundColor
             }"
-            @click.stop="removeBead(index)"
-          ></view>
-        </view>
+            @touchstart="onTouchStart"
+            @touchmove.prevent="onTouchMove"
+            @touchend="onTouchEnd"
+            @touchcancel="onTouchEnd"
+          >
+            <!-- 网格背景（使用 CSS 线性渐变代替 DOM 元素，大幅提升性能） -->
+            <view
+              v-if="canvasData.showGrid"
+              class="grid-layer-optimized"
+              :style="{
+                width: canvasWidth + 'px',
+                height: canvasHeight + 'px',
+                backgroundSize: `${cellSize}px ${cellSize}px`,
+                backgroundImage: `linear-gradient(to right, ${canvasData.gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${canvasData.gridColor} 1px, transparent 1px)`,
+              }"
+            ></view>
 
-        <!-- 触摸预览 -->
-        <view
-          v-if="previewBead.visible"
-          class="bead preview"
-          :style="{
-            left: (previewBead.x * cellSize) + 'px',
-            top: (previewBead.y * cellSize) + 'px',
-            width: cellSize + 'px',
-            height: cellSize + 'px',
-            backgroundColor: selectedColor,
-          }"
-        ></view>
+            <!-- 拼豆层（使用单一容器+CSS变量优化渲染性能） -->
+            <view class="beads-layer">
+              <view
+                v-for="bead in canvasData.beads"
+                :key="`${bead.x}-${bead.y}`"
+                class="bead"
+                :style="{
+                  left: (bead.x * cellSize) + 'px',
+                  top: (bead.y * cellSize) + 'px',
+                  width: cellSize + 'px',
+                  height: cellSize + 'px',
+                  backgroundColor: bead.color,
+                }"
+              ></view>
+            </view>
+
+            <!-- 触摸预览 -->
+            <view
+              v-if="previewBead.visible"
+              class="bead preview"
+              :style="{
+                left: (previewBead.x * cellSize) + 'px',
+                top: (previewBead.y * cellSize) + 'px',
+                width: cellSize + 'px',
+                height: cellSize + 'px',
+                backgroundColor: selectedColor,
+              }"
+            ></view>
+          </view>
+        </view>
       </view>
     </view>
 
@@ -217,11 +241,38 @@
         </view>
       </view>
     </view>
+
+    <!-- 自定义保存弹窗 -->
+    <view class="save-modal-overlay" v-if="showSaveModal" @tap="showSaveModal = false">
+      <view class="save-modal" @tap.stop>
+        <view class="save-modal-header">
+          <text class="save-modal-title">保存画布</text>
+          <text class="save-modal-close" @tap="showSaveModal = false">✕</text>
+        </view>
+        <view class="save-modal-body">
+          <input
+            class="save-name-input"
+            v-model="saveName"
+            :placeholder="saveNamePlaceholder"
+            placeholder-class="save-placeholder"
+            :focus="showSaveModal"
+            @input="onSaveNameInput"
+          />
+        </view>
+        <view class="save-modal-footer">
+          <view class="save-cancel-btn" @tap="showSaveModal = false"><text>取消</text></view>
+          <view class="save-only-btn" @tap="confirmSave"><text>仅保存</text></view>
+          <view class="save-export-btn" @tap="confirmSaveAndExport"><text>保存并导出</text></view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, getCurrentInstance } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance, toRaw, shallowRef, triggerRef } from 'vue'
+import { consumeBlueprintData } from '@/utils/blueprint-transfer'
+import { getMardCodeByHex } from '@/utils/mard-colors'
 
 // ==================== 类型定义 ====================
 
@@ -266,6 +317,9 @@ interface ToolItem {
 /** 每个格子的像素大小 */
 const cellSize = 20
 
+/** 行标注宽度 */
+const rowLabelWidth = 28
+
 /** 常用颜色列表 */
 const commonColors = [
   '#FFFFFF', '#1A1A1A', '#FF0000', '#FF5500', '#FF8C00', '#FFD700', '#FFFF00', '#9ACD32',
@@ -297,14 +351,14 @@ const SCALE_STEP = 0.25
 
 // ==================== 状态定义 ====================
 
-/** 画布数据 */
+/** 画布数据 - 使用 reactive */
 const canvasData = reactive<CanvasData>({
   width: 30,
   height: 30,
   backgroundColor: '#FFFFFF',
   showGrid: true,
   gridColor: '#CCCCCC',
-  beads: [],
+  beads: [] as Bead[],
   createdAt: Date.now(),
   updatedAt: Date.now(),
 })
@@ -367,8 +421,23 @@ const editingProjectId = ref('')
 /** 编辑中的项目名称 */
 const editingProjectName = ref('')
 
+/** 画布是否有未保存的修改（用于取消时判断是否需要确认） */
+const hasUnsavedChanges = ref(false)
+
+/** 初始 beads 快照（JSON字符串，用于精确判断是否有修改） */
+let initialBeadsSnapshot = ''
+
+/** 保存弹窗状态 */
+const showSaveModal = ref(false)
+const saveName = ref('')
+const saveNamePlaceholder = ref('我的拼豆作品')
+
 /** requestAnimationFrame 节流标记 */
 let rafId: number | null = null
+
+/** 上次触摸处理时间（用于节流） */
+let lastTouchTime = 0
+const TOUCH_THROTTLE_MS = 16 /** 约60fps */
 
 /** 画布容器的位置缓存 */
 let containerRectCache: { left: number; top: number } | null = null
@@ -402,14 +471,62 @@ onMounted(() => {
 
   if (options.mode === 'edit' && options.projectId) {
     /** 编辑已有项目：从本地存储加载 */
+    console.log('开始加载项目:', options.projectId)
     loadProject(options.projectId)
+    console.log('loadProject 执行完成，beads数量:', canvasData.beads.length)
   } else if (options.mode === 'create' && options.data) {
     /** 新建项目：从 URL 参数解析画布数据 */
     try {
-      const data = JSON.parse(decodeURIComponent(options.data))
-      Object.assign(canvasData, data)
+      const data = JSON.parse(decodeURIComponent(options.data)) as CanvasData
+      /** 使用 Object.assign 强制更新整个 canvasData */
+      Object.assign(canvasData, {
+        ...data,
+        beads: data.beads || [],
+        updatedAt: Date.now()
+      })
     } catch (e) {
       console.error('解析画布数据失败:', e)
+    }
+  } else if (options.mode === 'blueprint') {
+    /** 从图片导入生成图纸 */
+    /** 通过共享模块读取数据（模块级变量，最可靠） */
+    try {
+      const data = consumeBlueprintData()
+      if (data) {
+        canvasData.width = data.width || 30
+        canvasData.height = data.height || 30
+        canvasData.backgroundColor = data.backgroundColor || '#FFFFFF'
+        canvasData.showGrid = data.showGrid !== undefined ? data.showGrid : true
+        canvasData.gridColor = data.gridColor || '#CCCCCC'
+        canvasData.createdAt = data.createdAt || Date.now()
+        canvasData.updatedAt = Date.now()
+        canvasData.beads = data.beads || []
+        /** 记录初始状态快照 */
+        initialBeadsSnapshot = JSON.stringify(canvasData.beads)
+        hasUnsavedChanges.value = false
+        console.log('[蓝图] 数据加载成功(共享模块), beads数量:', canvasData.beads.length, '尺寸:', canvasData.width, 'x', canvasData.height)
+      } else {
+        console.warn('[蓝图] 共享模块无数据，尝试 localStorage')
+        /** 降级：尝试 localStorage */
+        if (options.key) {
+          const rawData = uni.getStorageSync(options.key)
+          if (rawData) {
+            uni.removeStorageSync(options.key)
+            const data2 = JSON.parse(rawData)
+            canvasData.width = data2.width || 30
+            canvasData.height = data2.height || 30
+            canvasData.backgroundColor = data2.backgroundColor || '#FFFFFF'
+            canvasData.showGrid = data2.showGrid !== undefined ? data2.showGrid : true
+            canvasData.gridColor = data2.gridColor || '#CCCCCC'
+            canvasData.beads = data2.beads || []
+            canvasData.createdAt = data2.createdAt || Date.now()
+            canvasData.updatedAt = Date.now()
+            console.log('[蓝图] 数据加载成功(localStorage), beads数量:', canvasData.beads.length)
+          }
+        }
+      }
+    } catch (e) {
+      console.error('[蓝图] 数据加载失败:', e)
     }
   }
 
@@ -419,8 +536,17 @@ onMounted(() => {
     favoriteColors.value = savedFavorites
   }
 
-  /** 保存初始状态到历史 */
-  saveHistory()
+  /** 保存初始状态到历史（确保 beads 已初始化） */
+  nextTick(() => {
+    /** 编辑模式：历史记录应从加载的数据开始，而不是空状态 */
+    if (options.mode === 'edit' && options.projectId) {
+      /** 清空历史，以加载的项目状态作为初始历史 */
+      history.value = []
+      historyIndex.value = -1
+    }
+    saveHistory()
+    console.log('初始化完成，beads数量:', canvasData.beads.length)
+  })
 })
 
 // ==================== 项目加载 ====================
@@ -438,9 +564,27 @@ const loadProject = (projectId: string) => {
     editingProjectId.value = project.id
     editingProjectName.value = project.name
 
-    /** 深拷贝画布数据，避免引用污染 */
+    /** 深拷贝存储的项目数据 */
     const clonedData = JSON.parse(JSON.stringify(project.canvasData)) as CanvasData
-    Object.assign(canvasData, clonedData)
+    
+    /** 逐个属性赋值，确保响应式更新 */
+    canvasData.width = clonedData.width || 30
+    canvasData.height = clonedData.height || 30
+    canvasData.backgroundColor = clonedData.backgroundColor || '#FFFFFF'
+    canvasData.showGrid = clonedData.showGrid !== undefined ? clonedData.showGrid : true
+    canvasData.gridColor = clonedData.gridColor || '#CCCCCC'
+    canvasData.createdAt = clonedData.createdAt || Date.now()
+    canvasData.updatedAt = Date.now()
+    
+    /** 清空并重新填充 beads 数组 */
+    canvasData.beads.splice(0, canvasData.beads.length)
+    if (clonedData.beads && clonedData.beads.length > 0) {
+      canvasData.beads.push(...clonedData.beads)
+    }
+    
+    /** 记录初始状态快照，用于精确判断是否有修改 */
+    initialBeadsSnapshot = JSON.stringify(canvasData.beads)
+    hasUnsavedChanges.value = false
   } else {
     uni.showToast({ title: '项目不存在', icon: 'none' })
   }
@@ -557,6 +701,11 @@ const onTouchMove = (e: TouchEvent) => {
   /** 填充工具在 move 时不重复触发 */
   if (activeTool.value === 'fill') return
 
+  /** 时间节流：限制处理频率 */
+  const now = Date.now()
+  if (now - lastTouchTime < TOUCH_THROTTLE_MS) return
+  lastTouchTime = now
+
   /** 使用 requestAnimationFrame 节流 */
   if (rafId !== null) return
   rafId = requestAnimationFrame(() => {
@@ -623,13 +772,9 @@ const handleTouch = async (e: TouchEvent) => {
   const rect = await getContainerRect()
   if (!rect) return
 
-  /** 计算相对于画布的位置（考虑缩放和偏移） */
-  const relativeX = (touch.clientX - rect.left) / scale.value - offsetX.value
-  const relativeY = (touch.clientY - rect.top) / scale.value - offsetY.value
-
-  /** 计算格子坐标 */
-  const gridX = Math.floor(relativeX / cellSize)
-  const gridY = Math.floor(relativeY / cellSize)
+  /** 计算格子坐标（考虑缩放和偏移避免点击位置偏移） */
+  const gridX = Math.floor(((touch.clientX - rect.left) / scale.value - offsetX.value) / cellSize)
+  const gridY = Math.floor(((touch.clientY - rect.top) / scale.value - offsetY.value) / cellSize)
 
   /** 边界检查 */
   if (gridX < 0 || gridX >= canvasData.width || gridY < 0 || gridY >= canvasData.height) {
@@ -789,7 +934,9 @@ const saveHistory = () => {
 const undo = () => {
   if (historyIndex.value > 0) {
     historyIndex.value--
-    canvasData.beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
+    const beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
+    /** 使用 splice 替换 beads 数组，确保响应式 */
+    canvasData.beads.splice(0, canvasData.beads.length, ...beads)
   }
 }
 
@@ -799,7 +946,9 @@ const undo = () => {
 const redo = () => {
   if (historyIndex.value < history.value.length - 1) {
     historyIndex.value++
-    canvasData.beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
+    const beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
+    /** 使用 splice 替换 beads 数组，确保响应式 */
+    canvasData.beads.splice(0, canvasData.beads.length, ...beads)
   }
 }
 
@@ -815,7 +964,8 @@ const clearCanvas = () => {
     confirmColor: '#FF3B30',
     success: (res) => {
       if (res.confirm) {
-        canvasData.beads = []
+        /** 使用 splice 清空 beads 数组，确保响应式 */
+        canvasData.beads.splice(0, canvasData.beads.length)
         saveHistory()
       }
     },
@@ -860,10 +1010,15 @@ const toggleGrid = () => {
 
 /**
  * 返回上一页
- * - 如果画布有内容，提示用户确认
+ * - 如果画布有未保存的修改，提示用户确认
+ * - 无修改则直接返回
  */
 const goBack = () => {
-  if (canvasData.beads.length > 0) {
+  /** 精确判断是否有修改：比较当前 beads 与初始快照 */
+  const currentSnapshot = JSON.stringify(canvasData.beads)
+  const hasChanges = hasUnsavedChanges.value || currentSnapshot !== initialBeadsSnapshot
+  
+  if (hasChanges) {
     uni.showModal({
       title: '确认离开',
       content: '画布有未保存的内容，确定要离开吗？',
@@ -881,27 +1036,294 @@ const goBack = () => {
 
 /**
  * 保存画布到本地存储
- * - 编辑模式：更新已有项目数据
- * - 新建模式：创建新项目并添加到列表头部
+ * - 编辑模式和新建模式都显示保存弹窗，让用户选择"仅保存"或"保存并导出"
  */
 const saveCanvas = () => {
-  /** 编辑模式使用已有项目名称，新建模式弹出输入框 */
+  console.log('[保存] saveCanvas 被调用, isEditMode:', isEditMode.value)
   if (isEditMode.value) {
-    doSave(editingProjectName.value)
+    /** 编辑模式：预填充当前项目名称 */
+    saveName.value = editingProjectName.value
+    saveNamePlaceholder.value = editingProjectName.value
+  } else {
+    /** 新建模式：清空名称 */
+    saveName.value = ''
+    saveNamePlaceholder.value = '我的拼豆作品'
+  }
+  showSaveModal.value = true
+  console.log('[保存] showSaveModal 已设为 true')
+}
+
+const onSaveNameInput = () => {
+  // 输入后隐藏placeholder（通过CSS :not(:placeholder-shown)处理）
+}
+
+const confirmSave = () => {
+  console.log('[保存] confirmSave 被调用, saveName:', saveName.value)
+  const name = saveName.value.trim() || '未命名作品'
+  showSaveModal.value = false
+  doSave(name)
+}
+
+/**
+ * 保存并导出图纸
+ * - 先执行保存逻辑
+ * - 然后生成带水印的拼豆图纸图片并下载
+ */
+const confirmSaveAndExport = () => {
+  console.log('[保存] confirmSaveAndExport 被调用, saveName:', saveName.value)
+  const name = saveName.value.trim() || '未命名作品'
+  showSaveModal.value = false
+  doSave(name, true)
+}
+
+/**
+ * 导出拼豆图纸为图片（带用料清单和水印）
+ * - 上方：像素级拼豆图（圆形拼豆 + 中心孔 + 网格线）
+ * - 下方：用料清单（颜色色块 + 数量）+ 总数 + 域名水印
+ * @param projectName - 项目名称
+ */
+const exportBlueprintImage = (projectName: string) => {
+  console.log('[导出] 开始生成图纸, 尺寸:', canvasData.width, 'x', canvasData.height)
+  const w = canvasData.width
+  const h = canvasData.height
+  
+  /** 根据图纸尺寸动态计算每格像素 */
+  const cellPx = w <= 30 ? 28 : w <= 60 ? 20 : 16
+  const padding = 30
+  const headerH = 60
+  const fontSize = Math.max(7, Math.floor(cellPx * 0.45))
+
+  /** 统计每种颜色的使用数量，并获取真实 MARD 色号 */
+  const colorCount: Record<string, number> = {}
+  const colorCodeMap: Record<string, string> = {}
+  const beads = canvasData.beads
+  beads.forEach((b: Bead) => {
+    if (b.color) {
+      colorCount[b.color] = (colorCount[b.color] || 0) + 1
+      if (!(b.color in colorCodeMap)) {
+        const mardCode = getMardCodeByHex(b.color)
+        colorCodeMap[b.color] = mardCode || b.color.slice(1, 4).toUpperCase()
+      }
+    }
+  })
+  const colorList = Object.entries(colorCount).sort((a, b) => b[1] - a[1])
+  const totalBeads = beads.length
+  const uniqueColors = colorList.length
+
+  /** 用料清单布局 */
+  const swatchSize = 36
+  const swatchGap = 12
+  const textWidth = 60
+  const itemWidth = swatchSize + swatchGap + textWidth
+  const swatchCols = Math.max(4, Math.min(Math.floor((w * cellPx + padding * 2 - 40) / itemWidth), 8))
+  const materialRows = Math.ceil(colorList.length / swatchCols)
+  const materialHeaderH = 40
+  const materialH = materialHeaderH + materialRows * (swatchSize + 8) + 20
+  const footerH = 50
+
+  const canvasW = w * cellPx + padding * 2
+  const canvasH = headerH + h * cellPx + padding * 2 + materialH + footerH
+
+  // #ifdef H5
+  const canvas = document.createElement('canvas')
+  canvas.width = canvasW
+  canvas.height = canvasH
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    uni.showToast({ title: '导出失败', icon: 'none' })
     return
   }
 
-  uni.showModal({
-    title: '保存画布',
-    content: '请输入画布名称',
-    editable: true,
-    placeholderText: '我的拼豆作品',
-    success: (res) => {
-      if (res.confirm && res.content) {
-        doSave(res.content || '未命名作品')
-      }
-    },
+  /** 白色背景 */
+  ctx.fillStyle = '#FFFFFF'
+  ctx.fillRect(0, 0, canvasW, canvasH)
+
+  /** ========== 1. 标题区域 ========== */
+  ctx.fillStyle = '#FAFAFA'
+  ctx.fillRect(0, 0, canvasW, headerH)
+  /** 分隔线 */
+  ctx.strokeStyle = '#E8E8E8'
+  ctx.lineWidth = 1
+  ctx.beginPath()
+  ctx.moveTo(0, headerH - 0.5)
+  ctx.lineTo(canvasW, headerH - 0.5)
+  ctx.stroke()
+  
+  /** 项目名称 */
+  ctx.fillStyle = '#1A1A1A'
+  ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(projectName, padding, headerH / 2 - 8)
+  
+  /** 尺寸和统计信息 */
+  ctx.fillStyle = '#888888'
+  ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  ctx.fillText(`${w} × ${h}  ·  ${totalBeads.toLocaleString()}颗  ·  ${uniqueColors}色`, padding, headerH / 2 + 12)
+
+  /** ========== 2. 拼豆图纸 ========== */
+  const gridOffsetY = headerH + padding
+  const beadMap: Record<string, string> = {}
+  beads.forEach((b: Bead) => {
+    beadMap[`${b.x},${b.y}`] = b.color
   })
+
+  /** 先绘制背景网格线 */
+  ctx.strokeStyle = '#E0E0E0'
+  ctx.lineWidth = 0.5
+  for (let x = 0; x <= w; x++) {
+    ctx.beginPath()
+    ctx.moveTo(padding + x * cellPx, gridOffsetY)
+    ctx.lineTo(padding + x * cellPx, gridOffsetY + h * cellPx)
+    ctx.stroke()
+  }
+  for (let y = 0; y <= h; y++) {
+    ctx.beginPath()
+    ctx.moveTo(padding, gridOffsetY + y * cellPx)
+    ctx.lineTo(padding + w * cellPx, gridOffsetY + y * cellPx)
+    ctx.stroke()
+  }
+
+  /** 绘制每个拼豆（圆形 + 中心孔） */
+  const beadRadius = cellPx * 0.42
+  const holeRadius = cellPx * 0.12
+  
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const color = beadMap[`${x},${y}`]
+      if (!color) continue
+      
+      const cx = padding + x * cellPx + cellPx / 2
+      const cy = gridOffsetY + y * cellPx + cellPx / 2
+      const mardCode = colorCodeMap[color]
+
+      /** 拼豆主体（圆形） */
+      ctx.fillStyle = color
+      ctx.beginPath()
+      ctx.arc(cx, cy, beadRadius, 0, Math.PI * 2)
+      ctx.fill()
+      
+      /** 拼豆边缘阴影效果 */
+      ctx.strokeStyle = 'rgba(0,0,0,0.15)'
+      ctx.lineWidth = 1
+      ctx.stroke()
+      
+      /** 中心孔 */
+      ctx.fillStyle = '#FFFFFF'
+      ctx.beginPath()
+      ctx.arc(cx, cy, holeRadius, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.strokeStyle = 'rgba(0,0,0,0.1)'
+      ctx.lineWidth = 0.5
+      ctx.stroke()
+
+      /** 色号编号 */
+      if (mardCode && cellPx >= 14) {
+        const r = parseInt(color.slice(1, 3), 16)
+        const g = parseInt(color.slice(3, 5), 16)
+        const b = parseInt(color.slice(5, 7), 16)
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
+        ctx.fillStyle = luminance > 0.5 ? '#333333' : '#FFFFFF'
+        ctx.font = `bold ${fontSize}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(mardCode, cx, cy)
+      }
+    }
+  }
+
+  /** ========== 3. 用料清单 ========== */
+  const materialY = gridOffsetY + h * cellPx + padding
+
+  /** 标题行背景 */
+  ctx.fillStyle = '#FAFAFA'
+  ctx.fillRect(0, materialY, canvasW, materialHeaderH)
+  ctx.strokeStyle = '#E8E8E8'
+  ctx.beginPath()
+  ctx.moveTo(0, materialY + materialHeaderH - 0.5)
+  ctx.lineTo(canvasW, materialY + materialHeaderH - 0.5)
+  ctx.stroke()
+  
+  /** 标题文字 */
+  ctx.fillStyle = '#1A1A1A'
+  ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('用料清单', padding, materialY + materialHeaderH / 2)
+  
+  ctx.fillStyle = '#888888'
+  ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  ctx.textAlign = 'right'
+  ctx.fillText(`共 ${totalBeads.toLocaleString()} 颗`, canvasW - padding, materialY + materialHeaderH / 2)
+
+  /** 色块列表 */
+  const listStartY = materialY + materialHeaderH + 12
+  const listPadding = (canvasW - padding * 2 - swatchCols * itemWidth + swatchGap) / 2
+  
+  colorList.forEach(([color, count], index) => {
+    const col = index % swatchCols
+    const row = Math.floor(index / swatchCols)
+    const sx = padding + listPadding + col * itemWidth
+    const sy = listStartY + row * (swatchSize + 8)
+    const mardCode = colorCodeMap[color] || ''
+
+    /** 色块（圆形拼豆样式） */
+    ctx.fillStyle = color
+    ctx.beginPath()
+    ctx.arc(sx + swatchSize / 2, sy + swatchSize / 2, swatchSize / 2 - 2, 0, Math.PI * 2)
+    ctx.fill()
+    
+    /** 中心孔 */
+    ctx.fillStyle = '#FFFFFF'
+    ctx.beginPath()
+    ctx.arc(sx + swatchSize / 2, sy + swatchSize / 2, swatchSize * 0.15, 0, Math.PI * 2)
+    ctx.fill()
+
+    /** 色号 + 数量 */
+    ctx.fillStyle = '#333333'
+    ctx.font = 'bold 12px sans-serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(mardCode, sx + swatchSize + swatchGap, sy + swatchSize / 2 - 6)
+    
+    ctx.fillStyle = '#888888'
+    ctx.font = '11px sans-serif'
+    ctx.fillText(`×${count}`, sx + swatchSize + swatchGap, sy + swatchSize / 2 + 8)
+  })
+
+  /** ========== 4. 底部水印 ========== */
+  ctx.fillStyle = '#FAFAFA'
+  ctx.fillRect(0, canvasH - footerH, canvasW, footerH)
+  ctx.strokeStyle = '#E8E8E8'
+  ctx.beginPath()
+  ctx.moveTo(0, canvasH - footerH + 0.5)
+  ctx.lineTo(canvasW, canvasH - footerH + 0.5)
+  ctx.stroke()
+  
+  ctx.fillStyle = '#BBBBBB'
+  ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('pindou.picsync.cn', canvasW / 2, canvasH - footerH / 2)
+
+  /** 下载图片 */
+  try {
+    const dataUrl = canvas.toDataURL('image/png')
+    const link = document.createElement('a')
+    link.download = `${projectName}_拼豆图纸.png`
+    link.href = dataUrl
+    link.click()
+    console.log('[导出] 图片下载成功')
+    uni.showToast({ title: '导出成功', icon: 'success' })
+  } catch (e) {
+    console.error('[导出] 下载失败:', e)
+    uni.showToast({ title: '导出失败', icon: 'none' })
+  }
+  // #endif
+
+  // #ifndef H5
+  uni.showToast({ title: '导出功能仅支持H5端', icon: 'none' })
+  // #endif
 }
 
 /**
@@ -910,46 +1332,111 @@ const saveCanvas = () => {
  * - 编辑模式更新已有项目，新建模式插入到列表头部
  * @param projectName - 项目名称
  */
-const doSave = (projectName: string) => {
-  /** 深拷贝画布数据，确保 beads 数组是独立副本 */
-  const clonedCanvasData = JSON.parse(JSON.stringify(canvasData)) as CanvasData
-  clonedCanvasData.updatedAt = Date.now()
+const doSave = (projectName: string, exportAfterSave = false) => {
+  console.log('[保存] doSave 开始, projectName:', projectName, 'beads数量:', canvasData.beads.length, '导出:', exportAfterSave)
 
-  const projects: ProjectData[] = uni.getStorageSync('pin_projects') || []
+  try {
+    /** 步骤1：生成缩略图 */
+    let thumbnail = ''
+    try {
+      const beads = canvasData.beads
+      if (beads.length > 0) {
+        const w = canvasData.width
+        const h = canvasData.height
+        const bg = canvasData.backgroundColor || '#FFFFFF'
+        const colorMap: Record<string, {x: number, y: number}[]> = {}
+        beads.forEach((b: Bead) => {
+          if (!colorMap[b.color]) colorMap[b.color] = []
+          colorMap[b.color].push({ x: b.x, y: b.y })
+        })
+        let rects = ''
+        Object.entries(colorMap).forEach(([color, positions]) => {
+          positions.forEach(p => {
+            rects += `<rect x="${p.x}" y="${p.y}" width="1" height="1" fill="${color}"/>`
+          })
+        })
+        const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${bg}"/>${rects}</svg>`
+        thumbnail = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgStr)))}`
+        console.log('[保存] 缩略图生成成功, SVG长度:', svgStr.length)
+      }
+    } catch (e) {
+      console.warn('[保存] 缩略图生成失败(不影响保存):', e)
+    }
 
-  if (isEditMode.value && editingProjectId.value) {
-    /** 编辑模式：找到并更新已有项目 */
-    const index = projects.findIndex((p) => p.id === editingProjectId.value)
-    if (index >= 0) {
-      projects[index].name = projectName
-      projects[index].canvasData = clonedCanvasData
-      projects[index].updatedAt = Date.now()
+    /** 步骤2：深拷贝画布数据 */
+    console.log('[保存] 开始深拷贝画布数据...')
+    const clonedCanvasData = JSON.parse(JSON.stringify(toRaw(canvasData))) as CanvasData
+    clonedCanvasData.updatedAt = Date.now()
+    console.log('[保存] 深拷贝完成, beads数量:', clonedCanvasData.beads.length)
+
+    /** 步骤3：读取已有项目列表 */
+    const projects: ProjectData[] = uni.getStorageSync('pin_projects') || []
+    console.log('[保存] 已有项目数量:', projects.length)
+
+    /** 步骤4：更新或创建项目 */
+    if (isEditMode.value && editingProjectId.value) {
+      const index = projects.findIndex((p) => p.id === editingProjectId.value)
+      if (index >= 0) {
+        projects[index].name = projectName
+        projects[index].canvasData = clonedCanvasData
+        projects[index].updatedAt = Date.now()
+        projects[index].thumbnail = thumbnail
+      }
+    } else {
+      const projectData: ProjectData = {
+        id: 'project_' + Date.now(),
+        name: projectName,
+        canvasData: clonedCanvasData,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        thumbnail: thumbnail,
+      }
+      projects.unshift(projectData)
     }
-  } else {
-    /** 新建模式：创建新项目 */
-    const projectData: ProjectData = {
-      id: 'project_' + Date.now(),
-      name: projectName,
-      canvasData: clonedCanvasData,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      thumbnail: '',
+
+    /** 步骤5：写入 localStorage */
+    console.log('[保存] 准备写入 localStorage...')
+    uni.setStorageSync('pin_projects', projects)
+    console.log('[保存] localStorage 写入成功')
+    /** 重置修改标记和快照 */
+    hasUnsavedChanges.value = false
+    initialBeadsSnapshot = JSON.stringify(canvasData.beads)
+    uni.showToast({ title: '保存成功', icon: 'success' })
+
+    /** 步骤6：跳转（导出在 try-catch 外部处理，避免导出异常影响保存） */
+    const navigateToProject = () => {
+      setTimeout(() => {
+        uni.switchTab({
+          url: '/pages/project/index',
+          success: () => { uni.$emit('projectSaved') },
+          fail: () => {
+            uni.reLaunch({
+              url: '/pages/project/index',
+              success: () => { uni.$emit('projectSaved') },
+            })
+          }
+        })
+      }, 800)
     }
-    projects.unshift(projectData)
+
+    if (exportAfterSave) {
+      /** 保存并导出：先导出图片，再跳转 */
+      setTimeout(() => {
+        try {
+          exportBlueprintImage(projectName)
+        } catch (e) {
+          console.error('[导出] 导出失败:', e)
+          uni.showToast({ title: '导出失败，但已保存', icon: 'none' })
+        }
+        navigateToProject()
+      }, 300)
+    } else {
+      navigateToProject()
+    }
+  } catch (e) {
+    console.error('[保存] doSave 发生异常:', e)
+    uni.showToast({ title: '保存失败，请重试', icon: 'none' })
   }
-
-  uni.setStorageSync('pin_projects', projects)
-  uni.showToast({ title: '保存成功', icon: 'success' })
-
-  /** 延迟返回项目列表并刷新 */
-  setTimeout(() => {
-    uni.switchTab({
-      url: '/pages/project/index',
-      success: () => {
-        uni.$emit('projectSaved')
-      },
-    })
-  }, 1000)
 }
 </script>
 
@@ -967,29 +1454,39 @@ const doSave = (projectName: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: calc(88rpx + var(--status-bar-height));
+  height: calc(88rpx + var(--status-bar-height, 44px));
   padding: 0 24rpx;
-  padding-top: var(--status-bar-height);
+  padding-top: calc(var(--status-bar-height, 44px) + 8px);
+  padding-bottom: 8px;
   background-color: #FFFFFF;
   border-bottom: 2rpx solid #E8E8E8;
+  position: relative;
+  z-index: 100;
   flex-shrink: 0;
 }
 
 .nav-left, .nav-right {
   width: 120rpx;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
 }
+.nav-left { justify-content: flex-start; }
+.nav-right { justify-content: flex-end; }
 
-/* 导航按钮 - 增加 padding 扩大热区 */
-.nav-btn {
-  font-size: 28rpx;
+.nav-btn-text {
+  font-size: 30rpx;
   color: #666666;
-  padding: 16rpx 12rpx;
+  padding: 20rpx 24rpx;
+  line-height: 1;
 }
 
-.nav-btn.primary {
+.nav-btn-text.primary {
   color: #007AFF;
   font-weight: 600;
-  text-align: right;
+  background: #F0F7FF;
+  border-radius: 16rpx;
 }
 
 .nav-title {
@@ -1003,6 +1500,7 @@ const doSave = (projectName: string) => {
   display: flex;
   align-items: center;
   padding: 16rpx 24rpx;
+  flex-shrink: 0;
   background-color: #FFFFFF;
   border-bottom: 2rpx solid #E8E8E8;
   flex-shrink: 0;
@@ -1058,8 +1556,8 @@ const doSave = (projectName: string) => {
   text-align: center;
 }
 
-/* 画布容器 */
-.canvas-container {
+/* 画布区域 */
+.canvas-area {
   flex: 1;
   overflow: hidden;
   display: flex;
@@ -1068,12 +1566,63 @@ const doSave = (projectName: string) => {
   position: relative;
 }
 
-.canvas-wrapper {
-  position: relative;
+.canvas-transform-wrapper {
   transform-origin: center center;
 }
 
-/* 网格层 */
+/* 列标注（顶部数字） */
+.col-labels {
+  display: flex;
+  box-sizing: border-box;
+}
+
+.col-label {
+  font-size: 10px;
+  color: #999;
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 20px;
+}
+
+/* 行标注和画布容器 */
+.canvas-with-row-labels {
+  display: flex;
+}
+
+/* 行标注（左侧数字） */
+.row-labels {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.row-label {
+  font-size: 10px;
+  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 4px;
+  flex-shrink: 0;
+}
+
+/* 画布容器 */
+.canvas-container {
+  position: relative;
+  overflow: visible;
+}
+
+/* 网格层（优化版：使用 CSS 渐变，无 DOM 元素） */
+.grid-layer-optimized {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* 旧网格层（已废弃，保留样式以防回退） */
 .grid-layer {
   position: absolute;
   top: 0;
@@ -1092,6 +1641,8 @@ const doSave = (projectName: string) => {
   position: absolute;
   top: 0;
   left: 0;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .bead {
@@ -1099,7 +1650,8 @@ const doSave = (projectName: string) => {
   border-radius: 4rpx;
   box-shadow: inset 0 -4rpx 0 rgba(0, 0, 0, 0.2),
               inset 0 4rpx 0 rgba(255, 255, 255, 0.3);
-  transition: transform 0.1s;
+  will-change: transform;
+  transform: translateZ(0);
 }
 
 .bead:active {
@@ -1301,5 +1853,99 @@ const doSave = (projectName: string) => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* 保存弹窗 */
+.save-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.save-modal {
+  width: 300px;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.save-modal-header {
+  padding: 20px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.save-modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #2D2D2D;
+}
+
+.save-modal-close {
+  font-size: 20px;
+  color: #999999;
+  padding: 4px;
+}
+
+.save-modal-body {
+  padding: 0 20px 20px;
+}
+
+.save-name-input {
+  width: 100%;
+  height: 44px;
+  background-color: #F5F5F5;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 15px;
+  color: #2D2D2D;
+  box-sizing: border-box;
+}
+
+.save-placeholder {
+  color: #CCCCCC;
+}
+
+.save-modal-footer {
+  display: flex;
+  border-top: 1px solid #F0F0F0;
+}
+
+.save-cancel-btn {
+  flex: 1;
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  color: #666666;
+  border-right: 1px solid #F0F0F0;
+}
+
+.save-only-btn {
+  flex: 1;
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  color: #007AFF;
+  font-weight: 600;
+  border-right: 1px solid #F0F0F0;
+}
+
+.save-export-btn {
+  flex: 1.2;
+  text-align: center;
+  padding: 14px;
+  font-size: 16px;
+  color: #FFFFFF;
+  font-weight: 600;
+  background: linear-gradient(135deg, #007AFF, #0056CC);
+  border-radius: 0 0 12px 0;
 }
 </style>

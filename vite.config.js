@@ -1,18 +1,31 @@
 import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
+import { writeFileSync, mkdirSync, existsSync } from 'fs'
+import { join } from 'path'
+
 // https://vitejs.dev/config/
 export default defineConfig({
   base: '/',
   plugins: [
     uni(),
+    /** 构建完成后自动写入 CNAME 文件到输出目录 */
+    {
+      name: 'add-cname',
+      closeBundle: () => {
+        const cnamePath = join(__dirname, 'dist', 'build', 'h5', 'CNAME')
+        const dir = join(__dirname, 'dist', 'build', 'h5')
+        if (!existsSync(dir)) {
+          mkdirSync(dir, { recursive: true })
+        }
+        writeFileSync(cnamePath, 'pindou.picsync.cn\n')
+        console.log('✅ CNAME file written to dist/build/h5/CNAME')
+      },
+    },
   ],
   build: {
-    // 禁用代码分割，避免懒加载问题
     rollupOptions: {
       output: {
-        // 避免生成以下划线开头的文件名（GitHub Pages 可能特殊处理）
         chunkFileNames: (chunkInfo) => {
-          // 将 _plugin-vue_export-helper 改为 plugin-vue-export-helper
           const name = chunkInfo.name || 'chunk'
           if (name.startsWith('_')) {
             return `assets/${name.slice(1)}-[hash].js`
@@ -20,7 +33,6 @@ export default defineConfig({
           return `assets/${name}-[hash].js`
         },
         entryFileNames: 'assets/[name]-[hash].js',
-        // 禁用动态导入，将所有代码打包到一个文件
         inlineDynamicImports: true,
       },
     },

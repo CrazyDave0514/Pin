@@ -23,7 +23,6 @@
               :src="formData.avatar || '/static/default-avatar.png'"
               mode="aspectFill"
             />
-            <text class="form-arrow">→</text>
           </view>
         </view>
       </view>
@@ -84,30 +83,18 @@
         </view>
 
         <!-- 出生日期 -->
-        <view class="form-item" @click="showBirthdayPicker">
+        <view class="form-item">
           <text class="form-label">出生日期</text>
-          <view class="form-value-wrapper">
-            <text class="form-value" :class="{ placeholder: !formData.birthday }">
-              {{ formData.birthday || '请选择出生日期' }}
-            </text>
-            <text class="form-arrow">→</text>
-          </view>
+          <picker mode="date" :value="formData.birthday" :start="'1900-01-01'" :end="today" @change="onBirthdayChange">
+            <view class="form-value-wrapper">
+              <text class="form-value" :class="{ placeholder: !formData.birthday }">
+                {{ formData.birthday || '请选择出生日期' }}
+              </text>
+            </view>
+          </picker>
         </view>
       </view>
     </scroll-view>
-
-    <!-- 日期选择器（隐藏） -->
-    <picker
-      v-if="showPicker"
-      mode="date"
-      :value="formData.birthday"
-      :start="'1900-01-01'"
-      :end="today"
-      @change="onBirthdayChange"
-      @cancel="showPicker = false"
-    >
-      <view />
-    </picker>
 
     <!-- 保存按钮 -->
     <view class="save-section">
@@ -119,7 +106,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { onShow } from '@dcloudio/uni-app'
 
 /** 表单数据 */
 const formData = reactive({
@@ -131,9 +119,6 @@ const formData = reactive({
 
 /** 状态栏高度 */
 const statusBarHeight = ref(44)
-
-/** 日期选择器显示状态 */
-const showPicker = ref(false)
 
 /** 今日日期字符串 */
 const today = new Date().toISOString().split('T')[0]
@@ -148,9 +133,29 @@ onMounted(() => {
   const sysInfo = uni.getSystemInfoSync()
   statusBarHeight.value = sysInfo.statusBarHeight || 44
 
-  /** 加载用户数据 */
+  /** 监听头像更新事件 */
+  uni.$on('avatarUpdated', handleAvatarUpdate)
+})
+
+onUnmounted(() => {
+  /** 移除事件监听 */
+  uni.$off('avatarUpdated', handleAvatarUpdate)
+})
+
+/** 页面显示时刷新数据 */
+onShow(() => {
   loadUserData()
 })
+
+/**
+ * 处理头像更新事件
+ * @param data - 头像数据
+ */
+const handleAvatarUpdate = (data: { avatar: string }) => {
+  if (data && data.avatar) {
+    formData.avatar = data.avatar
+  }
+}
 
 /**
  * 加载用户数据到表单
@@ -178,15 +183,16 @@ const changeAvatar = () => {
           formData.avatar = data.avatar
         }
       }
+    },
+    success: () => {
+      console.log('跳转成功')
+    },
+    fail: (err) => {
+      console.error('跳转失败:', err)
+      /** 降级：提示用户 */
+      uni.showToast({ title: '头像功能暂不可用', icon: 'none' })
     }
   })
-}
-
-/**
- * 显示日期选择器
- */
-const showBirthdayPicker = () => {
-  showPicker.value = true
 }
 
 /**
@@ -195,7 +201,6 @@ const showBirthdayPicker = () => {
  */
 const onBirthdayChange = (e: any) => {
   formData.birthday = e.detail.value
-  showPicker.value = false
 }
 
 /**

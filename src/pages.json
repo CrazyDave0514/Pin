@@ -85,6 +85,13 @@
         "navigationBarTitleText": "编辑资料",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/mine/avatar-crop",
+      "style": {
+        "navigationBarTitleText": "更换头像",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

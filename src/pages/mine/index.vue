@@ -123,7 +123,6 @@ const rotation = ref(0)
 const functionList = [
   { icon: '💰', name: '积分中心', path: '/pages/points/index' },
   { icon: '🫘', name: '豆仓管理', path: '/pages/bead-inventory/index' },
-  { icon: '✏️', name: '编辑资料', path: '/pages/profile/edit' },
   { icon: '📞', name: '联系作者', path: '/pages/contact/index' },
   { icon: '⚙️', name: '更多设置', path: '/pages/settings/index' },
 ]

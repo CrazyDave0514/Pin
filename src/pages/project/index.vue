@@ -49,7 +49,7 @@
         <!-- 项目信息 -->
         <view class="info">
           <text class="project-name">{{ project.name }}</text>
-          <text class="project-size">{{ project.canvas?.width || 0 }}×{{ project.canvas?.height || 0 }}</text>
+          <text class="project-size">{{ project.canvasData?.width || 0 }}×{{ project.canvasData?.height || 0 }}</text>
           <text class="project-time">{{ formatTime(project.updatedAt) }}</text>
         </view>
 
@@ -77,6 +77,7 @@
     <view class="select-action-bar" v-if="isSelectMode && selectedProjects.length > 0">
       <text class="selected-count">已选择 {{ selectedProjects.length }} 个</text>
       <view class="select-actions">
+        <text class="select-action" @click="copySelected">复制</text>
         <text class="select-action" @click="moveSelected">移动</text>
         <text class="select-action delete" @click="deleteSelected">删除</text>
         <text class="select-action" @click="selectAll">{{ isAllSelected ? '取消全选' : '全选' }}</text>
@@ -145,6 +146,9 @@
     <!-- 项目操作菜单 -->
     <view class="modal-overlay" v-if="showMenu" @click="closeMenu">
       <view class="action-sheet" @click.stop>
+        <view class="action-item" @click="renameProject">
+          <text>重命名</text>
+        </view>
         <view class="action-item" @click="moveProject">
           <text>移动</text>
         </view>
@@ -288,7 +292,7 @@ const handleProjectClick = (project: any) => {
   } else {
     // 跳转到画布编辑
     uni.navigateTo({
-      url: `/pages/canvas-editor/index?projectId=${project.id}`
+      url: `/pages/canvas-editor/index?mode=edit&projectId=${project.id}`
     })
   }
 }
@@ -303,6 +307,30 @@ const showProjectMenu = (project: any) => {
 const closeMenu = () => {
   showMenu.value = false
   currentProject.value = null
+}
+
+// 重命名项目
+const renameProject = () => {
+  const project = currentProject.value
+  closeMenu()
+  if (!project) return
+  uni.showModal({
+    title: '重命名',
+    editable: true,
+    placeholderText: project.name,
+    success: (res) => {
+      if (res.confirm && res.content) {
+        const data: any[] = uni.getStorageSync('pin_projects') || []
+        const index = data.findIndex((p: any) => p.id === project.id)
+        if (index > -1) {
+          data[index].name = res.content
+          uni.setStorageSync('pin_projects', data)
+          loadProjects()
+          uni.showToast({ title: '重命名成功', icon: 'success' })
+        }
+      }
+    }
+  })
 }
 
 // 创建画布
@@ -408,6 +436,28 @@ const moveSelected = () => {
   folderPickerTitle.value = '移动到'
   folderPickerAction.value = 'move'
   showFolderPicker.value = true
+}
+
+// 复制选中的项目
+const copySelected = () => {
+  const data: any[] = uni.getStorageSync('pin_projects') || []
+  selectedProjects.value.forEach(id => {
+    const project = data.find((p: any) => p.id === id)
+    if (project) {
+      const newProject = {
+        ...JSON.parse(JSON.stringify(project)),
+        id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        name: project.name + ' (副本)',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      }
+      data.push(newProject)
+    }
+  })
+  uni.setStorageSync('pin_projects', data)
+  loadProjects()
+  toggleSelectMode()
+  uni.showToast({ title: '复制成功', icon: 'success' })
 }
 
 // 删除选中的项目
