@@ -145,6 +145,65 @@ page {
 .uni-page-head-btn {
   color: var(--color-text-primary) !important;
 }
+
+/* ==================== PC 端深色主题适配 ==================== */
+@media (min-width: 768px) and (prefers-color-scheme: dark) {
+  page {
+    /* 文字色 - 深色主题 */
+    --color-text-primary: #E8E8E8;
+    --color-text-secondary: #A0A0A0;
+    --color-text-tertiary: #707070;
+    --color-text-disabled: #555555;
+    --color-text-inverse: #1A1A1A;
+
+    /* 背景色 - 深色主题 */
+    --color-bg-page: #0D0D0D;
+    --color-bg-panel: #1A1A1A;
+    --color-bg-elevated: #242424;
+    --color-bg-hover: #2A2A2A;
+    --color-bg-active: #333333;
+    --color-bg-mask: rgba(0, 0, 0, 0.7);
+
+    /* 边框色 - 深色主题 */
+    --color-border: #333333;
+    --color-border-light: #2A2A2A;
+    --color-divider: #333333;
+
+    /* 阴影 - 深色主题 */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.5);
+    --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.6);
+  }
+
+  /* 导航栏深色适配 */
+  .uni-page-head {
+    background-color: #1A1A1A !important;
+    border-bottom: 1px solid #333333 !important;
+  }
+
+  .uni-page-head__title {
+    color: #E8E8E8 !important;
+  }
+
+  .uni-page-head-btn {
+    color: #E8E8E8 !important;
+  }
+
+  /* TabBar 深色适配 */
+  .uni-tabbar {
+    background-color: #1A1A1A !important;
+    border-top: 1px solid #333333 !important;
+  }
+
+  .uni-tabbar__label {
+    color: #707070 !important;
+  }
+
+  .uni-tabbar__item--active .uni-tabbar__label {
+    color: #F5A623 !important;
+  }
+}
 /* #endif */
 
 /* ==================== 安全区域 ==================== */

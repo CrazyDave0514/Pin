@@ -386,7 +386,7 @@ const handleFunctionClick = (path: string) => {
 }
 
 .gender-icon.gender-female {
-  color: #FF6B9D;
+  color: var(--color-female);
 }
 
 .gender-icon.gender-secret {
@@ -574,10 +574,11 @@ const handleFunctionClick = (path: string) => {
   font-weight: 600;
 }
 
+/** 裁剪容器 - 使用 CSS 变量适配深色主题 */
 .crop-container {
   position: relative;
   height: 600rpx;
-  background-color: #000000;
+  background-color: var(--color-bg-crop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -599,7 +600,7 @@ const handleFunctionClick = (path: string) => {
 
 .crop-mask {
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-bg-mask);
 }
 
 .crop-mask.top {

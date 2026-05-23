@@ -547,8 +547,9 @@ onMounted(() => {
   box-shadow: var(--shadow-sm);
 }
 
+/* 已拥有颜色卡片样式 - 使用半透明成功色背景 */
 .color-card.owned {
-  background: #F0FFF0;
+  background: rgba(var(--color-success-rgb), 0.1);
   border: 1rpx solid var(--color-success);
 }
 

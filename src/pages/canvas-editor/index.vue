@@ -2033,16 +2033,24 @@ const exportBlueprintImage = (projectName: string) => {
 </script>
 
 <style scoped>
-/* ==================== 页面整体布局 ==================== */
+/* ==================== 页面整体布局 ====================
+ * 使用 CSS 变量实现深色主题支持
+ * 背景色：var(--color-bg-page) - 页面主背景
+ */
 .canvas-editor-page {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   overflow: hidden;
 }
 
-/* ==================== 顶部导航 ==================== */
+/* ==================== 顶部导航 ====================
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ * 主文字：var(--color-text-primary) - 标题等重要文字
+ * 次文字：var(--color-text-tertiary) - 辅助文字
+ */
 .editor-nav {
   display: flex;
   align-items: center;
@@ -2051,8 +2059,8 @@ const exportBlueprintImage = (projectName: string) => {
   padding: 0 24rpx;
   padding-top: calc(var(--status-bar-height, 44px) + 8px);
   padding-bottom: 8px;
-  background-color: #FFFFFF;
-  border-bottom: 2rpx solid #E8E8E8;
+  background-color: var(--color-bg-panel, #FFFFFF);
+  border-bottom: 2rpx solid var(--color-border, #E8E8E8);
   position: relative;
   z-index: 100;
   flex-shrink: 0;
@@ -2068,14 +2076,14 @@ const exportBlueprintImage = (projectName: string) => {
 
 .nav-back-icon {
   font-size: 40rpx;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   padding: 8rpx;
 }
 
 .nav-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
 }
 
 .nav-right {
@@ -2087,7 +2095,7 @@ const exportBlueprintImage = (projectName: string) => {
 .nav-btn {
   padding: 8rpx 20rpx;
   border-radius: 12rpx;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -2100,7 +2108,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .nav-btn-text {
   font-size: 26rpx;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   font-weight: 500;
 }
 
@@ -2116,11 +2124,16 @@ const exportBlueprintImage = (projectName: string) => {
   min-height: 0;
 }
 
-/* ==================== 侧边工具栏 ==================== */
+/* ==================== 侧边工具栏 ====================
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ * 悬停色：var(--color-bg-hover) - 悬停状态
+ * 激活色：var(--color-primary-light) - 选中状态背景
+ */
 .sidebar-tools {
   width: 56px;
-  background-color: #FFFFFF;
-  border-right: 1px solid #E8E8E8;
+  background-color: var(--color-bg-panel, #FFFFFF);
+  border-right: 1px solid var(--color-border, #E8E8E8);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2142,8 +2155,12 @@ const exportBlueprintImage = (projectName: string) => {
   transition: background-color 0.15s;
 }
 
+.sidebar-tool-item:hover {
+  background-color: var(--color-bg-hover, #F5F5F5);
+}
+
 .sidebar-tool-item.active {
-  background-color: #F5A623;
+  background-color: var(--color-primary-light, #FFF5E0);
 }
 
 .sidebar-tool-item.active .sidebar-tool-icon {
@@ -2163,7 +2180,7 @@ const exportBlueprintImage = (projectName: string) => {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  border: 1.5px solid #FFFFFF;
+  border: 1.5px solid var(--color-bg-panel, #FFFFFF);
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
 }
 
@@ -2181,7 +2198,9 @@ const exportBlueprintImage = (projectName: string) => {
   transform-origin: center center;
 }
 
-/* 列标注（顶部数字） */
+/* 列标注（顶部数字）
+ * 文字色：var(--color-text-tertiary) - 辅助文字
+ */
 .col-labels {
   display: flex;
   box-sizing: border-box;
@@ -2189,7 +2208,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .col-label {
   font-size: 10px;
-  color: #999;
+  color: var(--color-text-tertiary, #999999);
   text-align: center;
   flex-shrink: 0;
   line-height: 20px;
@@ -2200,7 +2219,9 @@ const exportBlueprintImage = (projectName: string) => {
   display: flex;
 }
 
-/* 行标注（左侧数字） */
+/* 行标注（左侧数字）
+ * 文字色：var(--color-text-tertiary) - 辅助文字
+ */
 .row-labels {
   display: flex;
   flex-direction: column;
@@ -2209,7 +2230,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .row-label {
   font-size: 10px;
-  color: #999;
+  color: var(--color-text-tertiary, #999999);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2217,7 +2238,7 @@ const exportBlueprintImage = (projectName: string) => {
   flex-shrink: 0;
 }
 
-/* 画布容器 */
+/* 画布容器 - 背景色使用用户数据，不受主题影响 */
 .canvas-container {
   position: relative;
   overflow: visible;
@@ -2269,7 +2290,7 @@ const exportBlueprintImage = (projectName: string) => {
   overflow: hidden;
 }
 
-/* 圆豆中心白色圆孔 */
+/* 圆豆中心白色圆孔 - 固定白色，不受主题影响 */
 .bead-hole {
   width: 30%;
   height: 30%;
@@ -2289,10 +2310,10 @@ const exportBlueprintImage = (projectName: string) => {
   z-index: 1;
 }
 
-/* 选中高亮框 */
+/* 选中高亮框 - 使用主题主色 */
 .selected-cell-highlight {
   position: absolute;
-  border: 2px solid #F5A623;
+  border: 2px solid var(--color-primary, #F5A623);
   box-sizing: border-box;
   pointer-events: none;
   z-index: 5;
@@ -2304,14 +2325,18 @@ const exportBlueprintImage = (projectName: string) => {
   pointer-events: none;
 }
 
-/* ==================== 底部快捷操作区 ==================== */
+/* ==================== 底部快捷操作区 ====================
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ * 激活色：var(--color-primary-light) - 选中状态
+ */
 .bottom-shortcuts {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background-color: #FFFFFF;
-  border-top: 1px solid #E8E8E8;
+  background-color: var(--color-bg-panel, #FFFFFF);
+  border-top: 1px solid var(--color-border, #E8E8E8);
   flex-shrink: 0;
 }
 
@@ -2328,13 +2353,13 @@ const exportBlueprintImage = (projectName: string) => {
   gap: 4px;
   padding: 6px 12px;
   border-radius: 8px;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .shortcut-btn.active {
-  background-color: #FFF5E0;
+  background-color: var(--color-primary-light, #FFF5E0);
 }
 
 .shortcut-btn.disabled {
@@ -2348,23 +2373,26 @@ const exportBlueprintImage = (projectName: string) => {
 
 .shortcut-label {
   font-size: 12px;
-  color: #666666;
+  color: var(--color-text-secondary, #666666);
 }
 
-/* ==================== 豆子统计区 ==================== */
+/* ==================== 豆子统计区 ====================
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ */
 .bead-stats-bar {
   display: flex;
   align-items: center;
   padding: 6px 16px;
-  background-color: #FFFFFF;
-  border-top: 1px solid #E8E8E8;
+  background-color: var(--color-bg-panel, #FFFFFF);
+  border-top: 1px solid var(--color-border, #E8E8E8);
   flex-shrink: 0;
   gap: 12px;
 }
 
 .stats-summary {
   font-size: 12px;
-  color: #666666;
+  color: var(--color-text-secondary, #666666);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -2396,20 +2424,25 @@ const exportBlueprintImage = (projectName: string) => {
 
 .stats-code {
   font-size: 11px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   font-weight: 500;
 }
 
 .stats-count {
   font-size: 11px;
-  color: #999999;
+  color: var(--color-text-tertiary, #999999);
 }
 
-/* ==================== Tab栏 ==================== */
+/* ==================== Tab栏 ====================
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ * 激活背景：var(--color-primary-light) - 选中状态
+ * 主色：var(--color-primary) - 主色调
+ */
 .tab-bar {
   display: flex;
-  background-color: #FFFFFF;
-  border-top: 1px solid #E8E8E8;
+  background-color: var(--color-bg-panel, #FFFFFF);
+  border-top: 1px solid var(--color-border, #E8E8E8);
   flex-shrink: 0;
 }
 
@@ -2425,11 +2458,11 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .tab-item.active {
-  background-color: #FFF5E0;
+  background-color: var(--color-primary-light, #FFF5E0);
 }
 
 .tab-item.active .tab-text {
-  color: #F5A623;
+  color: var(--color-primary, #F5A623);
   font-weight: 600;
 }
 
@@ -2441,20 +2474,23 @@ const exportBlueprintImage = (projectName: string) => {
   transform: translateX(-50%);
   width: 40px;
   height: 3px;
-  background-color: #F5A623;
+  background-color: var(--color-primary, #F5A623);
   border-radius: 2px;
 }
 
 .tab-text {
   font-size: 14px;
-  color: #666666;
+  color: var(--color-text-secondary, #666666);
 }
 
-/* ==================== Tab内容面板 ==================== */
+/* ==================== Tab内容面板 ====================
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ */
 .tab-panel {
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel, #FFFFFF);
   flex-shrink: 0;
-  border-top: 1px solid #F0F0F0;
+  border-top: 1px solid var(--color-border, #F0F0F0);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -2472,20 +2508,20 @@ const exportBlueprintImage = (projectName: string) => {
 .size-option {
   padding: 10px 18px;
   border-radius: 10px;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   border: 2px solid transparent;
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .size-option.active {
-  background-color: #FFF5E0;
-  border-color: #F5A623;
+  background-color: var(--color-primary-light, #FFF5E0);
+  border-color: var(--color-primary, #F5A623);
 }
 
 .size-option-text {
   font-size: 14px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
 }
 
 /* 编辑选项 */
@@ -2502,13 +2538,13 @@ const exportBlueprintImage = (projectName: string) => {
   gap: 8px;
   padding: 16px 12px;
   border-radius: 12px;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .edit-option:active {
-  background-color: #EBEBEB;
+  background-color: var(--color-bg-hover, #EBEBEB);
 }
 
 .edit-option-icon {
@@ -2518,7 +2554,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .edit-option-text {
   font-size: 13px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
 }
 
 /* 样式选项 */
@@ -2541,14 +2577,14 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .style-option.active {
-  border-color: #F5A623;
-  background-color: #FFF5E0;
+  border-color: var(--color-primary, #F5A623);
+  background-color: var(--color-primary-light, #FFF5E0);
 }
 
 .style-preview {
   width: 48px;
   height: 48px;
-  background-color: #F5A623;
+  background-color: var(--color-primary, #F5A623);
 }
 
 .style-preview.bead-square-preview {
@@ -2575,18 +2611,22 @@ const exportBlueprintImage = (projectName: string) => {
 
 .style-option-text {
   font-size: 14px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   font-weight: 500;
 }
 
-/* ==================== 颜色选择面板（底部弹窗） ==================== */
+/* ==================== 颜色选择面板（底部弹窗） ====================
+ * 遮罩色：var(--color-bg-mask) - 半透明遮罩
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ */
 .color-panel-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-bg-mask, rgba(0, 0, 0, 0.5));
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -2594,7 +2634,7 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .color-panel-content {
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel, #FFFFFF);
   border-radius: 20rpx 20rpx 0 0;
   width: 100%;
   max-height: 70vh;
@@ -2607,19 +2647,19 @@ const exportBlueprintImage = (projectName: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 32rpx;
-  border-bottom: 1px solid #F0F0F0;
+  border-bottom: 1px solid var(--color-border, #F0F0F0);
   flex-shrink: 0;
 }
 
 .color-panel-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
 }
 
 .color-panel-close {
   font-size: 36rpx;
-  color: #999999;
+  color: var(--color-text-tertiary, #999999);
   padding: 8rpx;
   cursor: pointer;
 }
@@ -2628,7 +2668,7 @@ const exportBlueprintImage = (projectName: string) => {
 .color-series-scroll {
   flex-shrink: 0;
   white-space: nowrap;
-  border-bottom: 1px solid #F0F0F0;
+  border-bottom: 1px solid var(--color-border, #F0F0F0);
 }
 
 .color-series-list {
@@ -2640,14 +2680,14 @@ const exportBlueprintImage = (projectName: string) => {
 .color-series-item {
   padding: 8rpx 24rpx;
   border-radius: 20rpx;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   cursor: pointer;
   transition: all 0.15s;
   flex-shrink: 0;
 }
 
 .color-series-item.active {
-  background-color: #F5A623;
+  background-color: var(--color-primary, #F5A623);
 }
 
 .color-series-item.active .color-series-text {
@@ -2656,7 +2696,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .color-series-text {
   font-size: 24rpx;
-  color: #666666;
+  color: var(--color-text-secondary, #666666);
   white-space: nowrap;
 }
 
@@ -2687,8 +2727,8 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .color-card-item.active {
-  border-color: #F5A623;
-  background-color: #FFF5E0;
+  border-color: var(--color-primary, #F5A623);
+  background-color: var(--color-primary-light, #FFF5E0);
 }
 
 .color-card-swatch {
@@ -2700,18 +2740,22 @@ const exportBlueprintImage = (projectName: string) => {
 
 .color-card-code {
   font-size: 20rpx;
-  color: #666666;
+  color: var(--color-text-secondary, #666666);
   font-weight: 500;
 }
 
-/* ==================== 保存弹窗 ==================== */
+/* ==================== 保存弹窗 ====================
+ * 遮罩色：var(--color-bg-mask) - 半透明遮罩
+ * 背景色：var(--color-bg-panel) - 面板背景
+ * 边框色：var(--color-border) - 分隔线
+ */
 .save-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-bg-mask, rgba(0, 0, 0, 0.5));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2720,7 +2764,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .save-modal {
   width: 300px;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel, #FFFFFF);
   border-radius: 16px;
   overflow: hidden;
 }
@@ -2735,12 +2779,12 @@ const exportBlueprintImage = (projectName: string) => {
 .save-modal-title {
   font-size: 17px;
   font-weight: 600;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
 }
 
 .save-modal-close {
   font-size: 20px;
-  color: #999999;
+  color: var(--color-text-tertiary, #999999);
   padding: 4px;
   cursor: pointer;
 }
@@ -2752,21 +2796,21 @@ const exportBlueprintImage = (projectName: string) => {
 .save-name-input {
   width: 100%;
   height: 44px;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   border-radius: 10px;
   padding: 0 14px;
   font-size: 15px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   box-sizing: border-box;
 }
 
 .save-placeholder {
-  color: #CCCCCC;
+  color: var(--color-text-tertiary, #CCCCCC);
 }
 
 .save-modal-footer {
   display: flex;
-  border-top: 1px solid #F0F0F0;
+  border-top: 1px solid var(--color-border, #F0F0F0);
 }
 
 .save-cancel-btn {
@@ -2774,8 +2818,8 @@ const exportBlueprintImage = (projectName: string) => {
   text-align: center;
   padding: 14px;
   font-size: 16px;
-  color: #666666;
-  border-right: 1px solid #F0F0F0;
+  color: var(--color-text-secondary, #666666);
+  border-right: 1px solid var(--color-border, #F0F0F0);
   cursor: pointer;
 }
 
@@ -2784,7 +2828,7 @@ const exportBlueprintImage = (projectName: string) => {
   text-align: center;
   padding: 14px;
   font-size: 16px;
-  color: #F5A623;
+  color: var(--color-primary, #F5A623);
   font-weight: 600;
   cursor: pointer;
 }
@@ -2804,7 +2848,7 @@ const exportBlueprintImage = (projectName: string) => {
 
 .custom-size-label {
   font-size: 15px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   width: 48px;
   flex-shrink: 0;
 }
@@ -2812,11 +2856,11 @@ const exportBlueprintImage = (projectName: string) => {
 .custom-size-input {
   flex: 1;
   height: 44px;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page, #F5F5F5);
   border-radius: 10px;
   padding: 0 14px;
   font-size: 15px;
-  color: #333333;
+  color: var(--color-text-primary, #333333);
   box-sizing: border-box;
 }
 </style>

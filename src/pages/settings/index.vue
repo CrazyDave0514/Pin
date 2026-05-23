@@ -26,34 +26,38 @@
       <view class="settings-list">
         <view class="setting-item switch-item">
           <text class="item-label">接收推送通知</text>
-          <switch 
-            :checked="settings.pushEnabled" 
+          <!-- 推送通知开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.pushEnabled"
             @change="toggleSetting('pushEnabled')"
-            color="#F5A623"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">邮件通知</text>
-          <switch 
-            :checked="settings.emailEnabled" 
+          <!-- 邮件通知开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.emailEnabled"
             @change="toggleSetting('emailEnabled')"
-            color="#F5A623"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">新粉丝提醒</text>
-          <switch 
-            :checked="settings.followerNotify" 
+          <!-- 新粉丝提醒开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.followerNotify"
             @change="toggleSetting('followerNotify')"
-            color="#F5A623"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">作品被收藏提醒</text>
-          <switch 
-            :checked="settings.favoriteNotify" 
+          <!-- 作品被收藏提醒开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.favoriteNotify"
             @change="toggleSetting('favoriteNotify')"
-            color="#F5A623"
+            color="var(--color-primary)"
           />
         </view>
       </view>
@@ -65,18 +69,20 @@
       <view class="settings-list">
         <view class="setting-item switch-item">
           <text class="item-label">公开我的作品</text>
-          <switch 
-            :checked="settings.publicWorks" 
+          <!-- 公开作品开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.publicWorks"
             @change="toggleSetting('publicWorks')"
-            color="#F5A623"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">允许他人私信</text>
-          <switch 
-            :checked="settings.allowMessage" 
+          <!-- 允许私信开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.allowMessage"
             @change="toggleSetting('allowMessage')"
-            color="#F5A623"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item" @click="manageBlacklist">

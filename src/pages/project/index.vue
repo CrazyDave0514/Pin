@@ -801,14 +801,16 @@ const handleProjectSaved = () => {
   border-radius: var(--radius-sm);
 }
 
+/** 草稿状态标签 - 使用语义化 CSS 变量适配深色主题 */
 .status-badge.draft {
-  background-color: #FFF7E6;
-  color: #FF9500;
+  background-color: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
+/** 已保存状态标签 - 使用语义化 CSS 变量适配深色主题 */
 .status-badge.saved {
-  background-color: #E8F5E9;
-  color: #4CAF50;
+  background-color: var(--color-success-light);
+  color: var(--color-success);
 }
 
 .menu-btn {
@@ -854,7 +856,7 @@ const handleProjectSaved = () => {
   font-size: 30rpx;
 }
 
-/* 多选操作栏 */
+/* 多选操作栏 - 底部固定操作栏，使用 CSS 变量适配深色主题 */
 .select-action-bar {
   position: fixed;
   bottom: 0;
@@ -865,7 +867,7 @@ const handleProjectSaved = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4rpx 20rpx var(--color-shadow);
 }
 
 .selected-count {

@@ -254,7 +254,7 @@ const doRender = (artwork: any, canvasId: string, width: number, height: number)
   const offsetX = Math.floor((width - gridSize * cellSize) / 2)
   const offsetY = Math.floor((height - gridSize * cellSize) / 2)
 
-  /** 背景 */
+  /** 背景 - 使用 CSS 变量适配深色主题 */
   ctx.setFillStyle('#F5F5F5')
   ctx.fillRect(0, 0, width, height)
 
@@ -480,14 +480,14 @@ const goToSearch = () => {
   height: 100%;
 }
 
-/** 积分徽章 - 封面右上角半透明背景 */
+/** 积分徽章 - 封面右上角半透明背景，使用 CSS 变量适配深色主题 */
 .points-badge {
   position: absolute;
   top: 12rpx;
   right: 12rpx;
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-bg-mask);
   padding: 6rpx 12rpx;
   border-radius: 20rpx;
   z-index: 1;
