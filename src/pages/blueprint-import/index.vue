@@ -424,41 +424,45 @@ const importBlueprint = () => {
 <style scoped>
 .blueprint-import-page {
   min-height: 100vh;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   padding-bottom: 160rpx;
 }
 
 /* 页面标题 */
 .page-header {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-title {
   font-size: 36rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
 }
 
 .page-subtitle {
   font-size: 26rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   margin-top: 8rpx;
 }
 
 /* 来源选择 */
 .source-section {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .section-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   margin-bottom: 24rpx;
   display: block;
 }
@@ -474,14 +478,14 @@ const importBlueprint = () => {
   flex-direction: column;
   align-items: center;
   padding: 24rpx;
-  background-color: #F5F5F5;
-  border-radius: 16rpx;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-lg);
   border: 4rpx solid transparent;
 }
 
 .source-tab.active {
-  background-color: #F0F7FF;
-  border-color: #007AFF;
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
 }
 
 .tab-icon {
@@ -491,25 +495,27 @@ const importBlueprint = () => {
 
 .tab-label {
   font-size: 24rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
 .source-tab.active .tab-label {
-  color: #007AFF;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
 /* 本地项目 */
 .local-section {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   border-radius: 32rpx;
   padding: 16rpx 24rpx;
   margin-bottom: 24rpx;
@@ -523,7 +529,7 @@ const importBlueprint = () => {
 .search-input {
   flex: 1;
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .project-list {
@@ -535,7 +541,7 @@ const importBlueprint = () => {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 0;
-  border-bottom: 2rpx solid #F0F0F0;
+  border-bottom: 2rpx solid var(--color-divider);
 }
 
 .project-item:last-child {
@@ -548,7 +554,7 @@ const importBlueprint = () => {
 
 .project-name {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   font-weight: 500;
   display: block;
   margin-bottom: 8rpx;
@@ -556,12 +562,12 @@ const importBlueprint = () => {
 
 .project-meta {
   font-size: 22rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 .project-arrow {
   font-size: 36rpx;
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
 }
 
 .empty-state {
@@ -571,26 +577,28 @@ const importBlueprint = () => {
 
 .empty-text {
   font-size: 28rpx;
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
 }
 
 /* 文件导入 */
 .file-section {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .format-info {
-  background-color: #F5F5F5;
-  border-radius: 16rpx;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-lg);
   padding: 24rpx;
   margin-bottom: 24rpx;
 }
 
 .format-title {
   font-size: 26rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   font-weight: 500;
   display: block;
   margin-bottom: 12rpx;
@@ -603,15 +611,15 @@ const importBlueprint = () => {
 
 .format-item {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   line-height: 1.6;
 }
 
 .upload-area {
   height: 300rpx;
-  background-color: #FFFFFF;
-  border-radius: 24rpx;
-  border: 4rpx dashed #E8E8E8;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  border: 4rpx dashed var(--color-border);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -621,7 +629,7 @@ const importBlueprint = () => {
 .upload-icon {
   width: 100rpx;
   height: 100rpx;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -635,13 +643,13 @@ const importBlueprint = () => {
 
 .upload-text {
   font-size: 30rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   margin-bottom: 8rpx;
 }
 
 .upload-hint {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 .recent-section {
@@ -652,7 +660,7 @@ const importBlueprint = () => {
   display: flex;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 2rpx solid #F0F0F0;
+  border-bottom: 2rpx solid var(--color-divider);
 }
 
 .recent-item:last-child {
@@ -670,34 +678,36 @@ const importBlueprint = () => {
 
 .recent-name {
   font-size: 26rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 4rpx;
 }
 
 .recent-date {
   font-size: 22rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 /* 二维码扫描 */
 .qrcode-section {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .section-hint {
   font-size: 26rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   display: block;
   margin-bottom: 32rpx;
 }
 
 .qrcode-scanner {
   height: 400rpx;
-  background-color: #F5F5F5;
-  border-radius: 24rpx;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -715,7 +725,7 @@ const importBlueprint = () => {
   position: absolute;
   width: 40rpx;
   height: 40rpx;
-  border-color: #007AFF;
+  border-color: var(--color-primary);
   border-style: solid;
   border-width: 0;
 }
@@ -754,15 +764,17 @@ const importBlueprint = () => {
 
 .scanner-hint {
   font-size: 26rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   margin-top: 24rpx;
 }
 
 /* 预览区域 */
 .preview-section {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .preview-header {
@@ -775,23 +787,23 @@ const importBlueprint = () => {
 .preview-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .preview-clear {
   font-size: 26rpx;
-  color: #007AFF;
+  color: var(--color-primary);
 }
 
 .preview-content {
-  background-color: #F5F5F5;
-  border-radius: 16rpx;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-lg);
   padding: 24rpx;
 }
 
 .preview-name {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   font-weight: 600;
   display: block;
   margin-bottom: 12rpx;
@@ -799,7 +811,7 @@ const importBlueprint = () => {
 
 .preview-meta {
   font-size: 24rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   display: block;
   margin-bottom: 8rpx;
 }
@@ -812,15 +824,15 @@ const importBlueprint = () => {
   right: 0;
   padding: 24rpx 32rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
 .btn-import {
   width: 100%;
   height: 88rpx;
-  background: linear-gradient(135deg, #007AFF, #0056CC);
-  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-text-inverse);
   font-size: 32rpx;
   font-weight: 600;
   border-radius: 44rpx;
@@ -828,7 +840,7 @@ const importBlueprint = () => {
 }
 
 .btn-import[disabled] {
-  background: #CCCCCC;
+  background: var(--color-text-disabled);
 }
 
 /* 成功提示 */
@@ -837,9 +849,9 @@ const importBlueprint = () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: var(--color-bg-mask);
   padding: 32rpx 64rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -848,12 +860,12 @@ const importBlueprint = () => {
 
 .success-icon {
   font-size: 64rpx;
-  color: #34C759;
+  color: var(--color-success);
   margin-bottom: 16rpx;
 }
 
 .success-text {
   font-size: 28rpx;
-  color: #FFFFFF;
+  color: var(--color-text-inverse);
 }
 </style>

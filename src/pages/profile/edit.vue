@@ -250,14 +250,14 @@ const goBack = () => {
 <style scoped>
 .edit-page {
   min-height: 100vh;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   display: flex;
   flex-direction: column;
 }
 
 /* 自定义导航栏 */
 .nav-bar {
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -281,13 +281,13 @@ const goBack = () => {
 
 .back-icon {
   font-size: 40rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .nav-title {
   font-size: 34rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .nav-placeholder {
@@ -301,7 +301,7 @@ const goBack = () => {
 }
 
 .form-section {
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
 }
 
@@ -312,7 +312,7 @@ const goBack = () => {
   justify-content: space-between;
   min-height: 100rpx;
   padding: 24rpx 32rpx;
-  border-bottom: 2rpx solid #F0F0F0;
+  border-bottom: 2rpx solid var(--color-divider);
 }
 
 .form-item:last-child {
@@ -321,7 +321,7 @@ const goBack = () => {
 
 .form-label {
   font-size: 30rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   flex-shrink: 0;
   width: 160rpx;
 }
@@ -340,7 +340,7 @@ const goBack = () => {
   width: 100rpx;
   height: 100rpx;
   border-radius: 50%;
-  background-color: #F0F0F0;
+  background-color: var(--color-divider);
 }
 
 /* 输入框 */
@@ -356,17 +356,17 @@ const goBack = () => {
   flex: 1;
   text-align: right;
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .input-placeholder {
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
   font-size: 28rpx;
 }
 
 .char-count {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
@@ -389,20 +389,20 @@ const goBack = () => {
 
 .gender-radio {
   font-size: 32rpx;
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
 }
 
 .gender-radio.checked {
-  color: #007AFF;
+  color: var(--color-primary);
 }
 
 .gender-text {
   font-size: 28rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
 .gender-text.text-male {
-  color: #007AFF;
+  color: var(--color-primary);
 }
 
 .gender-text.text-female {
@@ -410,7 +410,7 @@ const goBack = () => {
 }
 
 .gender-text.text-secret {
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 /* 右侧值展示 */
@@ -422,23 +422,23 @@ const goBack = () => {
 
 .form-value {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .form-value.placeholder {
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
 }
 
 .form-arrow {
   font-size: 28rpx;
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
 }
 
 /* 保存按钮 */
 .save-section {
   padding: 24rpx 32rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
 }
 
 .save-btn {
@@ -446,16 +446,16 @@ const goBack = () => {
   height: 88rpx;
   line-height: 88rpx;
   text-align: center;
-  background-color: #007AFF;
-  color: #FFFFFF;
+  background-color: var(--color-primary);
+  color: var(--color-bg-panel);
   font-size: 32rpx;
   font-weight: 600;
-  border-radius: 12rpx;
+  border-radius: var(--radius-lg);
   border: none;
 }
 
 .save-btn.disabled {
-  background-color: #CCCCCC;
+  background-color: var(--color-text-disabled);
 }
 
 .save-btn::after {

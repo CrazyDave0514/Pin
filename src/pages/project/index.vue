@@ -211,7 +211,10 @@ const folderPickerAction = ref<'move' | 'copy'>('move')
 const currentProject = ref<any>(null)
 const folders = ref<any[]>([])
 
-// 筛选后的项目
+/**
+ * 根据搜索关键词过滤项目列表
+ * @returns 过滤后的项目数组
+ */
 const filteredProjects = computed(() => {
   if (!searchKeyword.value) return projects.value
   return projects.value.filter(p =>
@@ -219,23 +222,34 @@ const filteredProjects = computed(() => {
   )
 })
 
-// 是否全选
+/**
+ * 判断当前是否已全选所有过滤后的项目
+ * @returns 是否全选状态
+ */
 const isAllSelected = computed(() => {
   return selectedProjects.value.length === filteredProjects.value.length
 })
 
-// 加载项目数据
+/**
+ * 从本地存储加载项目列表，按更新时间倒序排列
+ */
 const loadProjects = () => {
   const data = uni.getStorageSync('pin_projects') || []
   projects.value = data.sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
-// 加载文件夹数据
+/**
+ * 从本地存储加载文件夹列表
+ */
 const loadFolders = () => {
   folders.value = uni.getStorageSync('pin_folders') || []
 }
 
-// 格式化时间
+/**
+ * 将时间戳格式化为友好的相对时间描述
+ * @param timestamp - Unix 时间戳（毫秒）
+ * @returns 格式化后的时间字符串，如"今天"、"昨天"、"3天前"、"5/12"
+ */
 const formatTime = (timestamp: number) => {
   if (!timestamp) return ''
   const date = new Date(timestamp)
@@ -248,7 +262,10 @@ const formatTime = (timestamp: number) => {
   return `${date.getMonth() + 1}/${date.getDate()}`
 }
 
-// 切换多选模式
+/**
+ * 切换多选模式的开启/关闭状态
+ * 关闭多选模式时自动清空已选中的项目列表
+ */
 const toggleSelectMode = () => {
   isSelectMode.value = !isSelectMode.value
   if (!isSelectMode.value) {
@@ -256,7 +273,10 @@ const toggleSelectMode = () => {
   }
 }
 
-// 切换选中
+/**
+ * 切换指定项目的选中状态
+ * @param id - 项目 ID
+ */
 const toggleSelect = (id: string) => {
   const index = selectedProjects.value.indexOf(id)
   if (index > -1) {
@@ -266,7 +286,9 @@ const toggleSelect = (id: string) => {
   }
 }
 
-// 全选/取消全选
+/**
+ * 全选或取消全选当前过滤后的所有项目
+ */
 const selectAll = () => {
   if (isAllSelected.value) {
     selectedProjects.value = []
@@ -275,17 +297,25 @@ const selectAll = () => {
   }
 }
 
-// 显示创建弹窗
+/**
+ * 显示"开始创作"弹窗
+ */
 const showCreateModal = () => {
   showModal.value = true
 }
 
-// 关闭弹窗
+/**
+ * 关闭"开始创作"弹窗
+ */
 const closeModal = () => {
   showModal.value = false
 }
 
-// 项目点击
+/**
+ * 处理项目卡片点击事件
+ * 多选模式下切换选中状态，普通模式下跳转到画布编辑页面
+ * @param project - 被点击的项目对象
+ */
 const handleProjectClick = (project: any) => {
   if (isSelectMode.value) {
     toggleSelect(project.id)
@@ -297,19 +327,27 @@ const handleProjectClick = (project: any) => {
   }
 }
 
-// 显示项目菜单
+/**
+ * 显示指定项目的操作菜单（重命名、移动、复制、删除）
+ * @param project - 要操作的项目对象
+ */
 const showProjectMenu = (project: any) => {
   currentProject.value = project
   showMenu.value = true
 }
 
-// 关闭菜单
+/**
+ * 关闭项目操作菜单并清空当前操作项目引用
+ */
 const closeMenu = () => {
   showMenu.value = false
   currentProject.value = null
 }
 
-// 重命名项目
+/**
+ * 重命名当前选中的项目
+ * 弹出系统输入框，确认后更新本地存储中的项目名称
+ */
 const renameProject = () => {
   const project = currentProject.value
   closeMenu()
@@ -333,7 +371,10 @@ const renameProject = () => {
   })
 }
 
-// 创建画布
+/**
+ * 根据创建类型跳转到对应的画布创建页面
+ * @param type - 创建类型：blank（空白画布）、image（导入图片）、blueprint（导入图纸）
+ */
 const createCanvas = (type: 'blank' | 'image' | 'blueprint') => {
   closeModal()
   if (type === 'blank') {
@@ -354,13 +395,18 @@ const createCanvas = (type: 'blank' | 'image' | 'blueprint') => {
   }
 }
 
-// 导入小红书链接
+/**
+ * 导入小红书链接功能（当前为开发中状态）
+ */
 const importFromXiaohongshu = () => {
   closeModal()
   uni.showToast({ title: '功能开发中', icon: 'none' })
 }
 
-// 创建文件夹
+/**
+ * 创建新文件夹
+ * 弹出系统输入框，确认后将文件夹信息保存到本地存储
+ */
 const createFolder = () => {
   closeModal()
   uni.showModal({
@@ -384,7 +430,10 @@ const createFolder = () => {
   })
 }
 
-// 移动项目
+/**
+ * 移动当前项目到指定文件夹
+ * 关闭操作菜单后打开文件夹选择器
+ */
 const moveProject = () => {
   closeMenu()
   folderPickerTitle.value = '移动到'
@@ -392,7 +441,10 @@ const moveProject = () => {
   showFolderPicker.value = true
 }
 
-// 复制项目
+/**
+ * 复制当前项目
+ * 深拷贝项目数据并生成新 ID，保存到本地存储
+ */
 const copyProject = () => {
   closeMenu()
   if (!currentProject.value) return
@@ -410,7 +462,10 @@ const copyProject = () => {
   uni.showToast({ title: '复制成功', icon: 'success' })
 }
 
-// 删除项目
+/**
+ * 删除当前项目
+ * 弹出确认对话框，确认后从本地存储中移除该项目
+ */
 const deleteProject = () => {
   const projectToDelete = currentProject.value
   closeMenu()
@@ -430,7 +485,10 @@ const deleteProject = () => {
   })
 }
 
-// 移动选中的项目
+/**
+ * 批量移动已选中的项目到文件夹
+ * 退出多选模式后打开文件夹选择器
+ */
 const moveSelected = () => {
   toggleSelectMode()
   folderPickerTitle.value = '移动到'
@@ -438,7 +496,10 @@ const moveSelected = () => {
   showFolderPicker.value = true
 }
 
-// 复制选中的项目
+/**
+ * 批量复制已选中的项目
+ * 深拷贝每个选中项目并生成新 ID，保存到本地存储后退出多选模式
+ */
 const copySelected = () => {
   const data: any[] = uni.getStorageSync('pin_projects') || []
   selectedProjects.value.forEach(id => {
@@ -460,7 +521,10 @@ const copySelected = () => {
   uni.showToast({ title: '复制成功', icon: 'success' })
 }
 
-// 删除选中的项目
+/**
+ * 批量删除已选中的项目
+ * 弹出确认对话框，确认后从本地存储中移除所有选中项目并退出多选模式
+ */
 const deleteSelected = () => {
   uni.showModal({
     title: '确认删除',
@@ -478,12 +542,18 @@ const deleteSelected = () => {
   })
 }
 
-// 显示文件夹选择器
+/**
+ * 关闭文件夹选择器弹窗
+ */
 const closeFolderPicker = () => {
   showFolderPicker.value = false
 }
 
-// 选择文件夹
+/**
+ * 选择目标文件夹并执行移动或复制操作
+ * 支持单个项目和批量项目操作，操作完成后关闭文件夹选择器
+ * @param folder - 目标文件夹对象
+ */
 const selectFolder = (folder: any) => {
   if (folderPickerAction.value === 'move') {
     // 移动项目到文件夹
@@ -528,7 +598,10 @@ const selectFolder = (folder: any) => {
   uni.showToast({ title: folderPickerAction.value === 'move' ? '移动成功' : '复制成功', icon: 'success' })
 }
 
-// 在选择器中新建文件夹
+/**
+ * 在文件夹选择器中新建文件夹
+ * 关闭选择器后调用 createFolder 方法
+ */
 const createNewFolderInPicker = () => {
   closeFolderPicker()
   createFolder()
@@ -548,7 +621,10 @@ onUnmounted(() => {
   uni.$off('projectSaved', handleProjectSaved)
 })
 
-// 处理项目保存事件
+/**
+ * 处理项目保存事件
+ * 当其他页面触发 projectSaved 事件时，刷新项目列表数据
+ */
 const handleProjectSaved = () => {
   // 刷新项目列表
   loadProjects()
@@ -556,130 +632,134 @@ const handleProjectSaved = () => {
 </script>
 
 <style scoped>
+/* ==================== 项目管理页面样式 ==================== */
+/* 基于 Pin 统一设计系统，使用 CSS 变量和 rpx 单位 */
+
 .project-page {
   min-height: 100vh;
-  background-color: #F8F8F8;
+  background-color: var(--color-bg-page);
 }
 
 /* 顶部区域 */
 .header {
-  padding: 16px 20px;
-  background-color: #FFFFFF;
+  padding: 32rpx 40rpx;
+  background-color: var(--color-bg-panel);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .title {
-  font-size: 20px;
+  font-size: 40rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .count {
-  font-size: 12px;
-  color: #999999;
+  font-size: 24rpx;
+  color: var(--color-text-tertiary);
 }
 
 /* 操作栏 */
 .action-bar {
-  padding: 12px 20px;
-  background-color: #FFFFFF;
+  padding: 24rpx 40rpx;
+  background-color: var(--color-bg-panel);
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 24rpx;
 }
 
 .search-box {
   flex: 1;
-  height: 36px;
-  background-color: #F5F5F5;
-  border-radius: 18px;
+  height: 72rpx;
+  background-color: var(--color-bg-page);
+  border-radius: 36rpx;
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 24rpx;
 }
 
 .search-icon {
-  font-size: 14px;
-  margin-right: 8px;
+  font-size: 28rpx;
+  margin-right: 16rpx;
 }
 
 .search-input {
   flex: 1;
-  font-size: 14px;
-  color: #2D2D2D;
+  font-size: 28rpx;
+  color: var(--color-text-primary);
 }
 
 .placeholder {
-  color: #CCCCCC;
+  color: var(--color-text-disabled);
 }
 
 .action-buttons {
   display: flex;
-  gap: 8px;
+  gap: 16rpx;
 }
 
 .action-btn {
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #007AFF;
+  padding: 16rpx 24rpx;
+  font-size: 28rpx;
+  color: var(--color-primary);
 }
 
 .action-btn.new-btn {
-  color: #FFFFFF;
-  background-color: #007AFF;
-  border-radius: 16px;
+  color: var(--color-text-inverse);
+  background-color: var(--color-primary);
+  border-radius: 32rpx;
 }
 
 /* 项目列表 */
 .project-list {
-  padding: 12px 20px;
-  height: calc(100vh - 180px);
+  padding: 24rpx 40rpx;
+  height: calc(100vh - 360rpx);
 }
 
 .project-card {
-  background-color: #FFFFFF;
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 12px;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  padding: 28rpx;
+  margin-bottom: 24rpx;
   display: flex;
   align-items: center;
   position: relative;
+  box-shadow: var(--shadow-md);
 }
 
 .project-card.selected {
-  background-color: #E8F4FF;
+  background-color: var(--color-primary-light);
 }
 
 .checkbox {
-  width: 20px;
-  height: 20px;
-  border: 2px solid #007AFF;
-  border-radius: 4px;
-  margin-right: 12px;
+  width: 40rpx;
+  height: 40rpx;
+  border: 4rpx solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  margin-right: 24rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #007AFF;
-  font-size: 14px;
+  color: var(--color-primary);
+  font-size: 28rpx;
 }
 
 .thumbnail {
-  width: 60px;
-  height: 60px;
-  background-color: #F5F5F5;
-  border-radius: 8px;
+  width: 120rpx;
+  height: 120rpx;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 12px;
+  margin-right: 24rpx;
   overflow: hidden;
 }
 
 .thumbnail-placeholder {
-  font-size: 24px;
-  color: #CCCCCC;
+  font-size: 48rpx;
+  color: var(--color-text-disabled);
 }
 
 .thumbnail-img {
@@ -692,33 +772,33 @@ const handleProjectSaved = () => {
 }
 
 .project-name {
-  font-size: 15px;
-  color: #2D2D2D;
+  font-size: 30rpx;
+  color: var(--color-text-primary);
   font-weight: 500;
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 8rpx;
 }
 
 .project-size {
-  font-size: 12px;
-  color: #666666;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 4rpx;
 }
 
 .project-time {
-  font-size: 12px;
-  color: #999999;
+  font-size: 24rpx;
+  color: var(--color-text-tertiary);
   display: block;
 }
 
 .status-badge {
   position: absolute;
-  top: 14px;
-  right: 40px;
-  padding: 2px 8px;
-  font-size: 10px;
-  border-radius: 4px;
+  top: 28rpx;
+  right: 80rpx;
+  padding: 4rpx 16rpx;
+  font-size: 20rpx;
+  border-radius: var(--radius-sm);
 }
 
 .status-badge.draft {
@@ -733,11 +813,11 @@ const handleProjectSaved = () => {
 
 .menu-btn {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  font-size: 18px;
-  color: #CCCCCC;
-  padding: 4px;
+  top: 28rpx;
+  right: 28rpx;
+  font-size: 36rpx;
+  color: var(--color-text-disabled);
+  padding: 8rpx;
 }
 
 /* 空状态 */
@@ -746,32 +826,32 @@ const handleProjectSaved = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-top: 100px;
+  padding-top: 200rpx;
 }
 
 .empty-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  font-size: 128rpx;
+  margin-bottom: 32rpx;
 }
 
 .empty-text {
-  font-size: 16px;
-  color: #2D2D2D;
-  margin-bottom: 8px;
+  font-size: 32rpx;
+  color: var(--color-text-primary);
+  margin-bottom: 16rpx;
 }
 
 .empty-subtext {
-  font-size: 14px;
-  color: #999999;
-  margin-bottom: 24px;
+  font-size: 28rpx;
+  color: var(--color-text-tertiary);
+  margin-bottom: 48rpx;
 }
 
 .start-btn {
-  padding: 12px 32px;
-  background-color: #007AFF;
-  color: #FFFFFF;
-  border-radius: 24px;
-  font-size: 15px;
+  padding: 24rpx 64rpx;
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
+  border-radius: 48rpx;
+  font-size: 30rpx;
 }
 
 /* 多选操作栏 */
@@ -780,31 +860,31 @@ const handleProjectSaved = () => {
   bottom: 0;
   left: 0;
   right: 0;
-  background-color: #FFFFFF;
-  padding: 16px 20px;
+  background-color: var(--color-bg-panel);
+  padding: 32rpx 40rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.1);
 }
 
 .selected-count {
-  font-size: 14px;
-  color: #2D2D2D;
+  font-size: 28rpx;
+  color: var(--color-text-primary);
 }
 
 .select-actions {
   display: flex;
-  gap: 20px;
+  gap: 40rpx;
 }
 
 .select-action {
-  font-size: 14px;
-  color: #007AFF;
+  font-size: 28rpx;
+  color: var(--color-primary);
 }
 
 .select-action.delete {
-  color: #FF3B30;
+  color: var(--color-error);
 }
 
 /* 创建弹窗 */
@@ -814,7 +894,7 @@ const handleProjectSaved = () => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-bg-mask);
   display: flex;
   align-items: flex-end;
   z-index: 999;
@@ -822,32 +902,32 @@ const handleProjectSaved = () => {
 
 .create-modal {
   width: 100%;
-  background-color: #FFFFFF;
-  border-radius: 16px 16px 0 0;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   max-height: 80vh;
 }
 
 .modal-header {
-  padding: 16px 20px;
+  padding: 32rpx 40rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #F0F0F0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .modal-title {
-  font-size: 17px;
+  font-size: 34rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .modal-close {
-  font-size: 20px;
-  color: #999999;
+  font-size: 40rpx;
+  color: var(--color-text-tertiary);
 }
 
 .modal-content {
-  padding: 16px 20px;
+  padding: 32rpx 40rpx;
   max-height: 60vh;
   overflow-y: auto;
 }
@@ -855,22 +935,22 @@ const handleProjectSaved = () => {
 .create-option {
   display: flex;
   align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid #F0F0F0;
+  padding: 28rpx 0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .create-option.primary {
-  background-color: #F5F5F5;
-  margin: 0 -20px;
-  padding: 14px 20px;
-  border-radius: 12px;
-  margin-bottom: 8px;
+  background-color: var(--color-bg-page);
+  margin: 0 -40rpx;
+  padding: 28rpx 40rpx;
+  border-radius: var(--radius-lg);
+  margin-bottom: 16rpx;
   border-bottom: none;
 }
 
 .option-icon {
-  font-size: 24px;
-  margin-right: 12px;
+  font-size: 48rpx;
+  margin-right: 24rpx;
 }
 
 .option-text {
@@ -878,31 +958,31 @@ const handleProjectSaved = () => {
 }
 
 .option-title {
-  font-size: 15px;
-  color: #2D2D2D;
+  font-size: 30rpx;
+  color: var(--color-text-primary);
   font-weight: 500;
   display: block;
-  margin-bottom: 2px;
+  margin-bottom: 4rpx;
 }
 
 .new-tag {
-  font-size: 10px;
-  background-color: #FF3B30;
-  color: #FFFFFF;
-  padding: 2px 4px;
-  border-radius: 2px;
+  font-size: 20rpx;
+  background-color: var(--color-error);
+  color: var(--color-text-inverse);
+  padding: 4rpx 8rpx;
+  border-radius: 4rpx;
 }
 
 .option-desc {
-  font-size: 12px;
-  color: #999999;
+  font-size: 24rpx;
+  color: var(--color-text-tertiary);
   display: block;
 }
 
 .divider {
-  height: 8px;
-  background-color: #F5F5F5;
-  margin: 8px -20px;
+  height: 16rpx;
+  background-color: var(--color-bg-page);
+  margin: 16rpx -40rpx;
 }
 
 .create-option.folder {
@@ -912,76 +992,76 @@ const handleProjectSaved = () => {
 /* 操作菜单 */
 .action-sheet {
   width: 100%;
-  background-color: #FFFFFF;
-  border-radius: 16px 16px 0 0;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 .action-item {
-  padding: 16px 20px;
+  padding: 32rpx 40rpx;
   text-align: center;
-  font-size: 17px;
-  color: #007AFF;
-  border-bottom: 1px solid #F0F0F0;
+  font-size: 34rpx;
+  color: var(--color-primary);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .action-item.danger {
-  color: #FF3B30;
+  color: var(--color-error);
 }
 
 .action-cancel {
-  padding: 16px 20px;
+  padding: 32rpx 40rpx;
   text-align: center;
-  font-size: 17px;
-  color: #2D2D2D;
-  background-color: #F5F5F5;
-  margin-top: 8px;
+  font-size: 34rpx;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-page);
+  margin-top: 16rpx;
 }
 
 /* 文件夹选择器 */
 .folder-picker {
   width: 100%;
-  background-color: #FFFFFF;
-  border-radius: 16px 16px 0 0;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   max-height: 60vh;
 }
 
 .picker-header {
-  padding: 16px 20px;
+  padding: 32rpx 40rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid #F0F0F0;
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .picker-title {
-  font-size: 17px;
+  font-size: 34rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .picker-close {
-  font-size: 20px;
-  color: #999999;
+  font-size: 40rpx;
+  color: var(--color-text-tertiary);
 }
 
 .folder-list {
-  padding: 12px 20px;
+  padding: 24rpx 40rpx;
   max-height: 50vh;
 }
 
 .folder-item {
   display: flex;
   align-items: center;
-  padding: 12px 0;
-  font-size: 15px;
-  color: #2D2D2D;
+  padding: 24rpx 0;
+  font-size: 30rpx;
+  color: var(--color-text-primary);
 }
 
 .folder-item.new {
-  color: #007AFF;
+  color: var(--color-primary);
 }
 
 .folder-name {
-  margin-left: 8px;
+  margin-left: 16rpx;
 }
 </style>

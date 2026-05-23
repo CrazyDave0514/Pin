@@ -105,7 +105,7 @@
         <switch
           :checked="showGrid"
           @change="showGrid = !showGrid"
-          color="#007AFF"
+          color="#F5A623"
         />
       </view>
       <view class="toggle-item">
@@ -115,7 +115,7 @@
             v-for="color in gridColors"
             :key="color"
             class="grid-color-swatch"
-            :style="{ backgroundColor: color, borderColor: gridColor === color ? '#007AFF' : 'transparent' }"
+            :style="{ backgroundColor: color, borderColor: gridColor === color ? '#F5A623' : 'transparent' }"
             @click="gridColor = color"
           ></view>
         </view>
@@ -265,33 +265,37 @@ import { computed } from 'vue'
 <style scoped>
 .canvas-settings-page {
   min-height: 100vh;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   padding-bottom: 160rpx;
 }
 
 /* 页面标题 */
 .page-header {
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  box-shadow: var(--shadow-sm);
 }
 
 .page-title {
   font-size: 36rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 /* 设置区块 */
 .settings-section {
   margin-top: 24rpx;
   padding: 32rpx;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .section-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   margin-bottom: 24rpx;
   display: block;
 }
@@ -306,8 +310,8 @@ import { computed } from 'vue'
 .preset-item {
   width: calc(50% - 16rpx);
   padding: 24rpx;
-  background-color: #F5F5F5;
-  border-radius: 16rpx;
+  background-color: var(--color-bg-page);
+  border-radius: var(--radius-lg);
   margin-right: 32rpx;
   margin-bottom: 16rpx;
   border: 4rpx solid transparent;
@@ -318,32 +322,32 @@ import { computed } from 'vue'
 }
 
 .preset-item.active {
-  border-color: #007AFF;
-  background-color: #F0F7FF;
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
 }
 
 .preset-label {
   font-size: 28rpx;
   font-weight: 500;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 8rpx;
 }
 
 .preset-size {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 /* 自定义尺寸 */
 .custom-size {
   padding-top: 24rpx;
-  border-top: 2rpx solid #E8E8E8;
+  border-top: 2rpx solid var(--color-border);
 }
 
 .custom-label {
   font-size: 26rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   margin-bottom: 16rpx;
   display: block;
 }
@@ -357,33 +361,33 @@ import { computed } from 'vue'
 .input-group {
   display: flex;
   align-items: center;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   border-radius: 12rpx;
   padding: 16rpx 20rpx;
 }
 
 .input-label {
   font-size: 26rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   margin-right: 12rpx;
 }
 
 .size-input {
   width: 100rpx;
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   text-align: center;
 }
 
 .input-unit {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   margin-left: 8rpx;
 }
 
 .size-separator {
   font-size: 32rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   margin: 0 24rpx;
 }
 
@@ -405,24 +409,24 @@ import { computed } from 'vue'
   width: 80rpx;
   height: 80rpx;
   border-radius: 12rpx;
-  border: 2rpx solid #E8E8E8;
+  border: 2rpx solid var(--color-border);
   margin-bottom: 8rpx;
 }
 
 .bg-item.active .bg-preview {
-  border: 4rpx solid #007AFF;
+  border: 4rpx solid var(--color-primary);
 }
 
 .bg-label {
   font-size: 22rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
 /* 自定义背景色 */
 .custom-bg {
   margin-top: 24rpx;
   padding-top: 24rpx;
-  border-top: 2rpx solid #E8E8E8;
+  border-top: 2rpx solid var(--color-border);
 }
 
 .color-picker {
@@ -437,7 +441,7 @@ import { computed } from 'vue'
   border-radius: 8rpx;
   margin-right: 16rpx;
   margin-bottom: 16rpx;
-  border: 2rpx solid #E8E8E8;
+  border: 2rpx solid var(--color-border);
 }
 
 .color-input-row {
@@ -447,25 +451,25 @@ import { computed } from 'vue'
 
 .color-label {
   font-size: 26rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   margin-right: 16rpx;
 }
 
 .color-input {
   flex: 1;
   height: 64rpx;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   border-radius: 8rpx;
   padding: 0 16rpx;
   font-size: 26rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .color-preview {
   width: 64rpx;
   height: 64rpx;
   border-radius: 8rpx;
-  border: 2rpx solid #E8E8E8;
+  border: 2rpx solid var(--color-border);
   margin-left: 16rpx;
 }
 
@@ -475,7 +479,7 @@ import { computed } from 'vue'
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 0;
-  border-bottom: 2rpx solid #F0F0F0;
+  border-bottom: 2rpx solid var(--color-divider);
 }
 
 .toggle-item:last-child {
@@ -484,7 +488,7 @@ import { computed } from 'vue'
 
 .toggle-label {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .grid-color-picker {
@@ -508,15 +512,15 @@ import { computed } from 'vue'
   right: 0;
   padding: 24rpx 32rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
   box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
 }
 
 .btn-create {
   width: 100%;
   height: 88rpx;
-  background: linear-gradient(135deg, #007AFF, #0056CC);
-  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-text-inverse);
   font-size: 32rpx;
   font-weight: 600;
   border-radius: 44rpx;

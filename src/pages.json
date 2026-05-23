@@ -98,13 +98,23 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "Pin",
     "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#F5F5F5"
+    "backgroundColor": "#F5F5F5",
+    "app-plus": {
+      "titleNView": {
+        "titleColor": "#1A1A1A",
+        "backgroundColor": "#FFFFFF"
+      }
+    }
   },
   "tabBar": {
     "color": "#999999",
-    "selectedColor": "#007AFF",
+    "selectedColor": "#F5A623",
     "backgroundColor": "#FFFFFF",
     "borderStyle": "white",
+    "height": "50px",
+    "fontSize": "10px",
+    "iconWidth": "24px",
+    "spacing": "3px",
     "list": [
       {
         "pagePath": "pages/index/index",
