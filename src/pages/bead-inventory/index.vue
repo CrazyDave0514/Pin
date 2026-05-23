@@ -411,15 +411,15 @@ onMounted(() => {
 <style scoped>
 .bead-inventory-page {
   min-height: 100vh;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
   padding-bottom: 120rpx;
 }
 
 /* 品牌选择器 */
 .brand-selector {
-  background: #fff;
+  background: var(--color-bg-panel);
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .brand-scroll {
@@ -435,34 +435,34 @@ onMounted(() => {
 .brand-item {
   padding: 12rpx 28rpx;
   border-radius: 32rpx;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
 }
 
 .brand-item.active {
-  background: #2D2D2D;
+  background: var(--color-primary);
 }
 
 .brand-name {
   font-size: 26rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .brand-item.active .brand-name {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 /* 套装选择器 */
 .kit-selector {
   display: flex;
   align-items: center;
-  background: #fff;
+  background: var(--color-bg-panel);
   padding: 16rpx 24rpx;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .kit-label {
   font-size: 26rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   margin-right: 16rpx;
 }
 
@@ -479,27 +479,27 @@ onMounted(() => {
 .kit-item {
   padding: 8rpx 20rpx;
   border-radius: 24rpx;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
 }
 
 .kit-item.active {
-  background: #2D2D2D;
+  background: var(--color-primary);
 }
 
 .kit-name {
   font-size: 24rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .kit-item.active .kit-name {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 /* 统计栏 */
 .stats-bar {
   display: flex;
   justify-content: space-around;
-  background: #fff;
+  background: var(--color-bg-panel);
   padding: 24rpx;
   margin-bottom: 16rpx;
 }
@@ -511,13 +511,13 @@ onMounted(() => {
 .stat-value {
   font-size: 36rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
 }
 
 .stat-label {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   margin-top: 4rpx;
 }
 
@@ -534,21 +534,23 @@ onMounted(() => {
 
 .empty-text {
   font-size: 28rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .color-card {
   display: flex;
   align-items: center;
-  background: #fff;
-  border-radius: 12rpx;
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
   padding: 16rpx;
   margin-bottom: 12rpx;
+  box-shadow: var(--shadow-sm);
 }
 
+/* 已拥有颜色卡片样式 - 使用半透明成功色背景 */
 .color-card.owned {
-  background: #F0FFF0;
-  border: 1rpx solid #52C41A;
+  background: rgba(var(--color-success-rgb), 0.1);
+  border: 1rpx solid var(--color-success);
 }
 
 .color-preview {
@@ -565,9 +567,9 @@ onMounted(() => {
 .owned-mark {
   width: 32rpx;
   height: 32rpx;
-  background: #52C41A;
+  background: var(--color-success);
   border-radius: 50%;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 20rpx;
   display: flex;
   align-items: center;
@@ -580,14 +582,14 @@ onMounted(() => {
 
 .color-name {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 4rpx;
 }
 
 .color-code {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .stock-control {
@@ -606,26 +608,26 @@ onMounted(() => {
 }
 
 .stock-btn.minus {
-  background: #F5F5F5;
+  background: var(--color-bg-page);
 }
 
 .stock-btn.plus {
-  background: #2D2D2D;
+  background: var(--color-primary);
 }
 
 .btn-icon {
   font-size: 28rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .stock-btn.plus .btn-icon {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 .stock-value {
   font-size: 28rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   min-width: 60rpx;
   text-align: center;
 }
@@ -636,10 +638,10 @@ onMounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: #fff;
+  background: var(--color-bg-panel);
   padding: 16rpx 24rpx;
   padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
-  border-top: 1rpx solid #F0F0F0;
+  border-top: 1rpx solid var(--color-divider);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -653,22 +655,23 @@ onMounted(() => {
 .batch-btn {
   padding: 16rpx 32rpx;
   border-radius: 8rpx;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
 }
 
 .batch-btn .btn-text {
   font-size: 26rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .save-btn {
   padding: 16rpx 48rpx;
   border-radius: 8rpx;
-  background: #2D2D2D;
+  background: var(--color-primary);
 }
 
 .save-btn .btn-text {
   font-size: 26rpx;
-  color: #fff;
+  color: var(--color-text-inverse);
+  font-weight: 600;
 }
 </style>

@@ -778,108 +778,109 @@ const startCreation = () => {
 </script>
 
 <style scoped>
-.image-import-page { min-height: 100vh; background-color: #F5F5F5; padding-bottom: 200rpx; }
+.image-import-page { min-height: 100vh; background-color: var(--color-bg-page); padding-bottom: 200rpx; }
 
-.page-header { padding: 32rpx; background-color: #FFFFFF; margin-bottom: 24rpx; }
-.page-title { font-size: 36rpx; font-weight: 600; color: #2D2D2D; display: block; }
-.page-subtitle { font-size: 26rpx; color: #999999; margin-top: 8rpx; }
+.page-header { padding: 32rpx; background-color: var(--color-bg-panel); margin-bottom: 24rpx; border-radius: 0 0 var(--radius-lg) var(--radius-lg); box-shadow: var(--shadow-sm); }
+.page-title { font-size: 36rpx; font-weight: 600; color: var(--color-text-primary); display: block; }
+.page-subtitle { font-size: 26rpx; color: var(--color-text-tertiary); margin-top: 8rpx; }
 
 .upload-section { padding: 0 32rpx; margin-bottom: 24rpx; }
 .upload-area {
-  height: 240rpx; background-color: #FFFFFF; border-radius: 24rpx; border: 4rpx dashed #E8E8E8;
+  height: 240rpx; background-color: var(--color-bg-panel); border-radius: var(--radius-lg); border: 4rpx dashed var(--color-border);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm);
 }
-.upload-icon { width: 100rpx; height: 100rpx; background-color: #F0F7FF; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; }
+.upload-icon { width: 100rpx; height: 100rpx; background-color: var(--color-primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; }
 .icon-text { font-size: 48rpx; }
-.upload-text { font-size: 28rpx; color: #2D2D2D; margin-bottom: 4rpx; }
-.upload-hint { font-size: 22rpx; color: #999999; }
+.upload-text { font-size: 28rpx; color: var(--color-text-primary); margin-bottom: 4rpx; }
+.upload-hint { font-size: 22rpx; color: var(--color-text-tertiary); }
 
 /* 对比区域 */
 .compare-section { padding: 0 32rpx; margin-bottom: 24rpx; }
 .compare-row { display: flex; gap: 16rpx; }
 .compare-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
-.compare-label { font-size: 24rpx; color: #666666; margin-bottom: 8rpx; }
+.compare-label { font-size: 24rpx; color: var(--color-text-secondary); margin-bottom: 8rpx; }
 .compare-image-wrap {
-  width: 100%; aspect-ratio: 1; background-color: #FFFFFF; border-radius: 16rpx;
-  border: 2rpx solid #E8E8E8; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  width: 100%; aspect-ratio: 1; background-color: var(--color-bg-panel); border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border); overflow: hidden; display: flex; align-items: center; justify-content: center;
 }
-.compare-image-wrap.has-result { border-color: #34C759; }
+.compare-image-wrap.has-result { border-color: var(--color-success); }
 .compare-img { width: 100%; height: 100%; }
-.bp-preview-img { image-rendering: pixelated; image-rendering: crisp-edges; background-color: #FFFFFF; }
-.no-result-text { font-size: 22rpx; color: #CCCCCC; }
+.bp-preview-img { image-rendering: pixelated; image-rendering: crisp-edges; background-color: var(--color-bg-panel); }
+.no-result-text { font-size: 22rpx; color: var(--color-text-disabled); }
 .compare-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 12rpx; }
-.action-link { font-size: 24rpx; color: #007AFF; }
+.action-link { font-size: 24rpx; color: var(--color-primary); }
 
 /* 设置 */
-.settings-section { padding: 32rpx; background-color: #FFFFFF; margin-bottom: 24rpx; }
-.section-title { font-size: 30rpx; font-weight: 600; color: #2D2D2D; margin-bottom: 24rpx; display: block; }
+.settings-section { padding: 32rpx; background-color: var(--color-bg-panel); margin-bottom: 24rpx; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.section-title { font-size: 30rpx; font-weight: 600; color: var(--color-text-primary); margin-bottom: 24rpx; display: block; }
 .setting-item { margin-bottom: 28rpx; }
 .setting-item:last-child { margin-bottom: 0; }
-.setting-label { font-size: 26rpx; color: #666666; margin-bottom: 14rpx; display: block; }
+.setting-label { font-size: 26rpx; color: var(--color-text-secondary); margin-bottom: 14rpx; display: block; }
 
 .size-inputs { display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; }
-.input-group { display: flex; align-items: center; background-color: #F5F5F5; border-radius: 12rpx; padding: 14rpx 18rpx; }
-.input-label { font-size: 26rpx; color: #666666; margin-right: 10rpx; }
-.size-input { width: 80rpx; font-size: 28rpx; color: #2D2D2D; text-align: center; }
-.input-unit { font-size: 22rpx; color: #999999; margin-left: 6rpx; }
-.size-separator { font-size: 32rpx; color: #999999; margin: 0 20rpx; }
+.input-group { display: flex; align-items: center; background-color: var(--color-bg-page); border-radius: 12rpx; padding: 14rpx 18rpx; }
+.input-label { font-size: 26rpx; color: var(--color-text-secondary); margin-right: 10rpx; }
+.size-input { width: 80rpx; font-size: 28rpx; color: var(--color-text-primary); text-align: center; }
+.input-unit { font-size: 22rpx; color: var(--color-text-tertiary); margin-left: 6rpx; }
+.size-separator { font-size: 32rpx; color: var(--color-text-tertiary); margin: 0 20rpx; }
 .size-presets { display: flex; justify-content: center; gap: 12rpx; flex-wrap: wrap; }
-.preset-btn { padding: 10rpx 20rpx; background-color: #F5F5F5; border-radius: 32rpx; font-size: 22rpx; color: #666666; }
-.preset-btn.active { background-color: #F0F7FF; color: #007AFF; }
+.preset-btn { padding: 10rpx 20rpx; background-color: var(--color-bg-page); border-radius: 32rpx; font-size: 22rpx; color: var(--color-text-secondary); }
+.preset-btn.active { background-color: var(--color-primary-light); color: var(--color-primary); }
 
 /* 颜色横向滑动 */
 .color-scroll { white-space: nowrap; }
 .color-chip-row { display: inline-flex; gap: 12rpx; padding: 4rpx 0; }
 .color-chip {
-  display: inline-block; padding: 14rpx 28rpx; background-color: #F5F5F5;
-  border-radius: 24rpx; font-size: 24rpx; color: #666666; white-space: nowrap;
+  display: inline-block; padding: 14rpx 28rpx; background-color: var(--color-bg-page);
+  border-radius: 24rpx; font-size: 24rpx; color: var(--color-text-secondary); white-space: nowrap;
 }
 .color-chip.active { background-color: #E8F5E9; color: #2E7D32; font-weight: 600; }
 
 /* 品牌选择 */
 .brand-options { display: flex; gap: 12rpx; flex-wrap: wrap; }
-.brand-btn { padding: 10rpx 20rpx; background-color: #F5F5F5; border-radius: 24rpx; font-size: 22rpx; color: #666666; }
+.brand-btn { padding: 10rpx 20rpx; background-color: var(--color-bg-page); border-radius: 24rpx; font-size: 22rpx; color: var(--color-text-secondary); }
 .brand-btn.active { background-color: #FFF3E0; color: #FF9800; }
 
 /* 算法选择 */
 .algo-options { display: flex; gap: 12rpx; flex-wrap: wrap; }
-.algo-btn { padding: 10rpx 20rpx; background-color: #F5F5F5; border-radius: 24rpx; font-size: 22rpx; color: #666666; }
+.algo-btn { padding: 10rpx 20rpx; background-color: var(--color-bg-page); border-radius: 24rpx; font-size: 22rpx; color: var(--color-text-secondary); }
 .algo-btn.active { background-color: #E8F5E9; color: #2E7D32; }
-.algo-desc { font-size: 22rpx; color: #999999; margin-top: 8rpx; display: block; }
+.algo-desc { font-size: 22rpx; color: var(--color-text-tertiary); margin-top: 8rpx; display: block; }
 
 /* 检测颜色 */
 .detected-colors { display: flex; flex-wrap: wrap; gap: 10rpx; }
-.detected-color-item { display: flex; align-items: center; background-color: #F5F5F5; padding: 6rpx 14rpx; border-radius: 8rpx; }
-.color-swatch { width: 28rpx; height: 28rpx; border-radius: 4rpx; margin-right: 10rpx; border: 1rpx solid #E8E8E8; }
-.color-value { font-size: 20rpx; color: #666666; font-family: monospace; }
+.detected-color-item { display: flex; align-items: center; background-color: var(--color-bg-page); padding: 6rpx 14rpx; border-radius: 8rpx; }
+.color-swatch { width: 28rpx; height: 28rpx; border-radius: 4rpx; margin-right: 10rpx; border: 1rpx solid var(--color-border); }
+.color-value { font-size: 20rpx; color: var(--color-text-secondary); font-family: monospace; }
 
 /* 统计 */
 .result-stats { display: flex; gap: 24rpx; }
-.stat-item { font-size: 24rpx; color: #666666; }
+.stat-item { font-size: 24rpx; color: var(--color-text-secondary); }
 
 /* 底部 */
-.bottom-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 32rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background-color: #FFFFFF; box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05); }
+.bottom-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 32rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background-color: var(--color-bg-panel); box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05); }
 .btn-generate {
   width: 100%; height: 88rpx;
-  background: linear-gradient(135deg, #007AFF, #0056CC);
-  color: #FFFFFF; font-size: 32rpx; font-weight: 600;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-text-inverse); font-size: 32rpx; font-weight: 600;
   border-radius: 44rpx; border: none;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
-.btn-generate.disabled { background: #CCCCCC; pointer-events: none; }
+.btn-generate.disabled { background: var(--color-text-disabled); pointer-events: none; }
 .btn-row { display: flex; gap: 16rpx; }
 .btn-regenerate {
-  flex: 1; height: 88rpx; background: #F5F5F5; color: #007AFF;
+  flex: 1; height: 88rpx; background: var(--color-bg-page); color: var(--color-primary);
   font-size: 28rpx; font-weight: 600; border-radius: 44rpx;
-  border: 2rpx solid #007AFF;
+  border: 2rpx solid var(--color-primary);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
 .btn-start-creation {
   flex: 1; height: 88rpx;
-  background: linear-gradient(135deg, #34C759, #28A745);
-  color: #FFFFFF; font-size: 28rpx; font-weight: 600;
+  background: linear-gradient(135deg, var(--color-success), #28A745);
+  color: var(--color-text-inverse); font-size: 28rpx; font-weight: 600;
   border-radius: 44rpx; border: none;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;

@@ -237,7 +237,7 @@ onMounted(() => {
 <style scoped>
 .agreement-page {
   min-height: 100vh;
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
 }
 
 .content-scroll {
@@ -253,7 +253,7 @@ onMounted(() => {
 .title {
   font-size: 40rpx;
   font-weight: 700;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   text-align: center;
   margin-bottom: 16rpx;
@@ -261,7 +261,7 @@ onMounted(() => {
 
 .update-time {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
   display: block;
   text-align: center;
   margin-bottom: 48rpx;
@@ -274,14 +274,14 @@ onMounted(() => {
 .section-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 16rpx;
 }
 
 .paragraph {
   font-size: 28rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   line-height: 1.8;
   display: block;
   margin-bottom: 16rpx;
@@ -290,7 +290,7 @@ onMounted(() => {
 
 .list-item {
   font-size: 28rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
   line-height: 1.8;
   display: block;
   margin-bottom: 8rpx;

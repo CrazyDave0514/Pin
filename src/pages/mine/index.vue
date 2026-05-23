@@ -1,7 +1,7 @@
 <template>
   <view class="mine-page">
-    <!-- 用户信息区 -->
-    <view class="user-section">
+    <!-- 用户信息区 - 卡片式设计 -->
+    <view class="user-card">
       <view class="user-info" @click="goToEditProfile">
         <template v-if="user">
           <view class="avatar-wrapper">
@@ -28,10 +28,12 @@
         <text class="stat-value">{{ stats.artworks }}</text>
         <text class="stat-label">我的作品</text>
       </view>
+      <view class="stat-divider"></view>
       <view class="stat-item">
         <text class="stat-value">{{ stats.favorites }}</text>
         <text class="stat-label">我的收藏</text>
       </view>
+      <view class="stat-divider"></view>
       <view class="stat-item">
         <text class="stat-value">{{ stats.likes }}</text>
         <text class="stat-label">我的获赞</text>
@@ -48,20 +50,19 @@
       >
         <text class="function-icon">{{ item.icon }}</text>
         <text class="function-name">{{ item.name }}</text>
-        <text class="function-arrow">→</text>
+        <text class="function-arrow">›</text>
       </view>
     </view>
-
-
 
     <!-- 头像操作菜单 -->
     <view v-if="showAvatarAction" class="modal-overlay" @click="closeAvatarMenu">
       <view class="action-sheet" @click.stop>
         <view class="action-item" @click="chooseAvatar('camera')">
-          <text>📷 拍照</text>
+          <text>拍照</text>
         </view>
+        <view class="action-divider"></view>
         <view class="action-item" @click="chooseAvatar('album')">
-          <text>🖼️ 从相册选择</text>
+          <text>从相册选择</text>
         </view>
         <view class="action-cancel" @click="closeAvatarMenu">取消</view>
       </view>
@@ -91,8 +92,8 @@
           </view>
         </view>
         <view class="crop-tools">
-          <text class="tool-btn" @click="rotateLeft">↺ 左旋</text>
-          <text class="tool-btn" @click="rotateRight">↻ 右旋</text>
+          <text class="tool-btn" @click="rotateLeft">左旋</text>
+          <text class="tool-btn" @click="rotateRight">右旋</text>
         </view>
       </view>
     </view>
@@ -301,15 +302,20 @@ const handleFunctionClick = (path: string) => {
 </script>
 
 <style scoped>
+/* ==================== 页面容器 ==================== */
 .mine-page {
   min-height: 100vh;
-  background-color: #F5F5F5;
-  padding-bottom: 40rpx;
+  background-color: var(--color-bg-page);
+  padding: 24rpx 24rpx 40rpx;
 }
 
-.user-section {
-  background-color: #FFFFFF;
-  padding: 96rpx 64rpx;
+/* ==================== 用户信息卡片 ==================== */
+.user-card {
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 80rpx 48rpx 48rpx;
+  margin-bottom: 24rpx;
 }
 
 .user-info {
@@ -328,12 +334,12 @@ const handleFunctionClick = (path: string) => {
   width: 160rpx;
   height: 160rpx;
   border-radius: 50%;
-  border: 4rpx solid #FFFFFF;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+  border: 4rpx solid var(--color-bg-panel);
+  box-shadow: var(--shadow-lg);
 }
 
 .user-avatar.default {
-  background-color: #E8E8E8;
+  background-color: var(--color-border);
 }
 
 /* 头像编辑按钮 */
@@ -343,12 +349,12 @@ const handleFunctionClick = (path: string) => {
   right: 0;
   width: 48rpx;
   height: 48rpx;
-  background-color: #007AFF;
+  background-color: var(--color-primary);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 4rpx solid #FFFFFF;
+  border: 4rpx solid var(--color-bg-panel);
 }
 
 .edit-icon {
@@ -357,7 +363,7 @@ const handleFunctionClick = (path: string) => {
 
 .user-name {
   font-size: 36rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   font-weight: 600;
   margin-bottom: 8rpx;
 }
@@ -376,34 +382,36 @@ const handleFunctionClick = (path: string) => {
 }
 
 .gender-icon.gender-male {
-  color: #007AFF;
+  color: var(--color-info);
 }
 
 .gender-icon.gender-female {
-  color: #FF6B9D;
+  color: var(--color-female);
 }
 
 .gender-icon.gender-secret {
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 .user-uid {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
 .login-text {
   font-size: 28rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
+/* ==================== 数据概览 ==================== */
 .stats-section {
   display: flex;
-  background-color: #FFFFFF;
+  align-items: center;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
   padding: 32rpx 0;
-  margin-bottom: 16rpx;
-  border-top: 2rpx solid #E8E8E8;
-  border-bottom: 2rpx solid #E8E8E8;
+  margin-bottom: 24rpx;
 }
 
 .stat-item {
@@ -411,36 +419,40 @@ const handleFunctionClick = (path: string) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-right: 2rpx solid #E8E8E8;
 }
 
-.stat-item:last-child {
-  border-right: none;
+.stat-divider {
+  width: 2rpx;
+  height: 48rpx;
+  background-color: var(--color-divider);
 }
 
 .stat-value {
   font-size: 36rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   font-weight: 600;
   margin-bottom: 8rpx;
 }
 
 .stat-label {
   font-size: 24rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
+/* ==================== 功能列表 ==================== */
 .function-section {
-  background-color: #FFFFFF;
-  margin-bottom: 16rpx;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 .function-item {
   display: flex;
   align-items: center;
-  height: 104rpx;
+  height: 112rpx;
   padding: 0 32rpx;
-  border-bottom: 2rpx solid #E8E8E8;
+  border-bottom: 2rpx solid var(--color-divider);
 }
 
 .function-item:last-child {
@@ -448,15 +460,15 @@ const handleFunctionClick = (path: string) => {
 }
 
 .function-item:active {
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-active);
 }
 
 .function-item.danger .function-name {
-  color: #FF3B30;
+  color: var(--color-error);
 }
 
 .danger-section {
-  background-color: #FFFFFF;
+  background-color: var(--color-bg-panel);
 }
 
 .function-icon {
@@ -466,23 +478,23 @@ const handleFunctionClick = (path: string) => {
 
 .function-name {
   flex: 1;
-  font-size: 28rpx;
-  color: #2D2D2D;
+  font-size: 30rpx;
+  color: var(--color-text-primary);
 }
 
 .function-arrow {
-  font-size: 32rpx;
-  color: #CCCCCC;
+  font-size: 36rpx;
+  color: var(--color-text-disabled);
 }
 
-/* 弹窗遮罩 */
+/* ==================== 弹窗遮罩 ==================== */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-bg-mask);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -493,39 +505,47 @@ const handleFunctionClick = (path: string) => {
   align-items: center;
 }
 
-/* 操作菜单 */
+/* ==================== 操作菜单 ==================== */
 .action-sheet {
   width: 100%;
-  background-color: #FFFFFF;
-  border-radius: 16rpx 16rpx 0 0;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .action-item {
   padding: 32rpx;
   text-align: center;
-  font-size: 30rpx;
-  color: #2D2D2D;
-  border-bottom: 2rpx solid #E8E8E8;
+  font-size: 32rpx;
+  color: var(--color-text-primary);
 }
 
 .action-item:active {
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-active);
+}
+
+.action-divider {
+  height: 2rpx;
+  background-color: var(--color-divider);
+  margin-left: 32rpx;
+  margin-right: 32rpx;
 }
 
 .action-cancel {
   padding: 32rpx;
   text-align: center;
-  font-size: 30rpx;
-  color: #666666;
-  background-color: #F5F5F5;
+  font-size: 32rpx;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-page);
   margin-top: 16rpx;
 }
 
-/* 裁剪弹窗 */
+/* ==================== 裁剪弹窗 ==================== */
 .crop-modal {
   width: 90%;
-  background-color: #FFFFFF;
-  border-radius: 16rpx;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-xl);
   overflow: hidden;
 }
 
@@ -534,30 +554,31 @@ const handleFunctionClick = (path: string) => {
   align-items: center;
   justify-content: space-between;
   padding: 24rpx 32rpx;
-  border-bottom: 2rpx solid #E8E8E8;
+  border-bottom: 2rpx solid var(--color-divider);
 }
 
 .crop-cancel {
-  font-size: 28rpx;
-  color: #666666;
+  font-size: 30rpx;
+  color: var(--color-text-secondary);
 }
 
 .crop-title {
   font-size: 32rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   font-weight: 600;
 }
 
 .crop-confirm {
-  font-size: 28rpx;
-  color: #007AFF;
+  font-size: 30rpx;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
+/** 裁剪容器 - 使用 CSS 变量适配深色主题 */
 .crop-container {
   position: relative;
   height: 600rpx;
-  background-color: #000000;
+  background-color: var(--color-bg-crop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -579,7 +600,7 @@ const handleFunctionClick = (path: string) => {
 
 .crop-mask {
   position: absolute;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: var(--color-bg-mask);
 }
 
 .crop-mask.top {
@@ -617,7 +638,7 @@ const handleFunctionClick = (path: string) => {
   width: 450rpx;
   height: 450rpx;
   transform: translate(-50%, -50%);
-  border: 4rpx solid #FFFFFF;
+  border: 4rpx solid var(--color-text-inverse);
   border-radius: 50%;
   box-sizing: border-box;
 }
@@ -627,12 +648,12 @@ const handleFunctionClick = (path: string) => {
   justify-content: center;
   gap: 64rpx;
   padding: 32rpx;
-  border-top: 2rpx solid #E8E8E8;
+  border-top: 2rpx solid var(--color-divider);
 }
 
 .tool-btn {
-  font-size: 28rpx;
-  color: #007AFF;
+  font-size: 30rpx;
+  color: var(--color-primary);
   padding: 16rpx 32rpx;
 }
 </style>

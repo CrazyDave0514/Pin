@@ -26,34 +26,38 @@
       <view class="settings-list">
         <view class="setting-item switch-item">
           <text class="item-label">接收推送通知</text>
-          <switch 
-            :checked="settings.pushEnabled" 
+          <!-- 推送通知开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.pushEnabled"
             @change="toggleSetting('pushEnabled')"
-            color="#2D2D2D"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">邮件通知</text>
-          <switch 
-            :checked="settings.emailEnabled" 
+          <!-- 邮件通知开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.emailEnabled"
             @change="toggleSetting('emailEnabled')"
-            color="#2D2D2D"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">新粉丝提醒</text>
-          <switch 
-            :checked="settings.followerNotify" 
+          <!-- 新粉丝提醒开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.followerNotify"
             @change="toggleSetting('followerNotify')"
-            color="#2D2D2D"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">作品被收藏提醒</text>
-          <switch 
-            :checked="settings.favoriteNotify" 
+          <!-- 作品被收藏提醒开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.favoriteNotify"
             @change="toggleSetting('favoriteNotify')"
-            color="#2D2D2D"
+            color="var(--color-primary)"
           />
         </view>
       </view>
@@ -65,18 +69,20 @@
       <view class="settings-list">
         <view class="setting-item switch-item">
           <text class="item-label">公开我的作品</text>
-          <switch 
-            :checked="settings.publicWorks" 
+          <!-- 公开作品开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.publicWorks"
             @change="toggleSetting('publicWorks')"
-            color="#2D2D2D"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item switch-item">
           <text class="item-label">允许他人私信</text>
-          <switch 
-            :checked="settings.allowMessage" 
+          <!-- 允许私信开关 - 使用主题主色 -->
+          <switch
+            :checked="settings.allowMessage"
             @change="toggleSetting('allowMessage')"
-            color="#2D2D2D"
+            color="var(--color-primary)"
           />
         </view>
         <view class="setting-item" @click="manageBlacklist">
@@ -135,7 +141,7 @@
       <view class="section-title">账号安全</view>
       <view class="settings-list">
         <view class="setting-item" @click="showDeleteAccount">
-          <text class="item-label" style="color: #FF3B30;">注销账号</text>
+          <text class="item-label text-danger">注销账号</text>
           <text class="item-arrow">›</text>
         </view>
       </view>
@@ -423,19 +429,19 @@ onMounted(() => {
 <style scoped>
 .settings-page {
   min-height: 100vh;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
   padding-bottom: 40rpx;
 }
 
 /* 设置区块 */
 .settings-section {
-  background: #fff;
+  background: var(--color-bg-panel);
   margin-bottom: 16rpx;
 }
 
 .section-title {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   padding: 24rpx 24rpx 16rpx;
 }
 
@@ -449,7 +455,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .setting-item:last-child {
@@ -462,12 +468,16 @@ onMounted(() => {
 
 .item-label {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
+}
+
+.item-label.text-danger {
+  color: var(--color-error);
 }
 
 .item-arrow {
   font-size: 32rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .item-extra {
@@ -478,7 +488,7 @@ onMounted(() => {
 
 .extra-text {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 /* 退出登录 */
@@ -488,8 +498,8 @@ onMounted(() => {
 
 .logout-btn {
   height: 88rpx;
-  background: #fff;
-  border-radius: 12rpx;
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -497,7 +507,7 @@ onMounted(() => {
 
 .logout-btn .btn-text {
   font-size: 30rpx;
-  color: #FF4D4F;
+  color: var(--color-error);
 }
 
 /* 弹窗 */
@@ -507,7 +517,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-bg-mask);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -517,8 +527,8 @@ onMounted(() => {
 .modal-content {
   width: 80%;
   max-width: 560rpx;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-xl);
   overflow: hidden;
 }
 
@@ -530,7 +540,7 @@ onMounted(() => {
 .modal-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .modal-body {
@@ -540,13 +550,13 @@ onMounted(() => {
 
 .modal-text {
   font-size: 28rpx;
-  color: #666;
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 
 .modal-footer {
   display: flex;
-  border-top: 1rpx solid #F0F0F0;
+  border-top: 1rpx solid var(--color-divider);
 }
 
 .modal-btn {
@@ -558,15 +568,15 @@ onMounted(() => {
 }
 
 .modal-btn.cancel {
-  border-right: 1rpx solid #F0F0F0;
+  border-right: 1rpx solid var(--color-divider);
 }
 
 .modal-btn.cancel .btn-text {
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .modal-btn.confirm .btn-text {
-  color: #FF4D4F;
+  color: var(--color-error);
 }
 
 .modal-btn .btn-text {

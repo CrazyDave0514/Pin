@@ -108,25 +108,29 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 
-// 用户积分
+/** 用户当前积分 */
 const userPoints = ref(0)
 
-// 筛选标签
+/** 筛选标签配置 */
 const filterTabs = [
   { key: 'all', label: '全部' },
   { key: 'income', label: '收入' },
   { key: 'expense', label: '支出' }
 ]
+
+/** 当前激活的筛选标签 */
 const activeFilter = ref('all')
 
-// 弹窗显示状态
+/** 兑换弹窗显示状态 */
 const showExchangeModal = ref(false)
+
+/** 赚取积分弹窗显示状态 */
 const showEarnModal = ref(false)
 
-// 积分记录
+/** 积分记录列表 */
 const records = ref<any[]>([])
 
-// 赚取任务列表
+/** 赚取积分任务列表 */
 const earnTasks = [
   { key: 'daily', title: '每日签到', desc: '每天登录即可获得积分', points: 5 },
   { key: 'create', title: '发布作品', desc: '发布公开作品到社区', points: 10 },
@@ -135,7 +139,9 @@ const earnTasks = [
   { key: 'invite', title: '邀请好友', desc: '成功邀请好友注册', points: 50 }
 ]
 
-// 筛选后的记录
+/**
+ * 根据当前筛选条件过滤积分记录
+ */
 const filteredRecords = computed(() => {
   if (activeFilter.value === 'all') return records.value
   if (activeFilter.value === 'income') return records.value.filter(r => r.amount > 0)
@@ -199,17 +205,18 @@ onMounted(() => {
 <style scoped>
 .points-page {
   min-height: 100vh;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
   padding-bottom: 40rpx;
 }
 
 /* 积分卡片 */
 .points-card {
-  background: linear-gradient(135deg, #2D2D2D 0%, #4A4A4A 100%);
+  background: linear-gradient(135deg, var(--color-text-primary) 0%, rgba(255,255,255,0.15) 100%);
   margin: 24rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-xl);
   padding: 40rpx;
-  color: #fff;
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-lg);
 }
 
 .points-header {
@@ -254,35 +261,37 @@ onMounted(() => {
 }
 
 .action-btn.primary {
-  background: #fff;
+  background: var(--color-primary);
 }
 
 .action-btn.primary .btn-text {
-  color: #2D2D2D;
+  color: var(--color-text-inverse);
+  font-weight: 600;
 }
 
 .action-btn .btn-text {
   font-size: 28rpx;
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 /* 积分明细 */
 .section {
-  background: #fff;
+  background: var(--color-bg-panel);
   margin: 0 24rpx;
-  border-radius: 16rpx;
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  box-shadow: var(--shadow-md);
 }
 
 .section-header {
   padding: 24rpx;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .section-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   margin-bottom: 16rpx;
   display: block;
 }
@@ -295,20 +304,20 @@ onMounted(() => {
 .filter-tab {
   padding: 8rpx 20rpx;
   border-radius: 24rpx;
-  background: #F5F5F5;
+  background: var(--color-bg-page);
 }
 
 .filter-tab.active {
-  background: #2D2D2D;
+  background: var(--color-primary);
 }
 
 .filter-tab .tab-text {
   font-size: 24rpx;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .filter-tab.active .tab-text {
-  color: #fff;
+  color: var(--color-text-inverse);
 }
 
 /* 记录列表 */
@@ -323,7 +332,7 @@ onMounted(() => {
 
 .empty-text {
   font-size: 28rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .record-item {
@@ -331,7 +340,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 24rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .record-item:last-child {
@@ -344,14 +353,14 @@ onMounted(() => {
 
 .record-title {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 8rpx;
 }
 
 .record-time {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .record-amount {
@@ -360,11 +369,11 @@ onMounted(() => {
 }
 
 .record-amount.positive {
-  color: #52C41A;
+  color: var(--color-success);
 }
 
 .record-amount.negative {
-  color: #FF4D4F;
+  color: var(--color-error);
 }
 
 /* 弹窗 */
@@ -374,7 +383,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-bg-mask);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,9 +393,10 @@ onMounted(() => {
 .modal-content {
   width: 80%;
   max-width: 560rpx;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--color-bg-panel);
+  border-radius: var(--radius-xl);
   overflow: hidden;
+  box-shadow: var(--shadow-lg);
 }
 
 .modal-header {
@@ -394,18 +404,18 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 24rpx;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .modal-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
 }
 
 .modal-close {
   font-size: 40rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
   line-height: 1;
 }
 
@@ -416,14 +426,14 @@ onMounted(() => {
 
 .modal-desc {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 16rpx;
 }
 
 .modal-hint {
   font-size: 24rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 /* 赚取列表 */
@@ -436,7 +446,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #F0F0F0;
+  border-bottom: 1rpx solid var(--color-divider);
 }
 
 .earn-item:last-child {
@@ -445,30 +455,30 @@ onMounted(() => {
 
 .earn-title {
   font-size: 28rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   display: block;
   margin-bottom: 4rpx;
 }
 
 .earn-desc {
   font-size: 22rpx;
-  color: #999;
+  color: var(--color-text-tertiary);
 }
 
 .reward-text {
   font-size: 28rpx;
-  color: #52C41A;
+  color: var(--color-success);
   font-weight: 600;
 }
 
 .modal-footer {
   padding: 24rpx;
-  border-top: 1rpx solid #F0F0F0;
+  border-top: 1rpx solid var(--color-divider);
 }
 
 .modal-btn {
   height: 80rpx;
-  background: #2D2D2D;
+  background: var(--color-primary);
   border-radius: 40rpx;
   display: flex;
   align-items: center;
@@ -477,6 +487,7 @@ onMounted(() => {
 
 .modal-btn .btn-text {
   font-size: 28rpx;
-  color: #fff;
+  color: var(--color-text-inverse);
+  font-weight: 600;
 }
 </style>

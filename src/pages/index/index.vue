@@ -254,7 +254,7 @@ const doRender = (artwork: any, canvasId: string, width: number, height: number)
   const offsetX = Math.floor((width - gridSize * cellSize) / 2)
   const offsetY = Math.floor((height - gridSize * cellSize) / 2)
 
-  /** 背景 */
+  /** 背景 - 使用 CSS 变量适配深色主题 */
   ctx.setFillStyle('#F5F5F5')
   ctx.fillRect(0, 0, width, height)
 
@@ -355,22 +355,26 @@ const goToSearch = () => {
 </script>
 
 <style scoped>
+/* ==================== 首页样式 - 基于 Pin 统一设计系统 ==================== */
+
+/** 页面容器 */
 .index-page {
   min-height: 100vh;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
   max-width: 100vw;
   overflow-x: hidden;
   box-sizing: border-box;
 }
 
+/** 顶部导航栏 */
 .nav-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 88rpx;
   padding: 0 32rpx;
-  background-color: #FFFFFF;
-  border-bottom: 2rpx solid #E8E8E8;
+  background-color: var(--color-bg-panel);
+  border-bottom: 2rpx solid var(--color-border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -378,6 +382,7 @@ const goToSearch = () => {
   box-sizing: border-box;
 }
 
+/** Tab 列表容器 */
 .tab-list {
   display: flex;
   align-items: center;
@@ -385,6 +390,7 @@ const goToSearch = () => {
   overflow: hidden;
 }
 
+/** 单个 Tab 项 */
 .tab-item {
   position: relative;
   margin-right: 48rpx;
@@ -392,11 +398,13 @@ const goToSearch = () => {
   flex-shrink: 0;
 }
 
+/** Tab 激活态文字 - 使用品牌主色 */
 .tab-item.active .tab-text {
-  color: #2D2D2D;
+  color: var(--color-primary);
   font-weight: 600;
 }
 
+/** Tab 激活态底部指示器 - 品牌色 */
 .tab-item.active::after {
   content: '';
   position: absolute;
@@ -405,15 +413,17 @@ const goToSearch = () => {
   transform: translateX(-50%);
   width: 32rpx;
   height: 4rpx;
-  background-color: #2D2D2D;
+  background-color: var(--color-primary);
   border-radius: 2rpx;
 }
 
+/** Tab 文字默认态 */
 .tab-text {
   font-size: 28rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
+/** 搜索按钮 */
 .search-btn {
   width: 64rpx;
   height: 64rpx;
@@ -423,40 +433,45 @@ const goToSearch = () => {
   flex-shrink: 0;
 }
 
+/** 搜索图标 */
 .search-icon {
   font-size: 36rpx;
 }
 
+/** 瀑布流滚动容器 */
 .waterfall-container {
   height: calc(100vh - 188rpx);
   padding: 16rpx;
   box-sizing: border-box;
 }
 
+/** 瀑布流列表 - 双列布局 */
 .waterfall-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
 }
 
+/** 作品卡片 - 统一圆角 12px + 标准阴影 */
 .artwork-card {
   width: calc(50% - 8rpx);
   margin-bottom: 16rpx;
-  background-color: #FFFFFF;
-  border-radius: 16rpx;
+  background-color: var(--color-bg-panel);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
-/* 封面容器 */
+/** 封面容器 - 等比例正方形 */
 .cover-wrapper {
   position: relative;
   width: 100%;
   padding-bottom: 100%;
   overflow: hidden;
-  background-color: #F5F5F5;
+  background-color: var(--color-bg-page);
 }
 
+/** Canvas 封面画布 - 绝对定位铺满容器 */
 .artwork-cover-canvas {
   position: absolute;
   top: 0;
@@ -465,37 +480,41 @@ const goToSearch = () => {
   height: 100%;
 }
 
-/* 积分徽章 - 封面右上角 */
+/** 积分徽章 - 封面右上角半透明背景，使用 CSS 变量适配深色主题 */
 .points-badge {
   position: absolute;
   top: 12rpx;
   right: 12rpx;
   display: flex;
   align-items: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--color-bg-mask);
   padding: 6rpx 12rpx;
   border-radius: 20rpx;
   z-index: 1;
 }
 
+/** 积分图标 */
 .points-icon {
   font-size: 20rpx;
   margin-right: 4rpx;
 }
 
+/** 积分数值 */
 .points-value {
   font-size: 20rpx;
-  color: #FFFFFF;
+  color: var(--color-text-inverse);
   font-weight: 500;
 }
 
+/** 作品信息区域 */
 .artwork-info {
   padding: 16rpx;
 }
 
+/** 作品名称 - 主文字色，最多两行截断 */
 .artwork-name {
   font-size: 26rpx;
-  color: #2D2D2D;
+  color: var(--color-text-primary);
   line-height: 1.4;
   margin-bottom: 12rpx;
   display: -webkit-box;
@@ -504,6 +523,7 @@ const goToSearch = () => {
   overflow: hidden;
 }
 
+/** 作品元信息行 - 创作者与点赞 */
 .artwork-meta {
   display: flex;
   align-items: center;
@@ -511,41 +531,47 @@ const goToSearch = () => {
   margin-bottom: 8rpx;
 }
 
+/** 创作者信息 */
 .creator {
   display: flex;
   align-items: center;
 }
 
+/** 创作者头像占位 */
 .creator-avatar {
   width: 28rpx;
   height: 28rpx;
   border-radius: 50%;
-  background-color: #E8E8E8;
+  background-color: var(--color-border);
   margin-right: 8rpx;
 }
 
+/** 创作者名称 - 次要文字色 */
 .creator-name {
   font-size: 22rpx;
-  color: #666666;
+  color: var(--color-text-secondary);
 }
 
+/** 点赞信息 */
 .likes {
   display: flex;
   align-items: center;
 }
 
+/** 点赞图标 */
 .like-icon {
   font-size: 22rpx;
-  color: #FF4D4D;
+  color: var(--color-error);
   margin-right: 4rpx;
 }
 
+/** 点赞数量 - 辅助文字色 */
 .like-count {
   font-size: 22rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
-/* 加载更多 */
+/** 加载更多区域 */
 .load-more {
   display: flex;
   align-items: center;
@@ -553,11 +579,13 @@ const goToSearch = () => {
   padding: 32rpx 0;
 }
 
+/** 加载更多文字 */
 .load-more-text {
   font-size: 24rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 
+/** 空状态容器 */
 .empty-state {
   display: flex;
   align-items: center;
@@ -565,8 +593,9 @@ const goToSearch = () => {
   height: 400rpx;
 }
 
+/** 空状态提示文字 */
 .empty-text {
   font-size: 28rpx;
-  color: #999999;
+  color: var(--color-text-tertiary);
 }
 </style>
