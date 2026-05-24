@@ -1,4 +1,5 @@
 import { defaultArtworks } from './artworks.js'
+import { normalizeAvatarValue } from './avatar-presets'
 
 export interface ProjectTags {
   primary?: string
@@ -135,7 +136,7 @@ export const normalizeArtwork = (item: any, index = 0): CommunityArtwork => {
     id: item.id || `artwork_${String(index + 1).padStart(3, '0')}`,
     name: item.name || '未命名作品',
     creatorName: item.creatorName || 'Pin用户',
-    creatorAvatar: item.creatorAvatar || '',
+    creatorAvatar: normalizeAvatarValue(item.creatorAvatar || ''),
     likes: Number(item.likes || 0),
     favorites: Number(item.favorites ?? Math.floor(Number(item.likes || 0) * 0.45)),
     points: Number(item.points || 0),
@@ -202,7 +203,7 @@ export const createArtworkFromProject = (
     id: existing?.id || getPublishedProjectArtworkId(project) || `local_${project.id}`,
     name: project.name || '未命名作品',
     creatorName: user.username || existing?.creatorName || 'Pin用户',
-    creatorAvatar: user.avatar || existing?.creatorAvatar || '',
+    creatorAvatar: normalizeAvatarValue(user.avatar || existing?.creatorAvatar || ''),
     likes: existing?.likes || 0,
     favorites: existing?.favorites || 0,
     points: Number(project.publishPoints ?? existing?.points ?? 0),

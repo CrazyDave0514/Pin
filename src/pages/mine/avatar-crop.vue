@@ -25,12 +25,12 @@
         </view>
         <view
           v-for="(preset, index) in presetAvatars"
-          :key="index"
+          :key="preset.key"
           class="preset-item"
           :class="{ selected: selectedPreset === index }"
           @click="selectPreset(index)"
         >
-          <image class="preset-image" :src="preset" mode="aspectFill" />
+          <image class="preset-avatar-image" :src="preset.image" mode="aspectFill" />
         </view>
       </view>
     </view>
@@ -43,6 +43,7 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
+import { DEFAULT_PRESET_AVATAR, PRESET_AVATARS, normalizeAvatarValue } from '../../utils/avatar-presets'
 
 /** 状态栏高度 */
 const statusBarHeight = ref(44)
@@ -54,22 +55,9 @@ const avatarUrl = ref('')
 const selectedPreset = ref(-1)
 
 /** 预设头像列表 */
-const presetAvatars = [
-  '/static/assets/v017/avatars/avatar-rat.svg',
-  '/static/assets/v017/avatars/avatar-ox.svg',
-  '/static/assets/v017/avatars/avatar-tiger.svg',
-  '/static/assets/v017/avatars/avatar-rabbit.svg',
-  '/static/assets/v017/avatars/avatar-dragon.svg',
-  '/static/assets/v017/avatars/avatar-snake.svg',
-  '/static/assets/v017/avatars/avatar-horse.svg',
-  '/static/assets/v017/avatars/avatar-goat.svg',
-  '/static/assets/v017/avatars/avatar-monkey.svg',
-  '/static/assets/v017/avatars/avatar-rooster.svg',
-  '/static/assets/v017/avatars/avatar-dog.svg',
-  '/static/assets/v017/avatars/avatar-pig.svg',
-]
+const presetAvatars = PRESET_AVATARS
 
-const isPresetAvatar = computed(() => presetAvatars.includes(avatarUrl.value))
+const isPresetAvatar = computed(() => String(avatarUrl.value || '').startsWith('preset:'))
 
 onMounted(() => {
   /** 获取系统状态栏高度 */
@@ -79,10 +67,10 @@ onMounted(() => {
   /** 从本地存储加载当前头像 */
   const userData = uni.getStorageSync('pin_user')
   if (userData && userData.avatar) {
-    avatarUrl.value = userData.avatar
-    selectedPreset.value = presetAvatars.indexOf(userData.avatar)
+    avatarUrl.value = normalizeAvatarValue(userData.avatar)
+    selectedPreset.value = presetAvatars.findIndex((item) => `preset:${item.key}` === avatarUrl.value)
   } else {
-    avatarUrl.value = presetAvatars[0]
+    avatarUrl.value = DEFAULT_PRESET_AVATAR
     selectedPreset.value = 0
   }
 })
@@ -92,7 +80,7 @@ onMounted(() => {
  */
 const selectPreset = (index: number) => {
   selectedPreset.value = index
-  avatarUrl.value = presetAvatars[index]
+  avatarUrl.value = `preset:${presetAvatars[index].key}`
 }
 
 /**
@@ -222,9 +210,25 @@ const goBack = () => {
   transform: scale(1.05);
 }
 
-.preset-image {
+.preset-avatar {
   width: 100%;
   height: 100%;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-bg-panel);
+}
+
+.preset-avatar-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.preset-glyph {
+  font-size: 46rpx;
+  font-weight: 800;
 }
 
 .upload-tile {

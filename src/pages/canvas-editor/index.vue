@@ -477,6 +477,7 @@ interface ProjectData {
   folderId?: string
   tags?: { primary?: string; secondary?: string }
   isPublished?: boolean
+  isOffShelf?: boolean
   publishedArtworkId?: string
   publishPoints?: number
 }
@@ -1833,6 +1834,7 @@ const doSave = (projectName: string, exportAfterSave = false) => {
         projects[index].folderId = editingFolderId.value
         projects[index].tags = normalizedTags
         projects[index].isPublished = editingPublished.value
+        projects[index].isOffShelf = false
         projects[index].publishedArtworkId = editingPublishedArtworkId.value
         projects[index].publishPoints = editingPublishPoints.value
       }
@@ -1847,6 +1849,7 @@ const doSave = (projectName: string, exportAfterSave = false) => {
         folderId: initialFolderId.value,
         tags: normalizedTags,
         isPublished: false,
+        isOffShelf: false,
         publishedArtworkId: '',
         publishPoints: 0,
       }
@@ -2659,23 +2662,24 @@ const exportBlueprintImage = (projectName: string) => {
 .bead-stats-bar {
   display: flex;
   align-items: center;
-  padding: 8px 16px;
+  min-height: 58px;
+  padding: 10px 14px 12px 10px;
   background-color: rgba(255,253,250,.96);
   border-top: 1px solid var(--color-border, #E8E8E8);
   flex-shrink: 0;
-  gap: 8px;
+  gap: 6px;
 }
 
 .stats-total {
-  min-width: 54px;
+  min-width: 58px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .stats-main {
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1;
   font-weight: 700;
   color: var(--color-text-primary, #333333);
@@ -2690,15 +2694,16 @@ const exportBlueprintImage = (projectName: string) => {
 
 .stats-divider {
   width: 1px;
-  height: 28px;
+  height: 32px;
   background-color: var(--color-border-light, #F0F0F0);
   flex-shrink: 0;
-  margin: 0 2px;
+  margin: 0 8px 0 6px;
 }
 
 .stats-scroll {
   flex: 1;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .stats-list {
@@ -2760,6 +2765,7 @@ const exportBlueprintImage = (projectName: string) => {
 .stats-empty {
   font-size: 12px;
   color: var(--color-text-tertiary, #999999);
+  line-height: 32px;
 }
 
 /* ==================== Tab栏 ====================
@@ -2770,7 +2776,7 @@ const exportBlueprintImage = (projectName: string) => {
  */
 .tab-bar {
   display: flex;
-  margin: 0 20px 12px;
+  margin: 0 16px 10px;
   padding: 6px;
   background-color: var(--color-bg-panel, #FFFFFF);
   border: 3px solid var(--color-text-primary);
@@ -2813,15 +2819,15 @@ const exportBlueprintImage = (projectName: string) => {
   background-color: transparent;
   flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom);
-  min-height: 172px;
+  min-height: 88px;
 }
 
 .tab-panel-content {
-  min-height: 172px;
-  padding: 16px 16px 20px;
+  min-height: 88px;
+  padding: 8px 14px 14px;
   box-sizing: border-box;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 /* 尺寸选项 */
@@ -2830,10 +2836,12 @@ const exportBlueprintImage = (projectName: string) => {
   flex-wrap: nowrap;
   gap: 10px;
   overflow-x: auto;
-  padding-bottom: 4px;
+  padding-bottom: 2px;
   width: 100%;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  align-items: center;
+  min-height: 66px;
 }
 
 .size-options::-webkit-scrollbar {
@@ -2844,13 +2852,17 @@ const exportBlueprintImage = (projectName: string) => {
 
 .size-option {
   flex: 0 0 auto;
-  min-width: 88px;
-  padding: 12px 18px;
+  min-width: 98px;
+  height: 46px;
+  padding: 0 14px;
   border-radius: 999px;
   background-color: rgba(255, 255, 255, 0.96);
   border: 2px solid var(--color-text-primary, #231F1A);
   cursor: pointer;
   transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .size-option.active {
@@ -2859,7 +2871,7 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .size-option-text {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-primary, #333333);
   font-weight: 600;
 }
@@ -2871,67 +2883,83 @@ const exportBlueprintImage = (projectName: string) => {
 /* 编辑选项 */
 .edit-options {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
+  align-items: stretch;
+  min-height: 66px;
 }
 
 .edit-option {
   flex: 1;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  padding: 16px 12px;
-  border-radius: 12px;
-  background-color: var(--color-bg-page, #F5F5F5);
+  gap: 10px;
+  min-height: 66px;
+  padding: 0 14px;
+  border-radius: 22px;
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 2px solid var(--color-text-primary, #231F1A);
   cursor: pointer;
   transition: all 0.15s;
+  justify-content: center;
 }
 
 .edit-option:active {
-  background-color: var(--color-bg-hover, #EBEBEB);
+  background-color: #FFF4D7;
 }
 
 .edit-option-icon {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   display: block;
+  flex-shrink: 0;
 }
 
 .edit-option-text {
   font-size: 13px;
   color: var(--color-text-primary, #333333);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* 样式选项 */
 .style-options {
   display: flex;
-  gap: 24px;
-  justify-content: center;
+  gap: 10px;
+  justify-content: flex-start;
   width: 100%;
+  align-items: stretch;
+  min-height: 66px;
 }
 
 .style-option {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   gap: 10px;
-  padding: 16px 24px;
-  border-radius: 12px;
-  border: 2px solid transparent;
+  min-width: 110px;
+  min-height: 66px;
+  padding: 0 14px;
+  border-radius: 22px;
+  border: 2px solid var(--color-text-primary, #231F1A);
+  background: rgba(255, 255, 255, 0.96);
   cursor: pointer;
   transition: all 0.15s;
+  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .style-option.active {
-  border-color: var(--color-primary, #F5A623);
-  background-color: var(--color-primary-light, #FFF5E0);
+  border-color: #D5A63B;
+  background-color: #FFF3D8;
 }
 
 .style-preview {
-  width: 48px;
-  height: 48px;
+  width: 28px;
+  height: 28px;
   background-color: var(--color-primary, #F5A623);
+  flex-shrink: 0;
 }
 
 .style-preview.bead-square-preview {
@@ -2949,17 +2977,18 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .style-preview-hole {
-  width: 14px;
-  height: 14px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   background-color: #FFFFFF;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .style-option-text {
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-text-primary, #333333);
-  font-weight: 500;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ==================== 颜色选择面板（底部弹窗） ====================

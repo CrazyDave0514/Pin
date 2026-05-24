@@ -47,7 +47,7 @@
         >
           <view class="entry-cover project-cover">
             <image
-              v-if="project.thumbnail"
+              v-if="hasProjectPreview(project)"
               class="entry-cover-image"
               :src="project.thumbnail"
               mode="aspectFit"
@@ -55,8 +55,8 @@
             <view v-else class="entry-cover-placeholder">
               <image class="placeholder-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
             </view>
-            <view class="status-chip" :class="project.isPublished ? 'published' : 'saved'">
-              {{ project.isPublished ? '已发布' : '编辑中' }}
+            <view class="status-chip" :class="resolveProjectStatusClass(project)">
+              {{ resolveProjectStatusText(project) }}
             </view>
           </view>
 
@@ -67,7 +67,8 @@
                 <text>•••</text>
               </view>
             </view>
-            <text class="entry-meta">{{ formatDimensions(project) }} · {{ formatDateTime(project.updatedAt) }}</text>
+            <text class="entry-meta">{{ formatProjectSpecs(project) }}</text>
+            <text class="entry-meta">{{ formatDateTime(project.updatedAt) }}</text>
             <text class="entry-meta" v-if="project.tags?.primary || project.tags?.secondary">{{ formatProjectTags(project.tags).join(' / ') }}</text>
           </view>
         </view>
@@ -92,7 +93,8 @@
             <text>✕</text>
           </view>
         </view>
-        <view class="sheet-list">
+        <scroll-view class="sheet-scroll" scroll-y>
+          <view class="sheet-list">
           <view class="sheet-item" @click="createCanvas('blank')">
             <image class="sheet-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
             <view class="sheet-copy">
@@ -121,7 +123,8 @@
               <text class="sheet-item-desc">整理你的项目与灵感</text>
             </view>
           </view>
-        </view>
+          </view>
+        </scroll-view>
       </view>
     </view>
 
@@ -133,7 +136,8 @@
             <text>✕</text>
           </view>
         </view>
-        <view class="action-grid">
+        <scroll-view class="sheet-scroll" scroll-y>
+          <view class="action-grid">
           <view class="action-tile" @click="renameProject">
             <text class="action-emoji">Aa</text>
             <text class="action-label">重命名</text>
@@ -162,7 +166,8 @@
             <text class="action-emoji">↗</text>
             <text class="action-label">分享</text>
           </view>
-        </view>
+          </view>
+        </scroll-view>
       </view>
     </view>
 
@@ -174,7 +179,8 @@
             <text>✕</text>
           </view>
         </view>
-        <view class="publish-body">
+        <scroll-view class="sheet-scroll" scroll-y>
+          <view class="publish-body">
           <text class="field-label">作品名称</text>
           <input v-model="publishName" class="field-input" placeholder="请输入作品名称" placeholder-class="placeholder" />
 
@@ -215,7 +221,8 @@
             <view class="footer-btn secondary" @click="closePublishModal">取消</view>
             <view class="footer-btn primary" @click="confirmPublish">确认发布</view>
           </view>
-        </view>
+          </view>
+        </scroll-view>
       </view>
     </view>
 
@@ -280,6 +287,7 @@ type ProjectRecord = {
   folderId?: string
   tags?: { primary?: string; secondary?: string }
   isPublished?: boolean
+  isOffShelf?: boolean
   publishedArtworkId?: string
   publishPoints?: number
 }
@@ -342,8 +350,9 @@ const loadData = () => {
     ...item,
     folderId: item.folderId || '',
     tags: normalizeProjectTags(item.tags),
-    thumbnail: item.thumbnail || buildProjectThumbnail(item.canvasData),
+    thumbnail: safeProjectThumbnail(item),
     updatedAt: item.updatedAt || item.createdAt || Date.now(),
+    isOffShelf: !!item.isOffShelf,
   }))
   folders.value = (uni.getStorageSync('pin_folders') || []).map((item: any) => ({
     id: item.id,
@@ -368,6 +377,40 @@ const formatDimensions = (project: ProjectRecord) => {
   const width = Number(project.canvasData?.width || 0)
   const height = Number(project.canvasData?.height || 0)
   return `${width}×${height}`
+}
+
+const getProjectBeadCount = (project: ProjectRecord) => {
+  return Array.isArray(project.canvasData?.beads) ? project.canvasData.beads.length : 0
+}
+
+const getProjectColorTypes = (project: ProjectRecord) => {
+  return new Set((project.canvasData?.beads || []).map((item: any) => item.color)).size
+}
+
+const formatProjectSpecs = (project: ProjectRecord) => {
+  return `${formatDimensions(project)}格｜${getProjectBeadCount(project)}豆｜${getProjectColorTypes(project)}种色号`
+}
+
+const hasProjectPreview = (project: ProjectRecord) => {
+  return Boolean(project.thumbnail)
+}
+
+const safeProjectThumbnail = (project: ProjectRecord) => {
+  const hasBeads = Array.isArray(project?.canvasData?.beads) && project.canvasData.beads.length > 0
+  if (!hasBeads) return ''
+  return project.thumbnail || buildProjectThumbnail(project.canvasData)
+}
+
+const resolveProjectStatusText = (project: ProjectRecord) => {
+  if (project.isPublished) return '已发布'
+  if (project.isOffShelf) return '已下架'
+  return '编辑中'
+}
+
+const resolveProjectStatusClass = (project: ProjectRecord) => {
+  if (project.isPublished) return 'published'
+  if (project.isOffShelf) return 'off-shelf'
+  return 'saved'
 }
 
 const formatDateTime = (timestamp: number) => {
@@ -554,6 +597,7 @@ const selectFolderTarget = (folderId: string) => {
     name: `${project.name || '未命名作品'}V2`,
     folderId,
     isPublished: false,
+    isOffShelf: false,
     publishedArtworkId: '',
     publishPoints: 0,
     updatedAt: now,
@@ -604,8 +648,9 @@ const confirmPublish = () => {
     tags: normalizeProjectTags(publishTags.value),
     publishPoints: Math.floor(points),
     isPublished: true,
+    isOffShelf: false,
     status: 'saved',
-    thumbnail: project.thumbnail || buildProjectThumbnail(project.canvasData),
+    thumbnail: safeProjectThumbnail(project),
     updatedAt: Date.now(),
   }
   const artwork = publishProjectAsArtwork(updatedProject, updatedProject.publishPoints)
@@ -626,11 +671,13 @@ const unpublishProject = () => {
     success: (res) => {
       if (!res.confirm) return
       unpublishProjectArtwork(project.id)
-      saveProjects(projects.value.map((item) => (
+      const nextProjects = projects.value.map((item) => (
         item.id === project.id
-          ? { ...item, isPublished: false, updatedAt: Date.now() }
+          ? { ...item, isPublished: false, isOffShelf: true, updatedAt: Date.now() }
           : item
-      )))
+      ))
+      saveProjects(nextProjects)
+      currentProject.value = nextProjects.find((item) => item.id === project.id) || null
       uni.showToast({ title: '已下架', icon: 'success' })
     },
   })
@@ -816,10 +863,15 @@ const formatProjectTags = formatProjectTagsLocal
   position: absolute;
   right: 10rpx;
   top: 10rpx;
-  padding: 6rpx 12rpx;
+  min-width: 72rpx;
+  height: 36rpx;
+  padding: 0 10rpx;
   border-radius: 999rpx;
-  font-size: 20rpx;
+  font-size: 18rpx;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .status-chip.saved {
@@ -830,6 +882,11 @@ const formatProjectTags = formatProjectTagsLocal
 .status-chip.published {
   background: rgba(245,166,35,.92);
   color: #2b2114;
+}
+
+.status-chip.off-shelf {
+  background: rgba(35,31,26,.72);
+  color: #fffdfa;
 }
 
 .entry-main {
@@ -932,6 +989,11 @@ const formatProjectTags = formatProjectTagsLocal
   background: var(--color-bg-panel);
   border-radius: 32rpx 32rpx 0 0;
   box-sizing: border-box;
+  max-height: calc(100vh - 160rpx);
+  margin-bottom: calc(env(safe-area-inset-bottom) + 88rpx);
+  padding-bottom: 12rpx;
+  display: flex;
+  flex-direction: column;
 }
 
 .sheet-header {
@@ -956,7 +1018,14 @@ const formatProjectTags = formatProjectTagsLocal
 }
 
 .sheet-list {
-  padding: 0 24rpx 24rpx;
+  padding: 0 24rpx 12rpx;
+}
+
+.sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 12rpx;
+  box-sizing: border-box;
 }
 
 .sheet-item {
@@ -988,7 +1057,7 @@ const formatProjectTags = formatProjectTagsLocal
 }
 
 .action-grid {
-  padding: 0 24rpx 24rpx;
+  padding: 0 24rpx 12rpx;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16rpx;
@@ -1024,7 +1093,7 @@ const formatProjectTags = formatProjectTagsLocal
 }
 
 .publish-body {
-  padding: 0 24rpx 24rpx;
+  padding: 0 24rpx 12rpx;
 }
 
 .field-label {
@@ -1111,7 +1180,7 @@ const formatProjectTags = formatProjectTagsLocal
 
 .folder-scroll {
   max-height: 56vh;
-  padding: 0 24rpx 24rpx;
+  padding: 0 24rpx 12rpx;
   box-sizing: border-box;
 }
 

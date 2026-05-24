@@ -19,10 +19,15 @@
           <text class="form-label">头像</text>
           <view class="avatar-right">
             <image
+              v-if="!isPresetAvatar"
               class="avatar-preview"
-              :src="formData.avatar || '/static/assets/v017/avatars/avatar-rat.svg'"
+              :src="formData.avatar"
               mode="aspectFill"
             />
+            <image v-else-if="presetAvatarImage" class="avatar-preview" :src="presetAvatarImage" mode="aspectFill" />
+            <view v-else class="avatar-preview preset" :style="presetAvatarStyle">
+              <text class="avatar-preview-glyph">{{ presetAvatarGlyph }}</text>
+            </view>
           </view>
         </view>
       </view>
@@ -59,6 +64,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
 
 /** 表单数据 */
 const formData = reactive({
@@ -99,7 +105,7 @@ onShow(() => {
  */
 const handleAvatarUpdate = (data: { avatar: string }) => {
   if (data && data.avatar) {
-    formData.avatar = data.avatar
+    formData.avatar = normalizeAvatarValue(data.avatar)
   }
 }
 
@@ -110,7 +116,7 @@ const loadUserData = () => {
   const userData = uni.getStorageSync('pin_user')
   if (userData) {
     formData.username = userData.username || ''
-    formData.avatar = userData.avatar || ''
+    formData.avatar = normalizeAvatarValue(userData.avatar || DEFAULT_PRESET_AVATAR)
   }
 }
 
@@ -124,7 +130,7 @@ const changeAvatar = () => {
       /** 监听头像裁切完成事件 */
       avatarCropped: (data: { avatar: string }) => {
         if (data && data.avatar) {
-          formData.avatar = data.avatar
+          formData.avatar = normalizeAvatarValue(data.avatar)
         }
       }
     },
@@ -179,6 +185,15 @@ const saveProfile = () => {
 const goBack = () => {
   uni.navigateBack()
 }
+
+const isPresetAvatar = computed(() => isPresetAvatarValue(formData.avatar))
+const presetAvatarImage = computed(() => getPresetAvatarImage(formData.avatar))
+const presetAvatarMeta = computed(() => getPresetAvatarMeta(formData.avatar) || getPresetAvatarMeta(DEFAULT_PRESET_AVATAR))
+const presetAvatarStyle = computed(() => ({
+  backgroundColor: presetAvatarMeta.value?.bg || '#FFE3DA',
+  color: presetAvatarMeta.value?.fg || '#B56A58',
+}))
+const presetAvatarGlyph = computed(() => presetAvatarMeta.value?.glyph || '鼠')
 </script>
 
 <style scoped>
@@ -283,6 +298,18 @@ const goBack = () => {
   background-color: var(--color-primary-soft);
   border: 4rpx solid var(--color-bg-panel);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.avatar-preview.preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-preview-glyph {
+  font-size: 42rpx;
+  font-weight: 800;
 }
 
 /* 输入框 */

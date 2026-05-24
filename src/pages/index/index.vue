@@ -47,7 +47,25 @@
             <text class="artwork-name">{{ artwork.name }}</text>
             <view class="artwork-meta">
               <view class="creator">
-                <view class="creator-avatar"></view>
+                <image
+                  v-if="!isPresetAvatarValue(artwork.creatorAvatar) && artwork.creatorAvatar"
+                  class="creator-avatar"
+                  :src="artwork.creatorAvatar"
+                  mode="aspectFill"
+                />
+                <image
+                  v-else-if="getPresetAvatarImage(artwork.creatorAvatar)"
+                  class="creator-avatar"
+                  :src="getPresetAvatarImage(artwork.creatorAvatar)"
+                  mode="aspectFill"
+                />
+                <view
+                  v-else
+                  class="creator-avatar preset"
+                  :style="getPresetAvatarStyle(artwork.creatorAvatar)"
+                >
+                  <text class="creator-avatar-text">{{ getPresetAvatarGlyph(artwork.creatorAvatar) }}</text>
+                </view>
                 <text class="creator-name">{{ artwork.creatorName }}</text>
               </view>
               <view class="likes">
@@ -78,6 +96,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { getPresetAvatarImage as resolvePresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '../../utils/avatar-presets'
 import { ensureCommunityArtworks } from '../../utils/community'
 
 /** 当前激活的标签 */
@@ -149,6 +168,19 @@ onShow(() => {
 const loadArtworks = () => {
   followedCreators.value = uni.getStorageSync('pin_followed_creators') || []
   artworks.value = ensureCommunityArtworks().filter((item: any) => item.isPublic !== false)
+}
+
+const getPresetAvatarGlyph = (value?: string) => {
+  return getPresetAvatarMeta(value)?.glyph || '豆'
+}
+
+const getPresetAvatarImage = (value?: string) => {
+  return resolvePresetAvatarImage(value)
+}
+
+const getPresetAvatarStyle = (value?: string) => {
+  const meta = getPresetAvatarMeta(value)
+  return meta ? { backgroundColor: meta.bg, color: meta.fg } : {}
 }
 
 /**
@@ -378,8 +410,20 @@ const goToArtworkDetail = (artwork: any) => {
   width: 28rpx;
   height: 28rpx;
   border-radius: 50%;
-  background-color: var(--color-border);
   margin-right: 8rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.creator-avatar.preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.creator-avatar-text {
+  font-size: 18rpx;
+  font-weight: 700;
 }
 
 /** 创作者名称 - 次要文字色 */

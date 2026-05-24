@@ -22,8 +22,9 @@
         </view>
         <view :class="['preview-board', activePreview]">
           <image
-            v-if="artwork.thumbnail && !artwork.canvasData?.beads?.length"
+            v-if="artwork.thumbnail"
             class="preview-image"
+            :class="activePreview"
             :src="artwork.thumbnail"
             mode="aspectFit"
           />
@@ -41,8 +42,11 @@
         <text class="artwork-title">{{ artwork.name }}</text>
         <view class="author-row">
           <view class="author-main">
-            <image v-if="artwork.creatorAvatar" class="author-avatar" :src="artwork.creatorAvatar" mode="aspectFill" />
-            <view v-else class="author-avatar fallback"></view>
+            <image v-if="showAvatarImage" class="author-avatar" :src="artwork.creatorAvatar" mode="aspectFill" />
+            <image v-else-if="presetAvatarImage" class="author-avatar" :src="presetAvatarImage" mode="aspectFill" />
+            <view v-else class="author-avatar preset" :style="presetAvatarStyle">
+              <text class="author-avatar-text">{{ presetAvatarGlyph }}</text>
+            </view>
             <text class="author-name">@{{ artwork.creatorName }}</text>
           </view>
           <view :class="['follow-btn', isFollowing ? 'followed' : '']" @click="toggleFollow">
@@ -71,11 +75,11 @@
     <view class="bottom-bar">
       <view class="social-actions">
         <view :class="['social-btn', isLiked ? 'active' : '']" @click="toggleLike">
-          <image class="social-icon" :src="isLiked ? '/static/assets/v015/icons/favorite-active.png' : '/static/assets/v015/icons/favorite.png'" mode="aspectFit" />
+          <text class="social-glyph">{{ isLiked ? '♥' : '♡' }}</text>
           <text>{{ artwork.likes }}</text>
         </view>
         <view :class="['social-btn', isFavorited ? 'active' : '']" @click="toggleFavorite">
-          <image class="social-icon" :src="isFavorited ? '/static/assets/v015/icons/tag-active.png' : '/static/assets/v015/icons/tag.png'" mode="aspectFit" />
+          <text class="social-glyph">{{ isFavorited ? '★' : '☆' }}</text>
           <text>{{ artwork.favorites }}</text>
         </view>
       </view>
@@ -103,6 +107,7 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '@/utils/avatar-presets'
 import { getMardCodeByHex } from '@/utils/mard-colors'
 import {
   addPointsRecord,
@@ -144,6 +149,14 @@ const artworkSpecs = computed(() => {
 
 const visibleTags = computed(() => (artwork.value?.tags || []).slice(0, 5))
 const hiddenTagCount = computed(() => Math.max(0, (artwork.value?.tags?.length || 0) - 5))
+const showAvatarImage = computed(() => !!artwork.value?.creatorAvatar && !isPresetAvatarValue(artwork.value.creatorAvatar))
+const presetAvatarImage = computed(() => getPresetAvatarImage(artwork.value?.creatorAvatar))
+const presetAvatarMeta = computed(() => getPresetAvatarMeta(artwork.value?.creatorAvatar))
+const presetAvatarStyle = computed(() => ({
+  backgroundColor: presetAvatarMeta.value?.bg || '#FFE3DA',
+  color: presetAvatarMeta.value?.fg || '#B56A58',
+}))
+const presetAvatarGlyph = computed(() => presetAvatarMeta.value?.glyph || '鼠')
 
 const costText = computed(() => {
   const points = artwork.value?.points || 0
@@ -225,7 +238,7 @@ const purchaseArtwork = () => {
 }
 
 const renderPreview = () => {
-  if (!artwork.value || (artwork.value.thumbnail && !artwork.value.canvasData?.beads?.length)) return
+  if (!artwork.value || artwork.value.thumbnail) return
   const query = uni.createSelectorQuery().in(instance)
   query.select('#detail-cover').boundingClientRect((rect: any) => {
     if (!rect || !rect.width) return
@@ -435,11 +448,34 @@ const goBack = () => {
   background-image: none;
 }
 
+.preview-board.blueprint::after {
+  content: '';
+  position: absolute;
+  inset: 18rpx;
+  background:
+    linear-gradient(90deg, rgba(35,31,26,.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(35,31,26,.08) 1px, transparent 1px);
+  background-size: 16rpx 16rpx;
+  pointer-events: none;
+}
+
 .preview-image,
 .preview-canvas {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+.preview-image.ironed {
+  padding: 18rpx;
+  box-sizing: border-box;
+  filter: saturate(1.02) contrast(1.03);
+}
+
+.preview-image.blueprint {
+  padding: 18rpx;
+  box-sizing: border-box;
+  image-rendering: pixelated;
 }
 
 .size-badge {
@@ -488,10 +524,22 @@ const goBack = () => {
   border-radius: 50%;
   margin-right: 14rpx;
   background-color: var(--color-primary-soft);
+  overflow: hidden;
 }
 
 .author-avatar.fallback {
   border: 2rpx solid var(--color-border);
+}
+
+.author-avatar.preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.author-avatar-text {
+  font-size: 26rpx;
+  font-weight: 800;
 }
 
 .author-name {
@@ -619,6 +667,11 @@ const goBack = () => {
 .social-icon {
   width: 28rpx;
   height: 28rpx;
+}
+
+.social-glyph {
+  font-size: 28rpx;
+  line-height: 1;
 }
 
 .purchase-area {

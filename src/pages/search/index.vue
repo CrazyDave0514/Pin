@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { ensureCommunityArtworks } from '../../utils/community'
 
@@ -98,17 +98,26 @@ onMounted(() => {
   searchHistory.value = history
 })
 
+watch(keyword, (value) => {
+  if (!value.trim()) {
+    results.value = []
+    return
+  }
+  handleSearch(false)
+})
+
 /**
  * 执行搜索操作
  * 保存搜索关键词到历史记录，并从本地存储中过滤匹配的作品
  */
-const handleSearch = () => {
+const handleSearch = (saveHistory = true) => {
   if (!keyword.value.trim()) return
 
-  // 保存搜索历史
-  const newHistory = [keyword.value, ...searchHistory.value.filter(h => h !== keyword.value)].slice(0, 10)
-  searchHistory.value = newHistory
-  uni.setStorageSync('pin_search_history', newHistory)
+  if (saveHistory) {
+    const newHistory = [keyword.value, ...searchHistory.value.filter(h => h !== keyword.value)].slice(0, 10)
+    searchHistory.value = newHistory
+    uni.setStorageSync('pin_search_history', newHistory)
+  }
 
   // 执行搜索
   const normalizedKeyword = keyword.value.toLowerCase()
@@ -121,6 +130,7 @@ const handleSearch = () => {
         name: item.name || '未命名作品',
         subtitle: tags || '项目作品',
         folderId: item.folderId || '',
+        extra: [tags, item.canvasData?.width, item.canvasData?.height].join(' '),
       }
     })
     const folders = (uni.getStorageSync('pin_folders') || []).map((item: any) => ({
@@ -128,9 +138,20 @@ const handleSearch = () => {
       type: 'folder',
       name: item.name || '未命名文件夹',
       subtitle: '文件夹',
+      extra: '',
     }))
-    results.value = [...projects, ...folders].filter((item: any) => {
-      const haystack = [item.name, item.subtitle].join(' ').toLowerCase()
+    const artworks = ensureCommunityArtworks().map((item: any) => ({
+      id: item.projectId || item.id,
+      type: 'project',
+      name: item.name || '未命名作品',
+      subtitle: [item.creatorName, ...(item.tags || [])].filter(Boolean).join(' / ') || '社区作品',
+      folderId: '',
+      extra: [item.creatorName, ...(item.tags || [])].join(' '),
+    }))
+    const merged = [...projects, ...folders, ...artworks]
+      .filter((item, index, array) => array.findIndex((target) => target.type === item.type && target.id === item.id) === index)
+    results.value = merged.filter((item: any) => {
+      const haystack = [item.name, item.subtitle, item.extra].join(' ').toLowerCase()
       return haystack.includes(normalizedKeyword)
     })
     return

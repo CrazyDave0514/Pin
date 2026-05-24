@@ -5,7 +5,11 @@
       <view class="user-info" @click="goToEditProfile">
         <template v-if="user">
           <view class="avatar-wrapper">
-            <image class="user-avatar" :src="getAvatarUrl()" mode="aspectFill" />
+            <image v-if="!isPresetAvatar" class="user-avatar" :src="getAvatarUrl()" mode="aspectFill" />
+            <image v-else-if="presetAvatarImage" class="user-avatar" :src="presetAvatarImage" mode="aspectFill" />
+            <view v-else class="user-avatar preset" :style="presetAvatarStyle">
+              <text class="user-avatar-glyph">{{ presetAvatarGlyph }}</text>
+            </view>
           </view>
           <view class="profile-text">
             <text class="user-name">{{ user.username }}</text>
@@ -14,7 +18,10 @@
         </template>
         <template v-else>
           <view class="avatar-wrapper">
-            <image class="user-avatar" src="/static/assets/v015/default-avatar.png" mode="aspectFill" />
+            <image v-if="presetAvatarImage" class="user-avatar" :src="presetAvatarImage" mode="aspectFill" />
+            <view v-else class="user-avatar preset" :style="presetAvatarStyle">
+              <text class="user-avatar-glyph">{{ presetAvatarGlyph }}</text>
+            </view>
           </view>
           <view class="profile-text">
             <text class="login-text">点击登录</text>
@@ -105,11 +112,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
+import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
 
 const user = ref<any>(null)
-const defaultAvatar = '/static/assets/v017/avatars/avatar-rat.svg'
+const defaultAvatar = DEFAULT_PRESET_AVATAR
 const stats = ref({
   purchases: 0,
   favorites: 0,
@@ -147,6 +155,10 @@ onShow(() => {
  */
 const loadUser = () => {
   const userData = uni.getStorageSync('pin_user')
+  if (userData?.avatar) {
+    userData.avatar = normalizeAvatarValue(userData.avatar)
+    uni.setStorageSync('pin_user', userData)
+  }
   user.value = userData
 }
 
@@ -164,10 +176,19 @@ const loadStats = () => {
  */
 const getAvatarUrl = () => {
   if (user.value && user.value.avatar) {
-    return user.value.avatar
+    return normalizeAvatarValue(user.value.avatar)
   }
   return defaultAvatar
 }
+
+const isPresetAvatar = computed(() => isPresetAvatarValue(getAvatarUrl()))
+const presetAvatarImage = computed(() => getPresetAvatarImage(getAvatarUrl()))
+const presetAvatarMeta = computed(() => getPresetAvatarMeta(getAvatarUrl()) || getPresetAvatarMeta(DEFAULT_PRESET_AVATAR))
+const presetAvatarStyle = computed(() => ({
+  backgroundColor: presetAvatarMeta.value?.bg || '#FFE3DA',
+  color: presetAvatarMeta.value?.fg || '#B56A58',
+}))
+const presetAvatarGlyph = computed(() => presetAvatarMeta.value?.glyph || '鼠')
 
 /**
  * 跳转到编辑资料页面
@@ -311,20 +332,7 @@ const handleStatClick = (type: 'purchases' | 'favorites' | 'likes') => {
 }
 
 .user-card::before {
-  content: '';
-  position: absolute;
-  right: 26rpx;
-  top: 24rpx;
-  width: 180rpx;
-  height: 132rpx;
-  border-radius: 28rpx;
-  background:
-    radial-gradient(circle, rgba(247,183,51,.20) 0 8rpx, transparent 9rpx),
-    radial-gradient(circle, rgba(95,155,115,.14) 0 8rpx, transparent 9rpx),
-    radial-gradient(circle, rgba(76,127,159,.12) 0 8rpx, transparent 9rpx);
-  background-size: 40rpx 40rpx, 40rpx 40rpx, 40rpx 40rpx;
-  background-position: 0 0, 20rpx 0, 10rpx 20rpx;
-  opacity: .7;
+  content: none;
 }
 
 .user-info {
@@ -358,6 +366,18 @@ const handleStatClick = (type: 'purchases' | 'favorites' | 'likes') => {
   border-radius: 50%;
   border: 4rpx solid var(--color-bg-panel);
   box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.user-avatar.preset {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-avatar-glyph {
+  font-size: 54rpx;
+  font-weight: 800;
 }
 
 .user-avatar.default {
