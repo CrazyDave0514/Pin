@@ -42,6 +42,7 @@
           v-for="artwork in displayArtworks"
           :key="artwork.id"
           class="artwork-card"
+          @click="goToArtworkDetail(artwork)"
         >
           <!-- 封面区域 - Canvas 动态渲染拼豆图案 -->
           <view class="cover-wrapper">
@@ -54,7 +55,7 @@
             <!-- 积分显示在封面右上角 -->
             <view class="points-badge">
               <image class="points-icon" src="/static/assets/v015/icons/points-active.png" mode="aspectFit" />
-              <text class="points-value">{{ artwork.points }}</text>
+              <text class="points-value">{{ artwork.points > 0 ? artwork.points : '免费' }}</text>
             </view>
           </view>
 
@@ -92,7 +93,8 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, getCurrentInstance } from 'vue'
-import { defaultArtworks } from '../../utils/artworks.js'
+import { onShow } from '@dcloudio/uni-app'
+import { ensureCommunityArtworks } from '../../utils/community'
 
 const instance = getCurrentInstance()
 
@@ -101,6 +103,7 @@ const activeTab = ref('recommend')
 
 /** 全部作品数据 */
 const artworks = ref<any[]>([])
+const followedCreators = ref<string[]>([])
 
 /** 当前展示的作品数量（分页加载） */
 const pageSize = 20
@@ -120,10 +123,10 @@ const displayArtworks = computed(() => {
     /** 最新：按创建时间降序 */
     sorted = [...artworks.value].sort((a, b) => b.createdAt - a.createdAt)
   } else if (activeTab.value === 'following') {
-    /** 关注：展示前 50 条作为"已关注创作者"的作品 */
+    /** 关注：展示已关注创作者的公开作品 */
     sorted = [...artworks.value]
+      .filter((item) => followedCreators.value.includes(item.creatorName))
       .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 50)
   } else {
     /** 推荐：综合评分 = 点赞数 * 2 + 浏览量 * 0.3 + 新鲜度奖励 */
     sorted = [...artworks.value].sort((a, b) => {
@@ -164,25 +167,18 @@ onMounted(() => {
   loadArtworks()
 })
 
-/** 数据版本号，数据结构变更时递增以强制刷新本地缓存 */
-const ARTWORKS_VERSION = 'v2'
+onShow(() => {
+  loadArtworks()
+})
 
 /**
  * 加载作品数据
- * 优先从本地存储读取，版本不匹配或无数据时使用预生成的 300 条假数据
+ * 优先从本地存储读取，版本不匹配或无数据时使用预生成的 100 条假数据
  */
 const loadArtworks = () => {
-  const cached = uni.getStorageSync('pin_artworks')
-  const cachedVersion = uni.getStorageSync('pin_artworks_version')
-
-  /** 版本不匹配或无数据时，使用最新假数据覆盖 */
-  if (!cached || cached.length === 0 || cachedVersion !== ARTWORKS_VERSION) {
-    uni.setStorageSync('pin_artworks', defaultArtworks)
-    uni.setStorageSync('pin_artworks_version', ARTWORKS_VERSION)
-    artworks.value = defaultArtworks
-  } else {
-    artworks.value = cached
-  }
+  followedCreators.value = uni.getStorageSync('pin_followed_creators') || []
+  artworks.value = ensureCommunityArtworks().filter((item: any) => item.isPublic !== false)
+  artworks.value.forEach((item) => { item._rendered = false })
 
   /** 首次加载后渲染可见区域的封面 */
   nextTick(() => {
@@ -377,6 +373,10 @@ const doRender = (artwork: any, canvasId: string, width: number, height: number)
  */
 const goToSearch = () => {
   uni.navigateTo({ url: '/pages/search/index' })
+}
+
+const goToArtworkDetail = (artwork: any) => {
+  uni.navigateTo({ url: `/pages/artwork-detail/index?id=${artwork.id}` })
 }
 </script>
 

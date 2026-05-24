@@ -29,19 +29,19 @@
 
     <!-- 数据概览 -->
     <view class="stats-section">
-      <view class="stat-item">
-        <text class="stat-value">{{ stats.artworks }}</text>
-        <text class="stat-label">我的作品</text>
+      <view class="stat-item" @click="handleStatClick('purchases')">
+        <text class="stat-value">{{ stats.purchases }}</text>
+        <text class="stat-label">我的购买</text>
       </view>
       <view class="stat-divider"></view>
-      <view class="stat-item">
+      <view class="stat-item" @click="handleStatClick('favorites')">
         <text class="stat-value">{{ stats.favorites }}</text>
         <text class="stat-label">我的收藏</text>
       </view>
       <view class="stat-divider"></view>
-      <view class="stat-item">
+      <view class="stat-item" @click="handleStatClick('likes')">
         <text class="stat-value">{{ stats.likes }}</text>
-        <text class="stat-label">我的获赞</text>
+        <text class="stat-label">我的点赞</text>
       </view>
     </view>
 
@@ -114,7 +114,7 @@ import { onShow } from '@dcloudio/uni-app'
 const user = ref<any>(null)
 const defaultAvatar = '/static/assets/v015/default-avatar.png'
 const stats = ref({
-  artworks: 0,
+  purchases: 0,
   favorites: 0,
   likes: 0,
 })
@@ -157,8 +157,9 @@ const loadUser = () => {
  * 加载统计数据
  */
 const loadStats = () => {
-  const projects = uni.getStorageSync('pin_projects') || []
-  stats.value.artworks = projects.length
+  stats.value.purchases = (uni.getStorageSync('pin_purchased_artworks') || []).length
+  stats.value.favorites = (uni.getStorageSync('pin_favorited_artworks') || []).length
+  stats.value.likes = (uni.getStorageSync('pin_liked_artworks') || []).length
 }
 
 /**
@@ -293,6 +294,14 @@ const rotateRight = () => {
  */
 const handleFunctionClick = (path: string) => {
   uni.navigateTo({ url: path })
+}
+
+const handleStatClick = (type: 'purchases' | 'favorites' | 'likes') => {
+  if (type === 'purchases') {
+    uni.showToast({ title: '购买作品页面下一期完善', icon: 'none' })
+    return
+  }
+  uni.navigateTo({ url: `/pages/mine/collection?type=${type}` })
 }
 </script>
 

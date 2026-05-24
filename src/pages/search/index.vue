@@ -56,7 +56,7 @@
       <view v-if="keyword && results.length > 0" class="results-section">
         <text class="section-title">搜索结果</text>
         <view class="results-list">
-          <view v-for="item in results" :key="item.id" class="result-item">
+          <view v-for="item in results" :key="item.id" class="result-item" @click="goToDetail(item.id)">
             <text class="result-name">{{ item.name }}</text>
             <text class="result-author">by {{ item.creatorName }}</text>
           </view>
@@ -73,6 +73,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { ensureCommunityArtworks } from '../../utils/community'
 
 /** 搜索关键词 */
 const keyword = ref('')
@@ -104,8 +105,9 @@ const handleSearch = () => {
   uni.setStorageSync('pin_search_history', newHistory)
 
   // 执行搜索
-  const artworks = uni.getStorageSync('pin_artworks') || []
+  const artworks = ensureCommunityArtworks()
   results.value = artworks.filter((a: any) =>
+    a.isPublic !== false &&
     a.name.toLowerCase().includes(keyword.value.toLowerCase())
   )
 }
@@ -142,6 +144,10 @@ const deleteHistoryItem = (item: string) => {
  */
 const goBack = () => {
   uni.navigateBack()
+}
+
+const goToDetail = (id: string) => {
+  uni.navigateTo({ url: `/pages/artwork-detail/index?id=${id}` })
 }
 </script>
 

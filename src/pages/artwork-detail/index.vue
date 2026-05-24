@@ -1,0 +1,628 @@
+<template>
+  <view class="detail-page" v-if="artwork">
+    <view class="page-nav">
+      <view class="nav-back" @click="goBack">
+        <image class="back-img" src="/static/assets/v015/icons/back.png" mode="aspectFit" />
+      </view>
+      <text class="nav-title">作品详情</text>
+      <view class="nav-placeholder"></view>
+    </view>
+
+    <scroll-view class="detail-scroll" scroll-y :show-scrollbar="false">
+      <view class="preview-section">
+        <view class="preview-tabs">
+          <view
+            v-for="tab in previewTabs"
+            :key="tab.key"
+            :class="['preview-tab', activePreview === tab.key ? 'active' : '']"
+            @click="switchPreview(tab.key)"
+          >
+            <text>{{ tab.label }}</text>
+          </view>
+        </view>
+        <view :class="['preview-board', activePreview]">
+          <image
+            v-if="artwork.thumbnail && !artwork.canvasData?.beads?.length"
+            class="preview-image"
+            :src="artwork.thumbnail"
+            mode="aspectFit"
+          />
+          <canvas
+            v-else
+            canvas-id="detail-cover"
+            id="detail-cover"
+            class="preview-canvas"
+          />
+          <view class="size-badge">{{ artworkSize }}</view>
+        </view>
+      </view>
+
+      <view class="info-section">
+        <text class="artwork-title">{{ artwork.name }}</text>
+        <view class="author-row">
+          <view class="author-main">
+            <image v-if="artwork.creatorAvatar" class="author-avatar" :src="artwork.creatorAvatar" mode="aspectFill" />
+            <view v-else class="author-avatar fallback"></view>
+            <text class="author-name">@{{ artwork.creatorName }}</text>
+          </view>
+          <view :class="['follow-btn', isFollowing ? 'followed' : '']" @click="toggleFollow">
+            <text>{{ isFollowing ? '已关注' : '关注' }}</text>
+          </view>
+        </view>
+
+        <view class="meta-grid">
+          <view class="meta-item">
+            <text class="meta-value">{{ artwork.useCount }}</text>
+            <text class="meta-label">销量</text>
+          </view>
+          <view class="meta-item wide">
+            <text class="meta-value small">{{ formatDateTime(artwork.updatedAt) }}</text>
+            <text class="meta-label">更新时间</text>
+          </view>
+        </view>
+
+        <view class="tag-list">
+          <text v-for="tag in artwork.tags" :key="tag" class="tag-item">{{ tag }}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="bottom-bar">
+      <view class="social-actions">
+        <view :class="['social-btn', isLiked ? 'active' : '']" @click="toggleLike">
+          <image class="social-icon" :src="isLiked ? '/static/assets/v015/icons/favorite-active.png' : '/static/assets/v015/icons/favorite.png'" mode="aspectFit" />
+          <text>{{ artwork.likes }}</text>
+        </view>
+        <view :class="['social-btn', isFavorited ? 'active' : '']" @click="toggleFavorite">
+          <image class="social-icon" :src="isFavorited ? '/static/assets/v015/icons/tag-active.png' : '/static/assets/v015/icons/tag.png'" mode="aspectFit" />
+          <text>{{ artwork.favorites }}</text>
+        </view>
+      </view>
+      <view class="purchase-area">
+        <text class="cost-text">{{ costText }}</text>
+        <view :class="['buy-btn', isPurchased ? 'disabled' : '']" @click="purchaseArtwork">
+          <text>{{ isPurchased ? '已购买' : '购买' }}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="detail-page empty" v-else>
+    <view class="page-nav">
+      <view class="nav-back" @click="goBack">
+        <image class="back-img" src="/static/assets/v015/icons/back.png" mode="aspectFit" />
+      </view>
+      <text class="nav-title">作品详情</text>
+      <view class="nav-placeholder"></view>
+    </view>
+    <text class="empty-text">作品不存在或已下架</text>
+  </view>
+</template>
+
+<script setup lang="ts">
+import { computed, getCurrentInstance, nextTick, ref } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
+import {
+  addPointsRecord,
+  getArtworkById,
+  getIdList,
+  setIdList,
+  toggleId,
+  updateArtwork,
+  type CommunityArtwork,
+} from '../../utils/community'
+
+const instance = getCurrentInstance()
+const artwork = ref<CommunityArtwork | null>(null)
+const activePreview = ref<'ironed' | 'blueprint'>('ironed')
+const artworkId = ref('')
+const isLiked = ref(false)
+const isFavorited = ref(false)
+const isPurchased = ref(false)
+const isFollowing = ref(false)
+
+const previewTabs = [
+  { key: 'ironed', label: '熨烫效果' },
+  { key: 'blueprint', label: '图纸效果' },
+] as const
+
+const artworkSize = computed(() => {
+  const width = artwork.value?.canvasData?.width || 0
+  const height = artwork.value?.canvasData?.height || 0
+  return `${width}*${height}格`
+})
+
+const costText = computed(() => {
+  const points = artwork.value?.points || 0
+  return points > 0 ? `${points} 积分` : '免费'
+})
+
+onLoad((options: any) => {
+  artworkId.value = options?.id || ''
+  loadArtwork()
+})
+
+const loadArtwork = () => {
+  const found = getArtworkById(artworkId.value)
+  artwork.value = found && found.isPublic !== false ? found : null
+  if (!artwork.value) return
+
+  isLiked.value = getIdList('pin_liked_artworks').includes(artwork.value.id)
+  isFavorited.value = getIdList('pin_favorited_artworks').includes(artwork.value.id)
+  isPurchased.value = getIdList('pin_purchased_artworks').includes(artwork.value.id)
+  isFollowing.value = getIdList('pin_followed_creators').includes(artwork.value.creatorName)
+  nextTick(() => setTimeout(renderPreview, 120))
+}
+
+const switchPreview = (key: 'ironed' | 'blueprint') => {
+  activePreview.value = key
+  nextTick(() => setTimeout(renderPreview, 80))
+}
+
+const toggleLike = () => {
+  if (!artwork.value) return
+  const added = toggleId('pin_liked_artworks', artwork.value.id)
+  const updated = updateArtwork(artwork.value.id, (item) => ({
+    ...item,
+    likes: Math.max(0, item.likes + (added ? 1 : -1)),
+  }))
+  if (updated) artwork.value = updated
+  isLiked.value = added
+}
+
+const toggleFavorite = () => {
+  if (!artwork.value) return
+  const added = toggleId('pin_favorited_artworks', artwork.value.id)
+  const updated = updateArtwork(artwork.value.id, (item) => ({
+    ...item,
+    favorites: Math.max(0, item.favorites + (added ? 1 : -1)),
+  }))
+  if (updated) artwork.value = updated
+  isFavorited.value = added
+}
+
+const toggleFollow = () => {
+  if (!artwork.value) return
+  isFollowing.value = toggleId('pin_followed_creators', artwork.value.creatorName)
+  uni.showToast({ title: isFollowing.value ? '已关注' : '已取消关注', icon: 'none' })
+}
+
+const purchaseArtwork = () => {
+  if (!artwork.value || isPurchased.value) return
+  const points = artwork.value.points || 0
+  const currentPoints = Number(uni.getStorageSync('pin_points') || 0)
+  if (points > currentPoints) {
+    uni.showToast({ title: '积分不足', icon: 'none' })
+    return
+  }
+
+  if (points > 0) {
+    uni.setStorageSync('pin_points', currentPoints - points)
+    addPointsRecord(`购买${artwork.value.name}`, -points)
+  }
+  const purchased = getIdList('pin_purchased_artworks')
+  setIdList('pin_purchased_artworks', [...purchased, artwork.value.id])
+  const updated = updateArtwork(artwork.value.id, (item) => ({
+    ...item,
+    useCount: item.useCount + 1,
+  }))
+  if (updated) artwork.value = updated
+  isPurchased.value = true
+  uni.showToast({ title: '购买成功', icon: 'success' })
+}
+
+const renderPreview = () => {
+  if (!artwork.value || (artwork.value.thumbnail && !artwork.value.canvasData?.beads?.length)) return
+  const query = uni.createSelectorQuery().in(instance)
+  query.select('#detail-cover').boundingClientRect((rect: any) => {
+    if (!rect || !rect.width) return
+    const ctx = uni.createCanvasContext('detail-cover', instance)
+    drawArtwork(ctx, rect.width, rect.height || rect.width)
+  }).exec()
+}
+
+const drawArtwork = (ctx: UniApp.CanvasContext, width: number, height: number) => {
+  if (!artwork.value) return
+  const data = artwork.value.canvasData
+  if (data?.beads?.length) {
+    const w = data.width || 29
+    const h = data.height || 29
+    const cell = Math.floor(Math.min(width / w, height / h))
+    const offsetX = Math.floor((width - w * cell) / 2)
+    const offsetY = Math.floor((height - h * cell) / 2)
+    ctx.setFillStyle(data.backgroundColor || '#FFFDFA')
+    ctx.fillRect(0, 0, width, height)
+    if (activePreview.value === 'blueprint') {
+      ctx.setStrokeStyle('rgba(35,31,26,.10)')
+      for (let x = 0; x <= w; x++) {
+        ctx.beginPath()
+        ctx.moveTo(offsetX + x * cell, offsetY)
+        ctx.lineTo(offsetX + x * cell, offsetY + h * cell)
+        ctx.stroke()
+      }
+      for (let y = 0; y <= h; y++) {
+        ctx.beginPath()
+        ctx.moveTo(offsetX, offsetY + y * cell)
+        ctx.lineTo(offsetX + w * cell, offsetY + y * cell)
+        ctx.stroke()
+      }
+    }
+    data.beads.forEach((bead) => {
+      const cx = offsetX + bead.x * cell + cell / 2
+      const cy = offsetY + bead.y * cell + cell / 2
+      ctx.beginPath()
+      if (activePreview.value === 'ironed') {
+        ctx.arc(cx, cy, Math.max(2, cell * 0.48), 0, Math.PI * 2)
+      } else {
+        ctx.rect(offsetX + bead.x * cell + 1, offsetY + bead.y * cell + 1, Math.max(1, cell - 2), Math.max(1, cell - 2))
+      }
+      ctx.setFillStyle(bead.color)
+      ctx.fill()
+    })
+    ctx.draw()
+    return
+  }
+  drawGeneratedCover(ctx, width, height)
+}
+
+const drawGeneratedCover = (ctx: UniApp.CanvasContext, width: number, height: number) => {
+  if (!artwork.value?.cover) return
+  let seed = artwork.value.cover.seed || 1
+  const random = () => {
+    seed = (seed * 16807) % 2147483647
+    return seed / 2147483647
+  }
+  const palette = artwork.value.cover.palette || ['#F5A623', '#5F9B73', '#4C7F9F']
+  const gridSize = 12
+  const cell = Math.floor(Math.min(width, height) / gridSize)
+  const offsetX = Math.floor((width - gridSize * cell) / 2)
+  const offsetY = Math.floor((height - gridSize * cell) / 2)
+  ctx.setFillStyle('#F7F3EC')
+  ctx.fillRect(0, 0, width, height)
+  for (let y = 0; y < gridSize; y++) {
+    for (let x = 0; x < gridSize; x++) {
+      if (random() < 0.35) continue
+      const color = palette[Math.floor(random() * palette.length)]
+      const cx = offsetX + x * cell + cell / 2
+      const cy = offsetY + y * cell + cell / 2
+      ctx.beginPath()
+      if (activePreview.value === 'ironed') {
+        ctx.arc(cx, cy, cell * 0.43, 0, Math.PI * 2)
+      } else {
+        ctx.rect(offsetX + x * cell + 2, offsetY + y * cell + 2, cell - 4, cell - 4)
+      }
+      ctx.setFillStyle(color)
+      ctx.fill()
+    }
+  }
+  ctx.draw()
+}
+
+const formatDateTime = (timestamp: number) => {
+  const date = new Date(timestamp)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+const goBack = () => {
+  uni.navigateBack()
+}
+</script>
+
+<style scoped>
+.detail-page {
+  min-height: 100vh;
+  background-color: var(--color-bg-page);
+  padding-bottom: 140rpx;
+}
+
+.page-nav {
+  height: 92rpx;
+  padding: 0 24rpx;
+  background-color: var(--color-bg-panel);
+  border-bottom: 1rpx solid var(--color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-back,
+.nav-placeholder {
+  width: 76rpx;
+  height: 76rpx;
+  display: flex;
+  align-items: center;
+}
+
+.back-img {
+  width: 38rpx;
+  height: 38rpx;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  color: var(--color-text-primary);
+  font-weight: 800;
+}
+
+.detail-scroll {
+  height: calc(100vh - 232rpx);
+}
+
+.preview-section,
+.info-section {
+  margin: 24rpx;
+  background-color: var(--color-bg-panel);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
+  box-shadow: var(--shadow-md);
+}
+
+.preview-section {
+  padding: 18rpx;
+}
+
+.preview-tabs {
+  display: flex;
+  padding: 6rpx;
+  border-radius: 18rpx;
+  background-color: var(--color-primary-soft);
+  margin-bottom: 18rpx;
+}
+
+.preview-tab {
+  flex: 1;
+  height: 64rpx;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.preview-tab.active {
+  background-color: var(--color-text-primary);
+  color: var(--color-text-inverse);
+}
+
+.preview-board {
+  position: relative;
+  height: 620rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(35,31,26,.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(35,31,26,.06) 1px, transparent 1px),
+    #F7F3EC;
+  background-size: 24rpx 24rpx;
+}
+
+.preview-board.ironed {
+  background-color: #F2E5D5;
+}
+
+.preview-image,
+.preview-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.size-badge {
+  position: absolute;
+  right: 18rpx;
+  bottom: 18rpx;
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  background-color: rgba(255,253,250,.92);
+  border: 1rpx solid var(--color-border);
+  font-size: 22rpx;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.info-section {
+  padding: 26rpx;
+}
+
+.artwork-title {
+  display: block;
+  font-size: 38rpx;
+  line-height: 1.35;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  margin-bottom: 22rpx;
+}
+
+.author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24rpx;
+}
+
+.author-main {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.author-avatar {
+  width: 58rpx;
+  height: 58rpx;
+  border-radius: 50%;
+  margin-right: 14rpx;
+  background-color: var(--color-primary-soft);
+}
+
+.author-avatar.fallback {
+  border: 2rpx solid var(--color-border);
+}
+
+.author-name {
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.follow-btn {
+  min-width: 112rpx;
+  height: 58rpx;
+  border-radius: 999rpx;
+  background-color: var(--color-primary);
+  color: var(--color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 25rpx;
+  font-weight: 800;
+}
+
+.follow-btn.followed {
+  background-color: var(--color-primary-soft);
+  color: var(--color-text-secondary);
+  border: 1rpx solid var(--color-border);
+}
+
+.meta-grid {
+  display: flex;
+  gap: 14rpx;
+  margin-bottom: 22rpx;
+}
+
+.meta-item {
+  flex: 1;
+  min-height: 92rpx;
+  padding: 14rpx;
+  border-radius: 16rpx;
+  background-color: var(--color-primary-soft);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.meta-item.wide {
+  flex: 2.2;
+}
+
+.meta-value {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.meta-value.small {
+  font-size: 24rpx;
+}
+
+.meta-label {
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--color-text-tertiary);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.tag-item {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background-color: #FFFFFF;
+  border: 1rpx solid var(--color-border);
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.bottom-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: 116rpx;
+  padding: 18rpx 24rpx calc(18rpx + env(safe-area-inset-bottom));
+  background-color: var(--color-bg-panel);
+  border-top: 1rpx solid var(--color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.social-actions {
+  display: flex;
+  gap: 12rpx;
+}
+
+.social-btn {
+  min-width: 104rpx;
+  height: 72rpx;
+  border-radius: 18rpx;
+  border: 1rpx solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  background-color: var(--color-bg-panel);
+}
+
+.social-btn.active {
+  color: var(--color-primary-dark);
+  background-color: var(--color-primary-light);
+}
+
+.social-icon {
+  width: 28rpx;
+  height: 28rpx;
+}
+
+.purchase-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14rpx;
+  min-width: 0;
+}
+
+.cost-text {
+  font-size: 26rpx;
+  color: var(--color-primary-dark);
+  font-weight: 800;
+}
+
+.buy-btn {
+  min-width: 170rpx;
+  height: 76rpx;
+  border-radius: 20rpx;
+  background-color: var(--color-text-primary);
+  color: var(--color-text-inverse);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.buy-btn.disabled {
+  background-color: var(--color-text-disabled);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-text {
+  margin-top: 240rpx;
+  text-align: center;
+  font-size: 28rpx;
+  color: var(--color-text-tertiary);
+}
+</style>

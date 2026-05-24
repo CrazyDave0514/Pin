@@ -29,6 +29,20 @@
       }
     },
     {
+      "path": "pages/artwork-detail/index",
+      "style": {
+        "navigationBarTitleText": "作品详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/mine/collection",
+      "style": {
+        "navigationBarTitleText": "作品列表",
+        "navigationStyle": "custom"
+      }
+    },
+    {
       "path": "pages/points/index",
       "style": {
         "navigationBarTitleText": "积分中心",

@@ -47,7 +47,13 @@
 
         <!-- 项目缩略图 -->
         <view class="thumbnail">
-          <view class="thumbnail-board">
+          <image
+            v-if="project.thumbnail"
+            class="thumbnail-img"
+            :src="project.thumbnail"
+            mode="aspectFill"
+          />
+          <view v-else class="thumbnail-board">
             <text class="thumbnail-placeholder">{{ project.name?.charAt(0) || 'P' }}</text>
           </view>
         </view>
@@ -60,8 +66,8 @@
         </view>
 
         <!-- 状态标签 -->
-        <view class="status-badge" :class="project.status">
-          {{ project.status === 'saved' ? '已保存' : '草稿' }}
+        <view class="status-badge" :class="project.isPublished ? 'published' : project.status">
+          {{ getStatusText(project) }}
         </view>
 
         <!-- 操作菜单按钮 -->
@@ -105,19 +111,8 @@
               <image class="option-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
             </view>
             <view class="option-text">
-              <text class="option-title">无需导入</text>
-              <text class="option-desc">建立空白画布，从零开始创作</text>
-            </view>
-          </view>
-
-          <!-- 小红书链接导入 -->
-          <view class="create-option" @click="importFromXiaohongshu">
-            <view class="option-icon-wrap">
-              <image class="option-icon" src="/static/assets/v015/icons/export-muted.png" mode="aspectFit" />
-            </view>
-            <view class="option-text">
-              <text class="option-title">从小红书链接导入 <text class="new-tag">NEW</text></text>
-              <text class="option-desc">粘贴小红书链接获取高清图纸</text>
+              <text class="option-title">新建空白画布</text>
+              <text class="option-desc">从零开始创作图纸</text>
             </view>
           </view>
 
@@ -165,16 +160,44 @@
         <view class="action-item" @click="renameProject">
           <text>重命名</text>
         </view>
-        <view class="action-item" @click="moveProject">
-          <text>移动</text>
-        </view>
         <view class="action-item" @click="copyProject">
           <text>复制</text>
+        </view>
+        <view v-if="!currentProject?.isPublished" class="action-item" @click="openPublishModal">
+          <text>发布</text>
+        </view>
+        <view v-else class="action-item" @click="unpublishProject">
+          <text>下架</text>
         </view>
         <view class="action-item danger" @click="deleteProject">
           <text>删除</text>
         </view>
         <view class="action-cancel" @click="closeMenu">取消</view>
+      </view>
+    </view>
+
+    <!-- 发布设置弹窗 -->
+    <view class="modal-overlay" v-if="showPublishModal" @click="closePublishModal">
+      <view class="publish-modal" @click.stop>
+        <view class="modal-header">
+          <text class="modal-title">发布作品</text>
+          <text class="modal-close" @click="closePublishModal">✕</text>
+        </view>
+        <view class="publish-content">
+          <text class="publish-label">设置积分数</text>
+          <input
+            class="publish-input"
+            type="number"
+            v-model="publishPoints"
+            placeholder="0-100"
+            placeholder-class="placeholder"
+          />
+          <text class="publish-hint">0 积分将展示为免费，发布后可在首页社区展示。</text>
+        </view>
+        <view class="publish-actions">
+          <view class="publish-btn secondary" @click="closePublishModal">取消</view>
+          <view class="publish-btn primary" @click="confirmPublish">发布</view>
+        </view>
       </view>
     </view>
 
@@ -207,6 +230,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { publishProjectAsArtwork, unpublishProjectArtwork } from '../../utils/community'
 
 // 项目列表
 const projects = ref<any[]>([])
@@ -220,8 +244,10 @@ const selectedProjects = ref<string[]>([])
 const showModal = ref(false)
 const showMenu = ref(false)
 const showFolderPicker = ref(false)
+const showPublishModal = ref(false)
 const folderPickerTitle = ref('移动到')
 const folderPickerAction = ref<'move' | 'copy'>('move')
+const publishPoints = ref('0')
 
 // 当前操作的项目
 const currentProject = ref<any>(null)
@@ -276,6 +302,11 @@ const formatTime = (timestamp: number) => {
   if (days === 1) return '昨天'
   if (days < 7) return `${days}天前`
   return `${date.getMonth() + 1}/${date.getDate()}`
+}
+
+const getStatusText = (project: any) => {
+  if (project.isPublished) return '已发布'
+  return project.status === 'saved' ? '已保存' : '草稿'
 }
 
 /**
@@ -412,14 +443,6 @@ const createCanvas = (type: 'blank' | 'image' | 'blueprint') => {
 }
 
 /**
- * 导入小红书链接功能（当前为开发中状态）
- */
-const importFromXiaohongshu = () => {
-  closeModal()
-  uni.showToast({ title: '功能开发中', icon: 'none' })
-}
-
-/**
  * 创建新文件夹
  * 弹出系统输入框，确认后将文件夹信息保存到本地存储
  */
@@ -462,12 +485,15 @@ const moveProject = () => {
  * 深拷贝项目数据并生成新 ID，保存到本地存储
  */
 const copyProject = () => {
+  const project = currentProject.value
   closeMenu()
-  if (!currentProject.value) return
+  if (!project) return
   const newProject = {
-    ...currentProject.value,
+    ...JSON.parse(JSON.stringify(project)),
     id: 'p_' + Date.now(),
-    name: currentProject.value.name + ' (副本)',
+    name: `${project.name}V2`,
+    isPublished: false,
+    publishedArtworkId: '',
     createdAt: Date.now(),
     updatedAt: Date.now()
   }
@@ -476,6 +502,69 @@ const copyProject = () => {
   uni.setStorageSync('pin_projects', data)
   loadProjects()
   uni.showToast({ title: '复制成功', icon: 'success' })
+}
+
+const openPublishModal = () => {
+  const project = currentProject.value
+  showMenu.value = false
+  if (!project) return
+  currentProject.value = project
+  publishPoints.value = String(project.publishPoints || 0)
+  showPublishModal.value = true
+}
+
+const closePublishModal = () => {
+  showPublishModal.value = false
+  currentProject.value = null
+  publishPoints.value = '0'
+}
+
+const confirmPublish = () => {
+  const project = currentProject.value
+  if (!project) return
+  const points = Number(publishPoints.value)
+  if (!Number.isFinite(points) || points < 0 || points > 100) {
+    uni.showToast({ title: '请输入0-100积分', icon: 'none' })
+    return
+  }
+
+  const artwork = publishProjectAsArtwork(project, Math.floor(points))
+  const data: any[] = uni.getStorageSync('pin_projects') || []
+  const index = data.findIndex((p: any) => p.id === project.id)
+  if (index > -1) {
+    data[index].isPublished = true
+    data[index].publishedArtworkId = artwork.id
+    data[index].publishPoints = Math.floor(points)
+    data[index].status = 'saved'
+    data[index].updatedAt = Date.now()
+    uni.setStorageSync('pin_projects', data)
+  }
+  closePublishModal()
+  loadProjects()
+  uni.showToast({ title: '发布成功', icon: 'success' })
+}
+
+const unpublishProject = () => {
+  const project = currentProject.value
+  closeMenu()
+  if (!project) return
+  uni.showModal({
+    title: '确认下架',
+    content: '下架后作品将不在首页社区展示，已购买用户不受影响。',
+    success: (res) => {
+      if (!res.confirm) return
+      unpublishProjectArtwork(project.id)
+      const data: any[] = uni.getStorageSync('pin_projects') || []
+      const index = data.findIndex((p: any) => p.id === project.id)
+      if (index > -1) {
+        data[index].isPublished = false
+        data[index].updatedAt = Date.now()
+        uni.setStorageSync('pin_projects', data)
+      }
+      loadProjects()
+      uni.showToast({ title: '已下架', icon: 'success' })
+    }
+  })
 }
 
 /**
@@ -493,6 +582,9 @@ const deleteProject = () => {
       if (res.confirm) {
         const data = uni.getStorageSync('pin_projects') || []
         const filtered = data.filter((p: any) => p.id !== projectToDelete.id)
+        if (projectToDelete.isPublished) {
+          unpublishProjectArtwork(projectToDelete.id)
+        }
         uni.setStorageSync('pin_projects', filtered)
         loadProjects()
         uni.showToast({ title: '删除成功', icon: 'success' })
@@ -548,6 +640,9 @@ const deleteSelected = () => {
     success: (res) => {
       if (res.confirm) {
         const data = uni.getStorageSync('pin_projects') || []
+        data
+          .filter((p: any) => selectedProjects.value.includes(p.id) && p.isPublished)
+          .forEach((p: any) => unpublishProjectArtwork(p.id))
         const filtered = data.filter((p: any) => !selectedProjects.value.includes(p.id))
         uni.setStorageSync('pin_projects', filtered)
         loadProjects()
@@ -883,6 +978,11 @@ const handleProjectSaved = () => {
   color: var(--color-success);
 }
 
+.status-badge.published {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
 .menu-btn {
   position: absolute;
   top: 28rpx;
@@ -1158,5 +1258,68 @@ const handleProjectSaved = () => {
 
 .folder-name {
   margin-left: 16rpx;
+}
+
+.publish-modal {
+  width: 100%;
+  background-color: var(--color-bg-panel);
+  border-radius: 34rpx 34rpx 0 0;
+  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+
+.publish-content {
+  padding: 28rpx 32rpx 18rpx;
+}
+
+.publish-label {
+  display: block;
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+  font-weight: 800;
+  margin-bottom: 16rpx;
+}
+
+.publish-input {
+  height: 82rpx;
+  border-radius: 18rpx;
+  border: 2rpx solid var(--color-border);
+  background-color: var(--color-primary-soft);
+  padding: 0 22rpx;
+  font-size: 30rpx;
+  color: var(--color-text-primary);
+  margin-bottom: 14rpx;
+}
+
+.publish-hint {
+  font-size: 24rpx;
+  line-height: 1.45;
+  color: var(--color-text-tertiary);
+}
+
+.publish-actions {
+  display: flex;
+  gap: 18rpx;
+  padding: 18rpx 32rpx 0;
+}
+
+.publish-btn {
+  flex: 1;
+  height: 76rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.publish-btn.secondary {
+  background-color: var(--color-primary-soft);
+  color: var(--color-text-secondary);
+}
+
+.publish-btn.primary {
+  background-color: var(--color-text-primary);
+  color: var(--color-text-inverse);
 }
 </style>
