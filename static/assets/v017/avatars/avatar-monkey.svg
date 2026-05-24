@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="56" fill="#F4E1D0"/>
+  <circle cx="34" cy="58" r="12" fill="#D7B38C"/>
+  <circle cx="86" cy="58" r="12" fill="#D7B38C"/>
+  <circle cx="60" cy="66" r="30" fill="#FFF8F2"/>
+  <circle cx="48" cy="60" r="4" fill="#433027"/>
+  <circle cx="72" cy="60" r="4" fill="#433027"/>
+  <circle cx="60" cy="72" r="5" fill="#E3B08C"/>
+  <path d="M52 82c4 5 12 5 16 0" fill="none" stroke="#433027" stroke-width="4" stroke-linecap="round"/>
+  <text x="60" y="108" text-anchor="middle" font-family="Arial" font-size="14" font-weight="700" fill="#9D6B44">HO</text>
+</svg>

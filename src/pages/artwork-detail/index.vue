@@ -33,7 +33,7 @@
             id="detail-cover"
             class="preview-canvas"
           />
-          <view class="size-badge">{{ artworkSize }}</view>
+          <view class="size-badge">{{ artworkSpecs }}</view>
         </view>
       </view>
 
@@ -62,7 +62,8 @@
         </view>
 
         <view class="tag-list">
-          <text v-for="tag in artwork.tags" :key="tag" class="tag-item">{{ tag }}</text>
+          <text v-for="tag in visibleTags" :key="tag" class="tag-item">{{ tag }}</text>
+          <text v-if="hiddenTagCount > 0" class="tag-item more">+{{ hiddenTagCount }}</text>
         </view>
       </view>
     </scroll-view>
@@ -102,6 +103,7 @@
 <script setup lang="ts">
 import { computed, getCurrentInstance, nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { getMardCodeByHex } from '@/utils/mard-colors'
 import {
   addPointsRecord,
   getArtworkById,
@@ -131,6 +133,17 @@ const artworkSize = computed(() => {
   const height = artwork.value?.canvasData?.height || 0
   return `${width}*${height}格`
 })
+
+const artworkSpecs = computed(() => {
+  const width = artwork.value?.canvasData?.width || 0
+  const height = artwork.value?.canvasData?.height || 0
+  const beadCount = artwork.value?.beadCount || artwork.value?.canvasData?.beads?.length || 0
+  const colorTypeCount = artwork.value?.colorTypeCount || 0
+  return `${width}×${height}格｜${beadCount}豆｜${colorTypeCount}种色号`
+})
+
+const visibleTags = computed(() => (artwork.value?.tags || []).slice(0, 5))
+const hiddenTagCount = computed(() => Math.max(0, (artwork.value?.tags?.length || 0) - 5))
 
 const costText = computed(() => {
   const points = artwork.value?.points || 0
@@ -252,12 +265,29 @@ const drawArtwork = (ctx: UniApp.CanvasContext, width: number, height: number) =
       const cy = offsetY + bead.y * cell + cell / 2
       ctx.beginPath()
       if (activePreview.value === 'ironed') {
-        ctx.arc(cx, cy, Math.max(2, cell * 0.48), 0, Math.PI * 2)
+        ctx.arc(cx, cy, Math.max(2, cell * 0.46), 0, Math.PI * 2)
       } else {
         ctx.rect(offsetX + bead.x * cell + 1, offsetY + bead.y * cell + 1, Math.max(1, cell - 2), Math.max(1, cell - 2))
       }
       ctx.setFillStyle(bead.color)
       ctx.fill()
+      if (activePreview.value === 'ironed') {
+        ctx.beginPath()
+        ctx.arc(cx, cy, Math.max(1, cell * 0.12), 0, Math.PI * 2)
+        ctx.setFillStyle('rgba(255,255,255,.92)')
+        ctx.fill()
+        return
+      }
+      if (cell >= 16) {
+        const code = getMardCodeByHex(bead.color) || ''
+        if (code) {
+          ctx.setFillStyle('rgba(35,31,26,.72)')
+          ctx.setFontSize(Math.max(7, Math.floor(cell * 0.24)))
+          ctx.setTextAlign('center')
+          ctx.setTextBaseline('middle')
+          ctx.fillText(code, cx, cy)
+        }
+      }
     })
     ctx.draw()
     return
@@ -397,10 +427,12 @@ const goBack = () => {
     linear-gradient(180deg, rgba(35,31,26,.06) 1px, transparent 1px),
     #F7F3EC;
   background-size: 24rpx 24rpx;
+  transition: transform .24s ease, opacity .24s ease;
 }
 
 .preview-board.ironed {
   background-color: #F2E5D5;
+  background-image: none;
 }
 
 .preview-image,
@@ -421,6 +453,7 @@ const goBack = () => {
   font-size: 22rpx;
   font-weight: 800;
   color: var(--color-text-primary);
+  max-width: calc(100% - 36rpx);
 }
 
 .info-section {
@@ -538,6 +571,11 @@ const goBack = () => {
   color: var(--color-text-secondary);
 }
 
+.tag-item.more {
+  color: var(--color-primary-dark);
+  font-weight: 700;
+}
+
 .bottom-bar {
   position: fixed;
   left: 0;
@@ -573,8 +611,9 @@ const goBack = () => {
 }
 
 .social-btn.active {
-  color: var(--color-primary-dark);
-  background-color: var(--color-primary-light);
+  color: #F5A623;
+  background-color: #FFF6E3;
+  transform: scale(1.02);
 }
 
 .social-icon {

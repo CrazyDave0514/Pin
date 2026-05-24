@@ -8,10 +8,7 @@
             <image class="user-avatar" :src="getAvatarUrl()" mode="aspectFill" />
           </view>
           <view class="profile-text">
-            <view class="name-row">
-              <text class="user-name">{{ user.username }}</text>
-              <view class="gender-icon" :class="genderClass"></view>
-            </view>
+            <text class="user-name">{{ user.username }}</text>
             <text class="user-uid">UID: {{ user.uid }}</text>
           </view>
         </template>
@@ -108,11 +105,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 const user = ref<any>(null)
-const defaultAvatar = '/static/assets/v015/default-avatar.png'
+const defaultAvatar = '/static/assets/v017/avatars/avatar-rat.svg'
 const stats = ref({
   purchases: 0,
   favorites: 0,
@@ -161,18 +158,6 @@ const loadStats = () => {
   stats.value.favorites = (uni.getStorageSync('pin_favorited_artworks') || []).length
   stats.value.likes = (uni.getStorageSync('pin_liked_artworks') || []).length
 }
-
-/**
- * 获取性别标识样式类名
- */
-const genderClass = computed(() => {
-  if (!user.value) return ''
-  switch (user.value.gender) {
-    case 'male': return 'gender-male'
-    case 'female': return 'gender-female'
-    default: return 'gender-secret'
-  }
-})
 
 /**
  * 获取用户头像 URL，无自定义头像时返回默认头像

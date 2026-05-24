@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="56" fill="#E8F0FF"/>
+  <path d="M38 32l8 12 10-12" fill="#9CB6F9"/>
+  <path d="M82 32l-8 12-10-12" fill="#9CB6F9"/>
+  <circle cx="60" cy="66" r="30" fill="#F8FBFF"/>
+  <circle cx="48" cy="60" r="4" fill="#34436B"/>
+  <circle cx="72" cy="60" r="4" fill="#34436B"/>
+  <path d="M50 77c6-4 14-4 20 0" fill="none" stroke="#7DA0FF" stroke-width="4" stroke-linecap="round"/>
+  <path d="M60 44l4 8-4 4-4-4z" fill="#7DA0FF"/>
+  <text x="60" y="108" text-anchor="middle" font-family="Arial" font-size="14" font-weight="700" fill="#627EC9">LO</text>
+</svg>

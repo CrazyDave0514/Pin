@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="56" fill="#FCE6F0"/>
+  <rect x="34" y="12" width="16" height="36" rx="8" fill="#F8BFD5"/>
+  <rect x="70" y="12" width="16" height="36" rx="8" fill="#F8BFD5"/>
+  <circle cx="60" cy="68" r="30" fill="#FFF8FC"/>
+  <circle cx="48" cy="62" r="4" fill="#44313A"/>
+  <circle cx="72" cy="62" r="4" fill="#44313A"/>
+  <path d="M55 74c3 3 7 3 10 0" fill="none" stroke="#FF9BBC" stroke-width="4" stroke-linecap="round"/>
+  <path d="M52 82c4 4 12 4 16 0" fill="none" stroke="#44313A" stroke-width="4" stroke-linecap="round"/>
+  <text x="60" y="108" text-anchor="middle" font-family="Arial" font-size="14" font-weight="700" fill="#C06A8F">TU</text>
+</svg>

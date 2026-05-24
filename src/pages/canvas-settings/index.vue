@@ -131,6 +131,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 
 // ==================== 状态定义 ====================
 // 尺寸预设选项
@@ -171,6 +172,11 @@ const gridColors = ['#CCCCCC', '#999999', '#666666', '#333333']
 // 辅助功能状态
 const showGrid = ref(true)
 const gridColor = ref('#CCCCCC')
+const targetFolderId = ref('')
+
+onLoad((options) => {
+  targetFolderId.value = String(options?.folderId || '')
+})
 
 // ==================== 方法定义 ====================
 
@@ -254,7 +260,7 @@ const createCanvas = () => {
 
   // 跳转到画布编辑器
   uni.navigateTo({
-    url: `/pages/canvas-editor/index?mode=create&data=${encodeURIComponent(JSON.stringify(canvasData))}`
+    url: `/pages/canvas-editor/index?mode=create&folderId=${targetFolderId.value}&data=${encodeURIComponent(JSON.stringify(canvasData))}`
   })
 }
 

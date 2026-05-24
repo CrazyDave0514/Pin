@@ -54,7 +54,7 @@
             <text
               v-for="col in canvasData.width"
               :key="'cl-' + col"
-              class="col-label"
+              :class="['col-label', { emphasis: col % 5 === 0 }]"
               :style="{ width: cellSize + 'px' }"
             >{{ col }}</text>
           </view>
@@ -65,7 +65,7 @@
               <text
                 v-for="row in canvasData.height"
                 :key="'rl-' + row"
-                class="row-label"
+                :class="['row-label', { emphasis: row % 5 === 0 }]"
                 :style="{ height: cellSize + 'px' }"
               >{{ row }}</text>
             </view>
@@ -87,16 +87,25 @@
               @mouseup="onMouseUp"
               @mouseleave="onMouseUp"
             >
-              <!-- 网格背景（CSS 线性渐变） -->
+              <!-- 网格背景（基础线 + 5格分组线） -->
               <view
                 v-if="canvasData.showGrid"
                 class="grid-layer-optimized"
-                :style="{
-                  width: canvasWidth + 'px',
-                  height: canvasHeight + 'px',
-                  backgroundSize: `${cellSize}px ${cellSize}px`,
-                  backgroundImage: `linear-gradient(to right, ${canvasData.gridColor} 1px, transparent 1px), linear-gradient(to bottom, ${canvasData.gridColor} 1px, transparent 1px)`,
-                }"
+                :style="gridLayerStyle"
+              ></view>
+              <view
+                v-for="line in majorHorizontalLines"
+                v-if="canvasData.showGrid"
+                :key="'h-' + line"
+                class="major-grid-line horizontal"
+                :style="{ top: line * cellSize + 'px' }"
+              ></view>
+              <view
+                v-for="line in majorVerticalLines"
+                v-if="canvasData.showGrid"
+                :key="'v-' + line"
+                class="major-grid-line vertical"
+                :style="{ left: line * cellSize + 'px' }"
               ></view>
 
               <!-- 拼豆层 -->
@@ -353,6 +362,30 @@
             placeholder-class="save-placeholder"
             :focus="showSaveModal"
           />
+          <text class="save-section-label">一级标签</text>
+          <scroll-view class="save-tag-scroll" scroll-x :show-scrollbar="false">
+            <view class="save-tag-row">
+              <view
+                v-for="group in TAG_OPTIONS"
+                :key="group.primary"
+                :class="['save-tag-pill', saveTags.primary === group.primary ? 'active' : '']"
+                @tap="toggleSavePrimaryTag(group.primary)"
+              >
+                <text>{{ group.primary }}</text>
+              </view>
+            </view>
+          </scroll-view>
+          <view v-if="saveSecondaryOptions.length" class="save-tag-wrap">
+            <view
+              v-for="item in saveSecondaryOptions"
+              :key="item"
+              :class="['save-tag-pill', saveTags.secondary === item ? 'active' : '']"
+              @tap="saveTags.secondary = saveTags.secondary === item ? '' : item"
+            >
+              <text>{{ item }}</text>
+            </view>
+          </view>
+          <text class="save-section-tip">标签非必填，保存后发布会直接复用。</text>
         </view>
         <view class="save-modal-footer">
           <view class="save-cancel-btn" @tap="showSaveModal = false">
@@ -409,7 +442,8 @@
 import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance, toRaw, onUnmounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { consumeBlueprintData } from '@/utils/blueprint-transfer'
-import { mardColorPalette, getMardCodeByHex } from '@/utils/mard-colors'
+import { getHexByMardCode, getMardCodeByHex, mardColorPalette } from '@/utils/mard-colors'
+import { TAG_OPTIONS, buildProjectThumbnail, normalizeProjectTags, syncProjectArtwork } from '@/utils/community'
 
 // ==================== 类型定义 ====================
 
@@ -440,6 +474,11 @@ interface ProjectData {
   createdAt: number
   updatedAt: number
   thumbnail: string
+  folderId?: string
+  tags?: { primary?: string; secondary?: string }
+  isPublished?: boolean
+  publishedArtworkId?: string
+  publishPoints?: number
 }
 
 /** 工具定义结构 */
@@ -498,10 +537,13 @@ const sideTools: ToolItem[] = [
 /** 预设尺寸选项 */
 const sizeOptions: SizeOption[] = [
   { label: '自定义', w: 0, h: 0, custom: true },
+  { label: '32 x 32', w: 32, h: 32 },
   { label: '52 x 52', w: 52, h: 52 },
-  { label: '72 x 72', w: 72, h: 72 },
+  { label: '64 x 64', w: 64, h: 64 },
+  { label: '84 x 84', w: 84, h: 84 },
   { label: '104 x 104', w: 104, h: 104 },
   { label: '156 x 156', w: 156, h: 156 },
+  { label: '200 x 200', w: 200, h: 200 },
 ]
 
 /** MARD 色卡系列列表 */
@@ -533,10 +575,10 @@ const canvasData = reactive<CanvasData>({
 })
 
 /** 当前选中的颜色 */
-const selectedColor = ref('#FF0000')
+const selectedColor = ref(getHexByMardCode('A01') || '#FAF4C8')
 
 /** 当前激活的工具 */
-const activeTool = ref('draw')
+const activeTool = ref('pan')
 
 /** 缩放比例 */
 const scale = ref(1)
@@ -576,6 +618,11 @@ const historyIndex = ref(-1)
 const isEditMode = ref(false)
 const editingProjectId = ref('')
 const editingProjectName = ref('')
+const editingFolderId = ref('')
+const editingProjectTags = ref<{ primary?: string; secondary?: string }>({})
+const editingPublishPoints = ref(0)
+const editingPublishedArtworkId = ref('')
+const editingPublished = ref(false)
 
 /** 画布是否有未保存的修改 */
 const hasUnsavedChanges = ref(false)
@@ -585,6 +632,7 @@ let initialBeadsSnapshot = ''
 const showSaveModal = ref(false)
 const saveName = ref('')
 const saveNamePlaceholder = ref('我的拼豆作品')
+const saveTags = ref<{ primary?: string; secondary?: string }>({})
 
 /** 自定义尺寸弹窗状态 */
 const showCustomSizeModal = ref(false)
@@ -593,6 +641,8 @@ const customHeight = ref('29')
 
 /** 页面路由参数初始化标记 */
 let hasInitializedFromRoute = false
+const initialFolderId = ref('')
+const autoExportAfterLoad = ref(false)
 
 /** 豆子样式：方豆/圆豆 */
 const beadStyle = ref<'square' | 'round'>('square')
@@ -613,7 +663,7 @@ const activeTab = ref('size')
 /** PC端空格键按下标记 */
 const spacePressed = ref(false)
 /** 空格键按下前的工具 */
-let toolBeforeSpace = 'draw'
+let toolBeforeSpace = 'pan'
 
 /** requestAnimationFrame 节流标记 */
 let rafId: number | null = null
@@ -674,6 +724,37 @@ const beadStats = computed<BeadStats>(() => {
   }
 })
 
+const saveSecondaryOptions = computed(() => {
+  const group = TAG_OPTIONS.find((item) => item.primary === saveTags.value.primary)
+  return group ? [...group.secondary] : []
+})
+
+const gridLayerStyle = computed(() => ({
+  width: `${canvasWidth.value}px`,
+  height: `${canvasHeight.value}px`,
+  backgroundImage: `
+    linear-gradient(to right, rgba(35, 31, 26, 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(35, 31, 26, 0.08) 1px, transparent 1px)
+  `,
+  backgroundSize: `${cellSize}px ${cellSize}px`,
+}))
+
+const majorHorizontalLines = computed(() => {
+  const lines: number[] = []
+  for (let row = 5; row < canvasData.height; row += 5) {
+    lines.push(row)
+  }
+  return lines
+})
+
+const majorVerticalLines = computed(() => {
+  const lines: number[] = []
+  for (let col = 5; col < canvasData.width; col += 5) {
+    lines.push(col)
+  }
+  return lines
+})
+
 // ==================== 生命周期 ====================
 
 onLoad((options) => {
@@ -687,6 +768,8 @@ onLoad((options) => {
 const initializeFromRouteOptions = (options: Record<string, any>) => {
   if (hasInitializedFromRoute) return
   hasInitializedFromRoute = true
+  initialFolderId.value = String(options.folderId || '')
+  autoExportAfterLoad.value = options.autoExport === '1'
 
   if (options.mode === 'edit' && options.projectId) {
     /** 编辑已有项目：从本地存储加载 */
@@ -762,6 +845,11 @@ onMounted(() => {
       historyIndex.value = -1
     }
     saveHistory()
+    if (autoExportAfterLoad.value) {
+      setTimeout(() => {
+        handleExport()
+      }, 150)
+    }
     console.log('初始化完成，beads数量:', canvasData.beads.length)
   })
 
@@ -863,6 +951,12 @@ const loadProject = (projectId: string) => {
     isEditMode.value = true
     editingProjectId.value = project.id
     editingProjectName.value = project.name
+    editingFolderId.value = project.folderId || ''
+    editingProjectTags.value = normalizeProjectTags(project.tags)
+    editingPublishPoints.value = Number(project.publishPoints || 0)
+    editingPublishedArtworkId.value = project.publishedArtworkId || ''
+    editingPublished.value = !!project.isPublished
+    saveTags.value = { ...editingProjectTags.value }
 
     /** 深拷贝存储的项目数据 */
     const clonedData = JSON.parse(JSON.stringify(project.canvasData)) as CanvasData
@@ -895,6 +989,20 @@ const loadProject = (projectId: string) => {
   } else {
     uni.showToast({ title: '项目不存在', icon: 'none' })
   }
+}
+
+const toggleSavePrimaryTag = (primary: string) => {
+  saveTags.value = {
+    primary: saveTags.value.primary === primary ? '' : primary,
+    secondary: '',
+  }
+}
+
+const getGridPosition = (localX: number, localY: number) => {
+  const scaledCellSize = cellSize * scale.value
+  const gridX = Math.floor(localX / scaledCellSize)
+  const gridY = Math.floor(localY / scaledCellSize)
+  return { gridX, gridY }
 }
 
 // ==================== 工具栏操作 ====================
@@ -1130,8 +1238,7 @@ const handleMouseClick = async (e: MouseEvent) => {
   /** 计算格子坐标 */
   const localX = e.clientX - rect.left
   const localY = e.clientY - rect.top
-  const gridX = Math.floor(localX / cellSize)
-  const gridY = Math.floor(localY / cellSize)
+  const { gridX, gridY } = getGridPosition(localX, localY)
 
   /** 边界检查 */
   if (gridX < 0 || gridX >= canvasData.width || gridY < 0 || gridY >= canvasData.height) {
@@ -1210,8 +1317,7 @@ const handleTouch = async (e: TouchEvent) => {
    */
   const localX = touch.clientX - rect.left
   const localY = touch.clientY - rect.top
-  const gridX = Math.floor(localX / cellSize)
-  const gridY = Math.floor(localY / cellSize)
+  const { gridX, gridY } = getGridPosition(localX, localY)
 
   /** 边界检查 */
   if (gridX < 0 || gridX >= canvasData.width || gridY < 0 || gridY >= canvasData.height) {
@@ -1652,13 +1758,15 @@ const goBack = () => {
  */
 const saveCanvas = () => {
   console.log('[保存] saveCanvas 被调用, isEditMode:', isEditMode.value)
-  if (isEditMode.value) {
-    saveName.value = editingProjectName.value
-    saveNamePlaceholder.value = editingProjectName.value
-  } else {
-    saveName.value = ''
-    saveNamePlaceholder.value = '我的拼豆作品'
+  const fallbackName = editingProjectName.value || saveName.value.trim()
+  if (isEditMode.value && fallbackName) {
+    doSave(fallbackName)
+    return
   }
+
+  saveName.value = fallbackName
+  saveNamePlaceholder.value = fallbackName || '我的拼豆作品'
+  saveTags.value = { ...normalizeProjectTags(editingProjectTags.value) }
   showSaveModal.value = true
 }
 
@@ -1668,6 +1776,7 @@ const saveCanvas = () => {
 const confirmSave = () => {
   console.log('[保存] confirmSave 被调用, saveName:', saveName.value)
   const name = saveName.value.trim() || '未命名作品'
+  editingProjectTags.value = normalizeProjectTags(saveTags.value)
   showSaveModal.value = false
   doSave(name)
 }
@@ -1677,9 +1786,14 @@ const confirmSave = () => {
  * - 先保存，再导出图纸图片
  */
 const handleExport = () => {
-  const name = isEditMode.value
-    ? editingProjectName.value
-    : '未命名作品'
+  const name = editingProjectName.value || saveName.value.trim()
+  if (!name) {
+    saveName.value = ''
+    saveNamePlaceholder.value = '我的拼豆作品'
+    saveTags.value = { ...normalizeProjectTags(editingProjectTags.value) }
+    showSaveModal.value = true
+    return
+  }
   doSave(name, true)
 }
 
@@ -1693,31 +1807,7 @@ const doSave = (projectName: string, exportAfterSave = false) => {
 
   try {
     /** 步骤1：生成缩略图 */
-    let thumbnail = ''
-    try {
-      const beads = canvasData.beads
-      if (beads.length > 0) {
-        const w = canvasData.width
-        const h = canvasData.height
-        const bg = canvasData.backgroundColor || '#FFFFFF'
-        const colorMap: Record<string, { x: number; y: number }[]> = {}
-        beads.forEach((b: Bead) => {
-          if (!colorMap[b.color]) colorMap[b.color] = []
-          colorMap[b.color].push({ x: b.x, y: b.y })
-        })
-        let rects = ''
-        Object.entries(colorMap).forEach(([color, positions]) => {
-          positions.forEach((p) => {
-            rects += `<rect x="${p.x}" y="${p.y}" width="1" height="1" fill="${color}"/>`
-          })
-        })
-        const svgStr = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><rect width="${w}" height="${h}" fill="${bg}"/>${rects}</svg>`
-        thumbnail = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgStr)))}`
-        console.log('[保存] 缩略图生成成功, SVG长度:', svgStr.length)
-      }
-    } catch (e) {
-      console.warn('[保存] 缩略图生成失败(不影响保存):', e)
-    }
+    const normalizedTags = normalizeProjectTags(editingProjectTags.value)
 
     /** 步骤2：深拷贝画布数据 */
     console.log('[保存] 开始深拷贝画布数据...')
@@ -1739,7 +1829,12 @@ const doSave = (projectName: string, exportAfterSave = false) => {
         projects[index].name = projectName
         projects[index].canvasData = clonedCanvasData
         projects[index].updatedAt = Date.now()
-        projects[index].thumbnail = thumbnail
+        projects[index].thumbnail = buildProjectThumbnail(clonedCanvasData)
+        projects[index].folderId = editingFolderId.value
+        projects[index].tags = normalizedTags
+        projects[index].isPublished = editingPublished.value
+        projects[index].publishedArtworkId = editingPublishedArtworkId.value
+        projects[index].publishPoints = editingPublishPoints.value
       }
     } else {
       const projectData: ProjectData = {
@@ -1748,15 +1843,34 @@ const doSave = (projectName: string, exportAfterSave = false) => {
         canvasData: clonedCanvasData,
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        thumbnail: thumbnail,
+        thumbnail: buildProjectThumbnail(clonedCanvasData),
+        folderId: initialFolderId.value,
+        tags: normalizedTags,
+        isPublished: false,
+        publishedArtworkId: '',
+        publishPoints: 0,
       }
       projects.unshift(projectData)
+      isEditMode.value = true
+      editingProjectId.value = projectData.id
+      editingFolderId.value = projectData.folderId || ''
+      editingPublished.value = false
+      editingPublishedArtworkId.value = ''
+      editingPublishPoints.value = 0
     }
+
+    editingProjectName.value = projectName
+    editingProjectTags.value = normalizedTags
+    saveName.value = projectName
 
     /** 步骤5：写入 localStorage */
     console.log('[保存] 准备写入 localStorage...')
     uni.setStorageSync('pin_projects', projects)
     console.log('[保存] localStorage 写入成功')
+    const savedProject = projects.find((item) => item.id === editingProjectId.value)
+    if (savedProject?.isPublished) {
+      syncProjectArtwork(savedProject as any)
+    }
     hasUnsavedChanges.value = false
     initialBeadsSnapshot = JSON.stringify(canvasData.beads)
     uni.showToast({ title: '保存成功', icon: 'success' })
@@ -1901,6 +2015,26 @@ const exportBlueprintImage = (projectName: string) => {
     ctx.lineTo(padding + w * cellPx, gridOffsetY + y * cellPx)
     ctx.stroke()
   }
+
+  /** 每 5 格分组线：横向实线，竖向虚线 */
+  ctx.lineWidth = 1.2
+  for (let y = 5; y < h; y += 5) {
+    ctx.setLineDash([])
+    ctx.strokeStyle = 'rgba(248, 90, 60, 0.78)'
+    ctx.beginPath()
+    ctx.moveTo(padding, gridOffsetY + y * cellPx)
+    ctx.lineTo(padding + w * cellPx, gridOffsetY + y * cellPx)
+    ctx.stroke()
+  }
+  for (let x = 5; x < w; x += 5) {
+    ctx.setLineDash([6, 4])
+    ctx.strokeStyle = 'rgba(248, 90, 60, 0.82)'
+    ctx.beginPath()
+    ctx.moveTo(padding + x * cellPx, gridOffsetY)
+    ctx.lineTo(padding + x * cellPx, gridOffsetY + h * cellPx)
+    ctx.stroke()
+  }
+  ctx.setLineDash([])
 
   /** 根据 beadStyle 绘制拼豆 */
   const isRound = beadStyle.value === 'round'
@@ -2295,10 +2429,18 @@ const exportBlueprintImage = (projectName: string) => {
 
 .col-label {
   font-size: 10px;
-  color: var(--color-text-tertiary, #999999);
+  color: #9A6A31;
   text-align: center;
   flex-shrink: 0;
   line-height: 20px;
+  background: rgba(250, 244, 200, 0.92);
+  border-radius: 6px 6px 0 0;
+  font-weight: 600;
+}
+
+.col-label.emphasis {
+  color: #8D5113;
+  background: rgba(245, 209, 130, 0.95);
 }
 
 /* 行标注和画布容器 */
@@ -2317,18 +2459,28 @@ const exportBlueprintImage = (projectName: string) => {
 
 .row-label {
   font-size: 10px;
-  color: var(--color-text-tertiary, #999999);
+  color: #9A6A31;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   padding-right: 4px;
   flex-shrink: 0;
+  background: rgba(250, 244, 200, 0.92);
+  border-radius: 6px 0 0 6px;
+  font-weight: 600;
+}
+
+.row-label.emphasis {
+  color: #8D5113;
+  background: rgba(245, 209, 130, 0.95);
 }
 
 /* 画布容器 - 背景色使用用户数据，不受主题影响 */
 .canvas-container {
   position: relative;
   overflow: visible;
+  border: 2px solid rgba(224, 106, 62, 0.45);
+  box-shadow: 0 10px 24px rgba(35, 31, 26, 0.08);
 }
 
 /* 网格层 */
@@ -2339,6 +2491,26 @@ const exportBlueprintImage = (projectName: string) => {
   pointer-events: none;
   will-change: transform;
   transform: translateZ(0);
+}
+
+.major-grid-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.major-grid-line.horizontal {
+  left: 0;
+  right: 0;
+  height: 1px;
+  border-top: 1px solid rgba(248, 90, 60, 0.78);
+}
+
+.major-grid-line.vertical {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  border-left: 1px dashed rgba(248, 90, 60, 0.82);
 }
 
 /* 拼豆层 */
@@ -2641,10 +2813,15 @@ const exportBlueprintImage = (projectName: string) => {
   background-color: transparent;
   flex-shrink: 0;
   padding-bottom: env(safe-area-inset-bottom);
+  min-height: 172px;
 }
 
 .tab-panel-content {
-  padding: 16px;
+  min-height: 172px;
+  padding: 16px 16px 20px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
 }
 
 /* 尺寸选项 */
@@ -2654,6 +2831,7 @@ const exportBlueprintImage = (projectName: string) => {
   gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
+  width: 100%;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -2666,29 +2844,35 @@ const exportBlueprintImage = (projectName: string) => {
 
 .size-option {
   flex: 0 0 auto;
-  min-width: 90px;
-  padding: 10px 18px;
-  border-radius: 10px;
-  background-color: var(--color-bg-page, #F5F5F5);
-  border: 2px solid transparent;
+  min-width: 88px;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 2px solid var(--color-text-primary, #231F1A);
   cursor: pointer;
   transition: all 0.15s;
 }
 
 .size-option.active {
-  background-color: var(--color-primary-light, #FFF5E0);
-  border-color: var(--color-primary, #F5A623);
+  background-color: #1D2741;
+  border-color: #1D2741;
 }
 
 .size-option-text {
   font-size: 14px;
   color: var(--color-text-primary, #333333);
+  font-weight: 600;
+}
+
+.size-option.active .size-option-text {
+  color: #FFFFFF;
 }
 
 /* 编辑选项 */
 .edit-options {
   display: flex;
   gap: 12px;
+  width: 100%;
 }
 
 .edit-option {
@@ -2724,6 +2908,7 @@ const exportBlueprintImage = (projectName: string) => {
   display: flex;
   gap: 24px;
   justify-content: center;
+  width: 100%;
 }
 
 .style-option {
@@ -2866,6 +3051,8 @@ const exportBlueprintImage = (projectName: string) => {
 .color-card-scroll {
   flex: 1;
   min-height: 0;
+  max-height: 50vh;
+  min-height: 280px;
 }
 
 .color-card-grid {
@@ -2953,6 +3140,9 @@ const exportBlueprintImage = (projectName: string) => {
 
 .save-modal-body {
   padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .save-name-input {
@@ -2968,6 +3158,54 @@ const exportBlueprintImage = (projectName: string) => {
 
 .save-placeholder {
   color: var(--color-text-tertiary, #CCCCCC);
+}
+
+.save-section-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary, #666666);
+}
+
+.save-tag-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.save-tag-row {
+  display: inline-flex;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+
+.save-tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.save-tag-pill {
+  min-width: 76px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(35, 31, 26, 0.16);
+  background: #FFFDF8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary, #666666);
+  font-size: 13px;
+}
+
+.save-tag-pill.active {
+  border-color: #F5A623;
+  background: #FFF3D9;
+  color: #8D5113;
+  font-weight: 600;
+}
+
+.save-section-tip {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #999999);
 }
 
 .save-modal-footer {

@@ -21,17 +21,17 @@
           @click="chooseImage"
         >
           <image class="upload-icon" src="/static/assets/v015/icons/image-import-active.png" mode="aspectFit" />
-          <text class="upload-label">相册</text>
+          <text class="upload-label">自定义</text>
         </view>
-          <view
-            v-for="(preset, index) in presetAvatars"
-            :key="index"
-            class="preset-item"
-            :class="{ selected: selectedPreset === index }"
-            @click="selectPreset(index)"
-          >
-            <image class="preset-image" :src="preset" mode="aspectFill" />
-          </view>
+        <view
+          v-for="(preset, index) in presetAvatars"
+          :key="index"
+          class="preset-item"
+          :class="{ selected: selectedPreset === index }"
+          @click="selectPreset(index)"
+        >
+          <image class="preset-image" :src="preset" mode="aspectFill" />
+        </view>
       </view>
     </view>
 
@@ -55,10 +55,18 @@ const selectedPreset = ref(-1)
 
 /** 预设头像列表 */
 const presetAvatars = [
-  '/static/assets/v015/default-avatar-1.png',
-  '/static/assets/v015/default-avatar-2.png',
-  '/static/assets/v015/default-avatar-3.png',
-  '/static/assets/v015/default-avatar-4.png',
+  '/static/assets/v017/avatars/avatar-rat.svg',
+  '/static/assets/v017/avatars/avatar-ox.svg',
+  '/static/assets/v017/avatars/avatar-tiger.svg',
+  '/static/assets/v017/avatars/avatar-rabbit.svg',
+  '/static/assets/v017/avatars/avatar-dragon.svg',
+  '/static/assets/v017/avatars/avatar-snake.svg',
+  '/static/assets/v017/avatars/avatar-horse.svg',
+  '/static/assets/v017/avatars/avatar-goat.svg',
+  '/static/assets/v017/avatars/avatar-monkey.svg',
+  '/static/assets/v017/avatars/avatar-rooster.svg',
+  '/static/assets/v017/avatars/avatar-dog.svg',
+  '/static/assets/v017/avatars/avatar-pig.svg',
 ]
 
 const isPresetAvatar = computed(() => presetAvatars.includes(avatarUrl.value))
@@ -193,18 +201,19 @@ const goBack = () => {
 
 .preset-grid {
   display: flex;
-  gap: 14rpx;
-  flex-wrap: nowrap;
+  gap: 18rpx;
+  flex-wrap: wrap;
   align-items: center;
 }
 
 .preset-item {
-  width: 112rpx;
-  height: 112rpx;
+  width: calc((100% - 72rpx) / 5);
+  aspect-ratio: 1;
   border-radius: 50%;
   overflow: hidden;
   border: 4rpx solid var(--color-border);
   transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .preset-item.selected {

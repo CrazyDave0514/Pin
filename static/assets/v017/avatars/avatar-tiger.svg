@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="56" fill="#FFE8C8"/>
+  <circle cx="40" cy="36" r="12" fill="#F6B45E"/>
+  <circle cx="80" cy="36" r="12" fill="#F6B45E"/>
+  <circle cx="60" cy="66" r="30" fill="#FFF6EA"/>
+  <circle cx="48" cy="60" r="4" fill="#3C3028"/>
+  <circle cx="72" cy="60" r="4" fill="#3C3028"/>
+  <circle cx="60" cy="70" r="5" fill="#FFB07E"/>
+  <path d="M48 46l6 8M72 46l-6 8M60 42v10" stroke="#C8771F" stroke-width="4" stroke-linecap="round"/>
+  <path d="M51 82c5 5 13 5 18 0" fill="none" stroke="#3C3028" stroke-width="4" stroke-linecap="round"/>
+  <text x="60" y="108" text-anchor="middle" font-family="Arial" font-size="14" font-weight="700" fill="#AF6A1F">HU</text>
+</svg>

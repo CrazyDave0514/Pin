@@ -1,226 +1,247 @@
 <template>
   <view class="project-page">
-    <!-- 顶部区域 -->
     <view class="header">
       <view class="title-row">
-        <text class="title">我的项目</text>
-        <text class="count" v-if="projects.length > 0">{{ projects.length }} 个项目</text>
-      </view>
-    </view>
-
-    <!-- 操作栏 -->
-    <view class="action-bar">
-      <view class="search-box">
-        <image class="search-icon" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
-        <input
-          class="search-input"
-          v-model="searchKeyword"
-          placeholder="搜索项目名称"
-          placeholder-class="placeholder"
-        />
-      </view>
-      <view class="action-buttons">
-        <text class="action-btn select-btn" @click="toggleSelectMode">
-          {{ isSelectMode ? '完成' : '选择' }}
-        </text>
-        <view class="action-btn new-btn" @click="showCreateModal">
-          <image class="btn-inline-icon" src="/static/assets/v015/icons/create-active.png" mode="aspectFit" />
-          <text>新建</text>
+        <view v-if="currentFolder" class="back-btn" @click="goToParentFolder">
+          <text>‹</text>
+        </view>
+        <view class="title-copy">
+          <text class="page-title">{{ currentFolder ? currentFolder.name : '我的项目' }}</text>
+          <text class="page-subtitle">{{ currentFolder ? currentFolderPath : '全部作品与文件夹' }}</text>
+        </view>
+        <view class="header-actions">
+          <view class="icon-btn" @click="goToSearch">
+            <image class="icon-img" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
+          </view>
         </view>
       </view>
     </view>
 
-    <!-- 项目列表 -->
-    <scroll-view class="project-list" scroll-y v-if="filteredProjects.length > 0">
-      <view
-        class="project-card"
-        v-for="project in filteredProjects"
-        :key="project.id"
-        :class="{ selected: selectedProjects.includes(project.id) }"
-        @click="handleProjectClick(project)"
-        @longpress="showProjectMenu(project)"
-      >
-        <!-- 多选模式复选框 -->
-        <view class="checkbox" v-if="isSelectMode" @click.stop="toggleSelect(project.id)">
-          <text v-if="selectedProjects.includes(project.id)">✓</text>
-        </view>
+    <scroll-view class="content-scroll" scroll-y>
+      <view v-if="currentFolderPath" class="breadcrumb">{{ currentFolderPath }}</view>
 
-        <!-- 项目缩略图 -->
-        <view class="thumbnail">
-          <image
-            v-if="project.thumbnail"
-            class="thumbnail-img"
-            :src="project.thumbnail"
-            mode="aspectFill"
-          />
-          <view v-else class="thumbnail-board">
-            <text class="thumbnail-placeholder">{{ project.name?.charAt(0) || 'P' }}</text>
+      <view v-if="folderEntries.length || projectEntries.length" class="list-section">
+        <view
+          v-for="folder in folderEntries"
+          :key="folder.id"
+          class="entry-card folder-card"
+          @click="openFolder(folder)"
+        >
+          <view class="entry-cover folder-cover">
+            <image class="folder-cover-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
+          </view>
+          <view class="entry-main">
+            <view class="entry-name-row">
+              <text class="entry-name">{{ folder.name }}</text>
+              <view class="folder-badge">文件夹</view>
+            </view>
+            <text class="entry-meta">{{ formatDateTime(folder.updatedAt || folder.createdAt) }}</text>
           </view>
         </view>
 
-        <!-- 项目信息 -->
-        <view class="info">
-          <text class="project-name">{{ project.name }}</text>
-          <text class="project-size">{{ project.canvasData?.width || 0 }}×{{ project.canvasData?.height || 0 }}</text>
-          <text class="project-time">{{ formatTime(project.updatedAt) }}</text>
-        </view>
+        <view
+          v-for="project in projectEntries"
+          :key="project.id"
+          class="entry-card project-card"
+          @click="handleProjectClick(project)"
+        >
+          <view class="entry-cover project-cover">
+            <image
+              v-if="project.thumbnail"
+              class="entry-cover-image"
+              :src="project.thumbnail"
+              mode="aspectFit"
+            />
+            <view v-else class="entry-cover-placeholder">
+              <image class="placeholder-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
+            </view>
+            <view class="status-chip" :class="project.isPublished ? 'published' : 'saved'">
+              {{ project.isPublished ? '已发布' : '编辑中' }}
+            </view>
+          </view>
 
-        <!-- 状态标签 -->
-        <view class="status-badge" :class="project.isPublished ? 'published' : project.status">
-          {{ getStatusText(project) }}
+          <view class="entry-main">
+            <view class="entry-name-row">
+              <text class="entry-name">{{ project.name || '未命名作品' }}</text>
+              <view class="entry-menu-btn" @click.stop="openActionSheet(project)">
+                <text>•••</text>
+              </view>
+            </view>
+            <text class="entry-meta">{{ formatDimensions(project) }} · {{ formatDateTime(project.updatedAt) }}</text>
+            <text class="entry-meta" v-if="project.tags?.primary || project.tags?.secondary">{{ formatProjectTags(project.tags).join(' / ') }}</text>
+          </view>
         </view>
+      </view>
 
-        <!-- 操作菜单按钮 -->
-        <view class="menu-btn" @click.stop="showProjectMenu(project)" v-if="!isSelectMode">
-          <text>⋮</text>
-        </view>
+      <view v-else class="empty-state">
+        <image class="empty-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
+        <text class="empty-title">{{ currentFolder ? '文件夹里还没有作品' : '还没有项目' }}</text>
+        <text class="empty-subtitle">{{ currentFolder ? '从右下角继续新建或导入' : '先创建一个拼豆作品试试看' }}</text>
       </view>
     </scroll-view>
 
-    <!-- 空状态 -->
-    <view class="empty-state" v-else>
-      <image class="empty-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
-      <text class="empty-text">还没有项目</text>
-      <text class="empty-subtext">开始创作你的第一个作品吧</text>
-      <button class="start-btn" @click="showCreateModal">开始创作</button>
+    <view class="fab" v-if="!showCreateSheet" @click="showCreateSheet = true">
+      <text class="fab-plus">+</text>
     </view>
 
-    <!-- 底部多选操作栏 -->
-    <view class="select-action-bar" v-if="isSelectMode && selectedProjects.length > 0">
-      <text class="selected-count">已选择 {{ selectedProjects.length }} 个</text>
-      <view class="select-actions">
-        <text class="select-action" @click="copySelected">复制</text>
-        <text class="select-action" @click="moveSelected">移动</text>
-        <text class="select-action delete" @click="deleteSelected">删除</text>
-        <text class="select-action" @click="selectAll">{{ isAllSelected ? '取消全选' : '全选' }}</text>
-      </view>
-    </view>
-
-    <!-- 开始创作弹窗 -->
-    <view class="modal-overlay" v-if="showModal" @click="closeModal">
-      <view class="create-modal" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">开始创作</text>
-          <text class="modal-close" @click="closeModal">✕</text>
+    <view v-if="showCreateSheet" class="modal-mask" @click="closeCreateSheet">
+      <view class="bottom-sheet create-sheet" @click.stop>
+        <view class="sheet-header">
+          <text class="sheet-title">新建</text>
+          <view class="sheet-close" @click="closeCreateSheet">
+            <text>✕</text>
+          </view>
         </view>
-
-        <view class="modal-content">
-          <!-- 无需导入（主要方式） -->
-          <view class="create-option primary" @click="createCanvas('blank')">
-            <view class="option-icon-wrap">
-              <image class="option-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
-            </view>
-            <view class="option-text">
-              <text class="option-title">新建空白画布</text>
-              <text class="option-desc">从零开始创作图纸</text>
+        <view class="sheet-list">
+          <view class="sheet-item" @click="createCanvas('blank')">
+            <image class="sheet-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
+            <view class="sheet-copy">
+              <text class="sheet-item-title">新建空白画布</text>
+              <text class="sheet-item-desc">从零开始创作图纸</text>
             </view>
           </view>
-
-          <!-- 导入图片生成 -->
-          <view class="create-option" @click="createCanvas('image')">
-            <view class="option-icon-wrap">
-              <image class="option-icon" src="/static/assets/v015/icons/image-import-muted.png" mode="aspectFit" />
-            </view>
-            <view class="option-text">
-              <text class="option-title">导入图片生成</text>
-              <text class="option-desc">导入图片和像素图，生成拼豆图纸</text>
+          <view class="sheet-item" @click="createCanvas('image')">
+            <image class="sheet-icon" src="/static/assets/v015/icons/image-import-muted.png" mode="aspectFit" />
+            <view class="sheet-copy">
+              <text class="sheet-item-title">导入图片生成</text>
+              <text class="sheet-item-desc">导入图片转换为拼豆图纸</text>
             </view>
           </view>
-
-          <!-- 导入已有拼豆图纸 -->
-          <view class="create-option" @click="createCanvas('blueprint')">
-            <view class="option-icon-wrap">
-              <image class="option-icon" src="/static/assets/v015/icons/blueprint-import-muted.png" mode="aspectFit" />
-            </view>
-            <view class="option-text">
-              <text class="option-title">导入已有拼豆图纸</text>
-              <text class="option-desc">要求图纸清晰</text>
+          <view class="sheet-item" @click="createCanvas('blueprint')">
+            <image class="sheet-icon" src="/static/assets/v015/icons/blueprint-import-muted.png" mode="aspectFit" />
+            <view class="sheet-copy">
+              <text class="sheet-item-title">导入拼豆图纸</text>
+              <text class="sheet-item-desc">识别已有图纸继续编辑</text>
             </view>
           </view>
-
-          <view class="divider"></view>
-
-          <!-- 新建文件夹 -->
-          <view class="create-option folder" @click="createFolder">
-            <view class="option-icon-wrap">
-              <image class="option-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
-            </view>
-            <view class="option-text">
-              <text class="option-title">新建文件夹</text>
-              <text class="option-desc">请输入文件夹名称</text>
+          <view class="sheet-item" @click="createFolder">
+            <image class="sheet-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
+            <view class="sheet-copy">
+              <text class="sheet-item-title">新建文件夹</text>
+              <text class="sheet-item-desc">整理你的项目与灵感</text>
             </view>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 项目操作菜单 -->
-    <view class="modal-overlay" v-if="showMenu" @click="closeMenu">
-      <view class="action-sheet" @click.stop>
-        <view class="action-item" @click="renameProject">
-          <text>重命名</text>
+    <view v-if="showActionSheet" class="modal-mask" @click="closeActionSheet">
+      <view class="bottom-sheet action-sheet" @click.stop>
+        <view class="sheet-header">
+          <text class="sheet-title">{{ currentProject?.name || '作品操作' }}</text>
+          <view class="sheet-close" @click="closeActionSheet">
+            <text>✕</text>
+          </view>
         </view>
-        <view class="action-item" @click="copyProject">
-          <text>复制</text>
-        </view>
-        <view v-if="!currentProject?.isPublished" class="action-item" @click="openPublishModal">
-          <text>发布</text>
-        </view>
-        <view v-else class="action-item" @click="unpublishProject">
-          <text>下架</text>
-        </view>
-        <view class="action-item danger" @click="deleteProject">
-          <text>删除</text>
-        </view>
-        <view class="action-cancel" @click="closeMenu">取消</view>
-      </view>
-    </view>
-
-    <!-- 发布设置弹窗 -->
-    <view class="modal-overlay" v-if="showPublishModal" @click="closePublishModal">
-      <view class="publish-modal" @click.stop>
-        <view class="modal-header">
-          <text class="modal-title">发布作品</text>
-          <text class="modal-close" @click="closePublishModal">✕</text>
-        </view>
-        <view class="publish-content">
-          <text class="publish-label">设置积分数</text>
-          <input
-            class="publish-input"
-            type="number"
-            v-model="publishPoints"
-            placeholder="0-100"
-            placeholder-class="placeholder"
-          />
-          <text class="publish-hint">0 积分将展示为免费，发布后可在首页社区展示。</text>
-        </view>
-        <view class="publish-actions">
-          <view class="publish-btn secondary" @click="closePublishModal">取消</view>
-          <view class="publish-btn primary" @click="confirmPublish">发布</view>
+        <view class="action-grid">
+          <view class="action-tile" @click="renameProject">
+            <text class="action-emoji">Aa</text>
+            <text class="action-label">重命名</text>
+          </view>
+          <view class="action-tile" @click="openFolderPicker('copy')">
+            <text class="action-emoji">⧉</text>
+            <text class="action-label">复制</text>
+          </view>
+          <view class="action-tile" @click="confirmDeleteProject">
+            <text class="action-emoji">⌫</text>
+            <text class="action-label danger">删除</text>
+          </view>
+          <view class="action-tile" :class="{ disabled: !folders.length }" @click="openFolderPicker('move')">
+            <text class="action-emoji">⇄</text>
+            <text class="action-label">移动</text>
+          </view>
+          <view class="action-tile" @click="currentProject?.isPublished ? unpublishProject() : openPublishModal()">
+            <text class="action-emoji">{{ currentProject?.isPublished ? '↓' : '↑' }}</text>
+            <text class="action-label">{{ currentProject?.isPublished ? '下架' : '发布' }}</text>
+          </view>
+          <view class="action-tile" @click="exportProject">
+            <text class="action-emoji">⇩</text>
+            <text class="action-label">导出</text>
+          </view>
+          <view class="action-tile" @click="shareProject">
+            <text class="action-emoji">↗</text>
+            <text class="action-label">分享</text>
+          </view>
         </view>
       </view>
     </view>
 
-    <!-- 文件夹选择弹窗 -->
-    <view class="modal-overlay" v-if="showFolderPicker" @click="closeFolderPicker">
-      <view class="folder-picker" @click.stop>
-        <view class="picker-header">
-          <text class="picker-title">{{ folderPickerTitle }}</text>
-          <text class="picker-close" @click="closeFolderPicker">✕</text>
+    <view v-if="showPublishModal" class="modal-mask" @click="closePublishModal">
+      <view class="bottom-sheet publish-sheet" @click.stop>
+        <view class="sheet-header">
+          <text class="sheet-title">发布作品</text>
+          <view class="sheet-close" @click="closePublishModal">
+            <text>✕</text>
+          </view>
         </view>
-        <scroll-view class="folder-list" scroll-y>
+        <view class="publish-body">
+          <text class="field-label">作品名称</text>
+          <input v-model="publishName" class="field-input" placeholder="请输入作品名称" placeholder-class="placeholder" />
+
+          <text class="field-label">积分数</text>
+          <input v-model="publishPoints" class="field-input" type="number" placeholder="0-100" placeholder-class="placeholder" />
+
+          <text class="field-label">一级标签</text>
+          <scroll-view class="tag-scroll" scroll-x :show-scrollbar="false">
+            <view class="tag-row">
+              <view
+                v-for="group in TAG_OPTIONS"
+                :key="group.primary"
+                :class="['tag-pill', publishTags.primary === group.primary ? 'active' : '']"
+                @click="selectPrimaryTag(group.primary)"
+              >
+                <text>{{ group.primary }}</text>
+              </view>
+            </view>
+          </scroll-view>
+
+          <template v-if="secondaryOptions.length">
+            <text class="field-label">二级标签</text>
+            <view class="tag-wrap">
+              <view
+                v-for="item in secondaryOptions"
+                :key="item"
+                :class="['tag-pill', publishTags.secondary === item ? 'active' : '']"
+                @click="publishTags.secondary = publishTags.secondary === item ? '' : item"
+              >
+                <text>{{ item }}</text>
+              </view>
+            </view>
+          </template>
+
+          <text class="publish-note">当前标签非必填，0 积分会展示为免费。</text>
+
+          <view class="footer-actions">
+            <view class="footer-btn secondary" @click="closePublishModal">取消</view>
+            <view class="footer-btn primary" @click="confirmPublish">确认发布</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view v-if="showFolderPicker" class="modal-mask" @click="closeFolderPicker">
+      <view class="bottom-sheet folder-sheet" @click.stop>
+        <view class="sheet-header">
+          <text class="sheet-title">{{ folderPickerAction === 'move' ? '移动到' : '复制到位置' }}</text>
+          <view class="sheet-close" @click="closeFolderPicker">
+            <text>✕</text>
+          </view>
+        </view>
+        <scroll-view class="folder-scroll" scroll-y>
+          <view class="folder-choice root" @click="selectFolderTarget('')">
+            <text class="folder-choice-name">根目录</text>
+          </view>
           <view
-            class="folder-item"
             v-for="folder in folders"
             :key="folder.id"
-            @click="selectFolder(folder)"
+            class="folder-choice"
+            @click="selectFolderTarget(folder.id)"
           >
-            <image class="folder-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
-            <text class="folder-name">{{ folder.name }}</text>
+            <text class="folder-choice-name">{{ folder.name }}</text>
+            <text class="folder-choice-path">{{ buildFolderPath(folder.id) }}</text>
           </view>
-          <view class="folder-item new" @click="createNewFolderInPicker">
-            <image class="folder-icon" src="/static/assets/v015/icons/create-active.png" mode="aspectFit" />
-            <text class="folder-name">新建文件夹</text>
+          <view class="folder-choice new" @click="createFolderFromPicker">
+            <text class="folder-choice-name">+ 新建文件夹</text>
           </view>
         </scroll-view>
       </view>
@@ -229,324 +250,375 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { publishProjectAsArtwork, unpublishProjectArtwork } from '../../utils/community'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import {
+  TAG_OPTIONS,
+  buildProjectThumbnail,
+  normalizeProjectTags,
+  projectTagsToList,
+  publishProjectAsArtwork,
+  syncProjectArtwork,
+  unpublishProjectArtwork,
+} from '../../utils/community'
 
-// 项目列表
-const projects = ref<any[]>([])
-// 搜索关键词
-const searchKeyword = ref('')
-// 多选模式
-const isSelectMode = ref(false)
-const selectedProjects = ref<string[]>([])
+type FolderRecord = {
+  id: string
+  name: string
+  parentId?: string
+  createdAt: number
+  updatedAt: number
+}
 
-// 弹窗状态
-const showModal = ref(false)
-const showMenu = ref(false)
-const showFolderPicker = ref(false)
+type ProjectRecord = {
+  id: string
+  name: string
+  canvasData: any
+  createdAt: number
+  updatedAt: number
+  thumbnail?: string
+  folderId?: string
+  tags?: { primary?: string; secondary?: string }
+  isPublished?: boolean
+  publishedArtworkId?: string
+  publishPoints?: number
+}
+
+const projects = ref<ProjectRecord[]>([])
+const folders = ref<FolderRecord[]>([])
+const currentFolderId = ref('')
+const showCreateSheet = ref(false)
+const showActionSheet = ref(false)
 const showPublishModal = ref(false)
-const folderPickerTitle = ref('移动到')
+const showFolderPicker = ref(false)
+const currentProject = ref<ProjectRecord | null>(null)
 const folderPickerAction = ref<'move' | 'copy'>('move')
+
+const publishName = ref('')
 const publishPoints = ref('0')
+const publishTags = ref<{ primary?: string; secondary?: string }>({})
 
-// 当前操作的项目
-const currentProject = ref<any>(null)
-const folders = ref<any[]>([])
+const currentFolder = computed(() => folders.value.find((item) => item.id === currentFolderId.value) || null)
 
-/**
- * 根据搜索关键词过滤项目列表
- * @returns 过滤后的项目数组
- */
-const filteredProjects = computed(() => {
-  if (!searchKeyword.value) return projects.value
-  return projects.value.filter(p =>
-    p.name?.toLowerCase().includes(searchKeyword.value.toLowerCase())
-  )
+const currentFolderPath = computed(() => buildFolderPath(currentFolderId.value))
+
+const folderEntries = computed(() => {
+  return folders.value
+    .filter((item) => (item.parentId || '') === currentFolderId.value)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
 })
 
-/**
- * 判断当前是否已全选所有过滤后的项目
- * @returns 是否全选状态
- */
-const isAllSelected = computed(() => {
-  return selectedProjects.value.length === filteredProjects.value.length
+const projectEntries = computed(() => {
+  return projects.value
+    .filter((item) => (item.folderId || '') === currentFolderId.value)
+    .sort((a, b) => b.updatedAt - a.updatedAt)
 })
 
-/**
- * 从本地存储加载项目列表，按更新时间倒序排列
- */
-const loadProjects = () => {
-  const data = uni.getStorageSync('pin_projects') || []
-  projects.value = data.sort((a, b) => b.updatedAt - a.updatedAt)
+const secondaryOptions = computed(() => {
+  const group = TAG_OPTIONS.find((item) => item.primary === publishTags.value.primary)
+  return group ? [...group.secondary] : []
+})
+
+onLoad((options) => {
+  currentFolderId.value = options?.folderId || ''
+})
+
+onShow(() => {
+  loadData()
+})
+
+onMounted(() => {
+  uni.$on('projectSearchOpenFolder', handleOpenFolderFromSearch)
+})
+
+onUnmounted(() => {
+  uni.$off('projectSearchOpenFolder', handleOpenFolderFromSearch)
+})
+
+const formatProjectTagsLocal = (tags: any) => projectTagsToList(normalizeProjectTags(tags))
+
+const loadData = () => {
+  projects.value = (uni.getStorageSync('pin_projects') || []).map((item: any) => ({
+    ...item,
+    folderId: item.folderId || '',
+    tags: normalizeProjectTags(item.tags),
+    thumbnail: item.thumbnail || buildProjectThumbnail(item.canvasData),
+    updatedAt: item.updatedAt || item.createdAt || Date.now(),
+  }))
+  folders.value = (uni.getStorageSync('pin_folders') || []).map((item: any) => ({
+    id: item.id,
+    name: item.name || '未命名文件夹',
+    parentId: item.parentId || '',
+    createdAt: item.createdAt || Date.now(),
+    updatedAt: item.updatedAt || item.createdAt || Date.now(),
+  }))
 }
 
-/**
- * 从本地存储加载文件夹列表
- */
-const loadFolders = () => {
-  folders.value = uni.getStorageSync('pin_folders') || []
+const saveProjects = (next: ProjectRecord[]) => {
+  projects.value = next
+  uni.setStorageSync('pin_projects', next)
 }
 
-/**
- * 将时间戳格式化为友好的相对时间描述
- * @param timestamp - Unix 时间戳（毫秒）
- * @returns 格式化后的时间字符串，如"今天"、"昨天"、"3天前"、"5/12"
- */
-const formatTime = (timestamp: number) => {
-  if (!timestamp) return ''
+const saveFolders = (next: FolderRecord[]) => {
+  folders.value = next
+  uni.setStorageSync('pin_folders', next)
+}
+
+const formatDimensions = (project: ProjectRecord) => {
+  const width = Number(project.canvasData?.width || 0)
+  const height = Number(project.canvasData?.height || 0)
+  return `${width}×${height}`
+}
+
+const formatDateTime = (timestamp: number) => {
   const date = new Date(timestamp)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  if (days === 0) return '今天'
-  if (days === 1) return '昨天'
-  if (days < 7) return `${days}天前`
-  return `${date.getMonth() + 1}/${date.getDate()}`
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-const getStatusText = (project: any) => {
-  if (project.isPublished) return '已发布'
-  return project.status === 'saved' ? '已保存' : '草稿'
-}
-
-/**
- * 切换多选模式的开启/关闭状态
- * 关闭多选模式时自动清空已选中的项目列表
- */
-const toggleSelectMode = () => {
-  isSelectMode.value = !isSelectMode.value
-  if (!isSelectMode.value) {
-    selectedProjects.value = []
+const buildFolderPath = (folderId: string) => {
+  if (!folderId) return '根目录'
+  const names: string[] = []
+  let cursor = folders.value.find((item) => item.id === folderId)
+  while (cursor) {
+    names.unshift(cursor.name)
+    cursor = folders.value.find((item) => item.id === cursor?.parentId)
   }
+  return ['根目录', ...names].join(' / ')
 }
 
-/**
- * 切换指定项目的选中状态
- * @param id - 项目 ID
- */
-const toggleSelect = (id: string) => {
-  const index = selectedProjects.value.indexOf(id)
-  if (index > -1) {
-    selectedProjects.value.splice(index, 1)
+const openFolder = (folder: FolderRecord) => {
+  currentFolderId.value = folder.id
+}
+
+const handleOpenFolderFromSearch = (folderId: string) => {
+  currentFolderId.value = folderId || ''
+}
+
+const goToParentFolder = () => {
+  currentFolderId.value = currentFolder.value?.parentId || ''
+}
+
+const closeCreateSheet = () => {
+  showCreateSheet.value = false
+}
+
+const goToSearch = () => {
+  uni.navigateTo({ url: '/pages/search/index?mode=project' })
+}
+
+const createCanvas = (type: 'blank' | 'image' | 'blueprint') => {
+  closeCreateSheet()
+  if (type === 'blank') {
+    uni.navigateTo({ url: '/pages/canvas-settings/index?type=blank&folderId=' + currentFolderId.value })
+  } else if (type === 'image') {
+    uni.navigateTo({ url: '/pages/image-import/index' })
   } else {
-    selectedProjects.value.push(id)
+    uni.navigateTo({ url: '/pages/blueprint-import/index' })
   }
 }
 
-/**
- * 全选或取消全选当前过滤后的所有项目
- */
-const selectAll = () => {
-  if (isAllSelected.value) {
-    selectedProjects.value = []
-  } else {
-    selectedProjects.value = filteredProjects.value.map(p => p.id)
+const askFolderName = (title: string, onConfirm: (name: string) => void) => {
+  uni.showModal({
+    title,
+    editable: true,
+    placeholderText: '请输入名称',
+    success: (res) => {
+      const name = String(res.content || '').trim()
+      if (!res.confirm) return
+      if (!name) {
+        uni.showToast({ title: '名称不能为空', icon: 'none' })
+        return
+      }
+      onConfirm(name)
+    },
+  })
+}
+
+const createFolder = () => {
+  closeCreateSheet()
+  askFolderName('新建文件夹', (name) => {
+    const duplicated = folders.value.some((item) => item.parentId === currentFolderId.value && item.name === name)
+    if (duplicated) {
+      uni.showToast({ title: '文件夹名称重复', icon: 'none' })
+      return
+    }
+    const now = Date.now()
+    saveFolders([
+      {
+        id: `folder_${now}`,
+        name,
+        parentId: currentFolderId.value,
+        createdAt: now,
+        updatedAt: now,
+      },
+      ...folders.value,
+    ])
+    uni.showToast({ title: '创建成功', icon: 'success' })
+  })
+}
+
+const createFolderFromPicker = () => {
+  closeFolderPicker()
+  askFolderName('新建文件夹', (name) => {
+    const now = Date.now()
+    saveFolders([
+      {
+        id: `folder_${now}`,
+        name,
+        parentId: currentFolderId.value,
+        createdAt: now,
+        updatedAt: now,
+      },
+      ...folders.value,
+    ])
+    uni.showToast({ title: '创建成功', icon: 'success' })
+  })
+}
+
+const handleProjectClick = (project: ProjectRecord) => {
+  if (project.isPublished) {
+    uni.showToast({ title: '请先下架作品后才能进行编辑调整', icon: 'none', duration: 3000 })
+    currentProject.value = project
+    setTimeout(() => {
+      showActionSheet.value = true
+    }, 300)
+    return
   }
+  uni.navigateTo({ url: `/pages/canvas-editor/index?mode=edit&projectId=${project.id}` })
 }
 
-/**
- * 显示"开始创作"弹窗
- */
-const showCreateModal = () => {
-  showModal.value = true
-}
-
-/**
- * 关闭"开始创作"弹窗
- */
-const closeModal = () => {
-  showModal.value = false
-}
-
-/**
- * 处理项目卡片点击事件
- * 多选模式下切换选中状态，普通模式下跳转到画布编辑页面
- * @param project - 被点击的项目对象
- */
-const handleProjectClick = (project: any) => {
-  if (isSelectMode.value) {
-    toggleSelect(project.id)
-  } else {
-    // 跳转到画布编辑
-    uni.navigateTo({
-      url: `/pages/canvas-editor/index?mode=edit&projectId=${project.id}`
-    })
-  }
-}
-
-/**
- * 显示指定项目的操作菜单（重命名、移动、复制、删除）
- * @param project - 要操作的项目对象
- */
-const showProjectMenu = (project: any) => {
+const openActionSheet = (project: ProjectRecord) => {
   currentProject.value = project
-  showMenu.value = true
+  showActionSheet.value = true
 }
 
-/**
- * 关闭项目操作菜单并清空当前操作项目引用
- */
-const closeMenu = () => {
-  showMenu.value = false
-  currentProject.value = null
+const closeActionSheet = () => {
+  showActionSheet.value = false
 }
 
-/**
- * 重命名当前选中的项目
- * 弹出系统输入框，确认后更新本地存储中的项目名称
- */
 const renameProject = () => {
   const project = currentProject.value
-  closeMenu()
+  closeActionSheet()
   if (!project) return
-  uni.showModal({
-    title: '重命名',
-    editable: true,
-    placeholderText: project.name,
-    success: (res) => {
-      if (res.confirm && res.content) {
-        const data: any[] = uni.getStorageSync('pin_projects') || []
-        const index = data.findIndex((p: any) => p.id === project.id)
-        if (index > -1) {
-          data[index].name = res.content
-          uni.setStorageSync('pin_projects', data)
-          loadProjects()
-          uni.showToast({ title: '重命名成功', icon: 'success' })
+  askFolderName('重命名作品', (name) => {
+    saveProjects(
+      projects.value.map((item) => {
+        if (item.id !== project.id) return item
+        const next = {
+          ...item,
+          name,
+          updatedAt: Date.now(),
         }
-      }
-    }
+        if (next.isPublished) syncProjectArtwork(next)
+        return next
+      })
+    )
+    uni.showToast({ title: '重命名成功', icon: 'success' })
   })
 }
 
-/**
- * 根据创建类型跳转到对应的画布创建页面
- * @param type - 创建类型：blank（空白画布）、image（导入图片）、blueprint（导入图纸）
- */
-const createCanvas = (type: 'blank' | 'image' | 'blueprint') => {
-  closeModal()
-  if (type === 'blank') {
-    // 直接进入画布设置
-    uni.navigateTo({
-      url: '/pages/canvas-settings/index?type=blank'
-    })
-  } else if (type === 'image') {
-    // 进入图片导入
-    uni.navigateTo({
-      url: '/pages/image-import/index'
-    })
-  } else if (type === 'blueprint') {
-    // 进入图纸导入
-    uni.navigateTo({
-      url: '/pages/blueprint-import/index'
-    })
+const openFolderPicker = (action: 'move' | 'copy') => {
+  if (action === 'move' && !folders.value.length) {
+    uni.showToast({ title: '暂无可移动目标文件夹', icon: 'none' })
+    return
   }
-}
-
-/**
- * 创建新文件夹
- * 弹出系统输入框，确认后将文件夹信息保存到本地存储
- */
-const createFolder = () => {
-  closeModal()
-  uni.showModal({
-    title: '新建文件夹',
-    placeholderText: '请输入文件夹名称',
-    editable: true,
-    success: (res) => {
-      if (res.confirm && res.content) {
-        const folder = {
-          id: 'f_' + Date.now(),
-          name: res.content,
-          createdAt: Date.now()
-        }
-        const data = uni.getStorageSync('pin_folders') || []
-        data.push(folder)
-        uni.setStorageSync('pin_folders', data)
-        loadFolders()
-        uni.showToast({ title: '创建成功', icon: 'success' })
-      }
-    }
-  })
-}
-
-/**
- * 移动当前项目到指定文件夹
- * 关闭操作菜单后打开文件夹选择器
- */
-const moveProject = () => {
-  closeMenu()
-  folderPickerTitle.value = '移动到'
-  folderPickerAction.value = 'move'
+  folderPickerAction.value = action
+  showActionSheet.value = false
   showFolderPicker.value = true
 }
 
-/**
- * 复制当前项目
- * 深拷贝项目数据并生成新 ID，保存到本地存储
- */
-const copyProject = () => {
+const closeFolderPicker = () => {
+  showFolderPicker.value = false
+}
+
+const selectFolderTarget = (folderId: string) => {
   const project = currentProject.value
-  closeMenu()
+  closeFolderPicker()
   if (!project) return
-  const newProject = {
+
+  if (folderPickerAction.value === 'move') {
+    saveProjects(projects.value.map((item) => (
+      item.id === project.id
+        ? { ...item, folderId, updatedAt: Date.now() }
+        : item
+    )))
+    uni.showToast({ title: '移动成功', icon: 'success' })
+    return
+  }
+
+  const now = Date.now()
+  const copiedProject = {
     ...JSON.parse(JSON.stringify(project)),
-    id: 'p_' + Date.now(),
-    name: `${project.name}V2`,
+    id: `project_${now}`,
+    name: `${project.name || '未命名作品'}V2`,
+    folderId,
     isPublished: false,
     publishedArtworkId: '',
-    createdAt: Date.now(),
-    updatedAt: Date.now()
+    publishPoints: 0,
+    updatedAt: now,
+    createdAt: now,
   }
-  const data = uni.getStorageSync('pin_projects') || []
-  data.push(newProject)
-  uni.setStorageSync('pin_projects', data)
-  loadProjects()
+  saveProjects([copiedProject, ...projects.value])
   uni.showToast({ title: '复制成功', icon: 'success' })
 }
 
 const openPublishModal = () => {
   const project = currentProject.value
-  showMenu.value = false
+  showActionSheet.value = false
   if (!project) return
-  currentProject.value = project
+  publishName.value = project.name || ''
   publishPoints.value = String(project.publishPoints || 0)
+  publishTags.value = { ...normalizeProjectTags(project.tags) }
   showPublishModal.value = true
 }
 
 const closePublishModal = () => {
   showPublishModal.value = false
-  currentProject.value = null
-  publishPoints.value = '0'
+}
+
+const selectPrimaryTag = (primary: string) => {
+  publishTags.value = {
+    primary: publishTags.value.primary === primary ? '' : primary,
+    secondary: '',
+  }
 }
 
 const confirmPublish = () => {
   const project = currentProject.value
   if (!project) return
   const points = Number(publishPoints.value)
+  const name = publishName.value.trim()
+  if (!name) {
+    uni.showToast({ title: '请输入作品名称', icon: 'none' })
+    return
+  }
   if (!Number.isFinite(points) || points < 0 || points > 100) {
     uni.showToast({ title: '请输入0-100积分', icon: 'none' })
     return
   }
 
-  const artwork = publishProjectAsArtwork(project, Math.floor(points))
-  const data: any[] = uni.getStorageSync('pin_projects') || []
-  const index = data.findIndex((p: any) => p.id === project.id)
-  if (index > -1) {
-    data[index].isPublished = true
-    data[index].publishedArtworkId = artwork.id
-    data[index].publishPoints = Math.floor(points)
-    data[index].status = 'saved'
-    data[index].updatedAt = Date.now()
-    uni.setStorageSync('pin_projects', data)
+  const updatedProject = {
+    ...project,
+    name,
+    tags: normalizeProjectTags(publishTags.value),
+    publishPoints: Math.floor(points),
+    isPublished: true,
+    status: 'saved',
+    thumbnail: project.thumbnail || buildProjectThumbnail(project.canvasData),
+    updatedAt: Date.now(),
   }
+  const artwork = publishProjectAsArtwork(updatedProject, updatedProject.publishPoints)
+  updatedProject.publishedArtworkId = artwork.id
+  saveProjects(projects.value.map((item) => (item.id === project.id ? updatedProject : item)))
+  currentProject.value = updatedProject
   closePublishModal()
-  loadProjects()
   uni.showToast({ title: '发布成功', icon: 'success' })
 }
 
 const unpublishProject = () => {
   const project = currentProject.value
-  closeMenu()
+  closeActionSheet()
   if (!project) return
   uni.showModal({
     title: '确认下架',
@@ -554,268 +626,421 @@ const unpublishProject = () => {
     success: (res) => {
       if (!res.confirm) return
       unpublishProjectArtwork(project.id)
-      const data: any[] = uni.getStorageSync('pin_projects') || []
-      const index = data.findIndex((p: any) => p.id === project.id)
-      if (index > -1) {
-        data[index].isPublished = false
-        data[index].updatedAt = Date.now()
-        uni.setStorageSync('pin_projects', data)
-      }
-      loadProjects()
+      saveProjects(projects.value.map((item) => (
+        item.id === project.id
+          ? { ...item, isPublished: false, updatedAt: Date.now() }
+          : item
+      )))
       uni.showToast({ title: '已下架', icon: 'success' })
-    }
+    },
   })
 }
 
-/**
- * 删除当前项目
- * 弹出确认对话框，确认后从本地存储中移除该项目
- */
-const deleteProject = () => {
-  const projectToDelete = currentProject.value
-  closeMenu()
-  if (!projectToDelete) return
+const confirmDeleteProject = () => {
+  const project = currentProject.value
+  closeActionSheet()
+  if (!project) return
   uni.showModal({
-    title: '确认删除',
-    content: '确定要删除此项目吗？此操作不可恢复。',
+    title: '确认删除该作品？',
+    content: '删除后不可恢复',
     success: (res) => {
-      if (res.confirm) {
-        const data = uni.getStorageSync('pin_projects') || []
-        const filtered = data.filter((p: any) => p.id !== projectToDelete.id)
-        if (projectToDelete.isPublished) {
-          unpublishProjectArtwork(projectToDelete.id)
-        }
-        uni.setStorageSync('pin_projects', filtered)
-        loadProjects()
-        uni.showToast({ title: '删除成功', icon: 'success' })
+      if (!res.confirm) return
+      if (project.isPublished) {
+        unpublishProjectArtwork(project.id)
       }
-    }
+      saveProjects(projects.value.filter((item) => item.id !== project.id))
+      uni.showToast({ title: '删除成功', icon: 'success' })
+    },
   })
 }
 
-/**
- * 批量移动已选中的项目到文件夹
- * 退出多选模式后打开文件夹选择器
- */
-const moveSelected = () => {
-  toggleSelectMode()
-  folderPickerTitle.value = '移动到'
-  folderPickerAction.value = 'move'
-  showFolderPicker.value = true
+const exportProject = () => {
+  const project = currentProject.value
+  closeActionSheet()
+  if (!project) return
+  uni.navigateTo({ url: `/pages/canvas-editor/index?mode=edit&projectId=${project.id}&autoExport=1` })
 }
 
-/**
- * 批量复制已选中的项目
- * 深拷贝每个选中项目并生成新 ID，保存到本地存储后退出多选模式
- */
-const copySelected = () => {
-  const data: any[] = uni.getStorageSync('pin_projects') || []
-  selectedProjects.value.forEach(id => {
-    const project = data.find((p: any) => p.id === id)
-    if (project) {
-      const newProject = {
-        ...JSON.parse(JSON.stringify(project)),
-        id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-        name: project.name + ' (副本)',
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }
-      data.push(newProject)
-    }
-  })
-  uni.setStorageSync('pin_projects', data)
-  loadProjects()
-  toggleSelectMode()
-  uni.showToast({ title: '复制成功', icon: 'success' })
+const shareProject = () => {
+  closeActionSheet()
+  uni.showToast({ title: '功能正在完善中', icon: 'none' })
 }
 
-/**
- * 批量删除已选中的项目
- * 弹出确认对话框，确认后从本地存储中移除所有选中项目并退出多选模式
- */
-const deleteSelected = () => {
-  uni.showModal({
-    title: '确认删除',
-    content: `确定要删除选中的 ${selectedProjects.value.length} 个项目吗？此操作不可恢复。`,
-    success: (res) => {
-      if (res.confirm) {
-        const data = uni.getStorageSync('pin_projects') || []
-        data
-          .filter((p: any) => selectedProjects.value.includes(p.id) && p.isPublished)
-          .forEach((p: any) => unpublishProjectArtwork(p.id))
-        const filtered = data.filter((p: any) => !selectedProjects.value.includes(p.id))
-        uni.setStorageSync('pin_projects', filtered)
-        loadProjects()
-        toggleSelectMode()
-        uni.showToast({ title: '删除成功', icon: 'success' })
-      }
-    }
-  })
-}
-
-/**
- * 关闭文件夹选择器弹窗
- */
-const closeFolderPicker = () => {
-  showFolderPicker.value = false
-}
-
-/**
- * 选择目标文件夹并执行移动或复制操作
- * 支持单个项目和批量项目操作，操作完成后关闭文件夹选择器
- * @param folder - 目标文件夹对象
- */
-const selectFolder = (folder: any) => {
-  if (folderPickerAction.value === 'move') {
-    // 移动项目到文件夹
-    if (currentProject.value) {
-      currentProject.value.folderId = folder.id
-      const data = uni.getStorageSync('pin_projects') || []
-      const index = data.findIndex((p: any) => p.id === currentProject.value.id)
-      if (index > -1) {
-        data[index] = currentProject.value
-        uni.setStorageSync('pin_projects', data)
-        loadProjects()
-      }
-    } else if (selectedProjects.value.length > 0) {
-      const data = uni.getStorageSync('pin_projects') || []
-      selectedProjects.value.forEach(id => {
-        const index = data.findIndex((p: any) => p.id === id)
-        if (index > -1) {
-          data[index].folderId = folder.id
-        }
-      })
-      uni.setStorageSync('pin_projects', data)
-      loadProjects()
-      toggleSelectMode()
-    }
-  } else {
-    // 复制项目到文件夹
-    if (currentProject.value) {
-      const newProject = {
-        ...currentProject.value,
-        id: 'p_' + Date.now(),
-        folderId: folder.id,
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      }
-      const data = uni.getStorageSync('pin_projects') || []
-      data.push(newProject)
-      uni.setStorageSync('pin_projects', data)
-      loadProjects()
-    }
-  }
-  closeFolderPicker()
-  uni.showToast({ title: folderPickerAction.value === 'move' ? '移动成功' : '复制成功', icon: 'success' })
-}
-
-/**
- * 在文件夹选择器中新建文件夹
- * 关闭选择器后调用 createFolder 方法
- */
-const createNewFolderInPicker = () => {
-  closeFolderPicker()
-  createFolder()
-}
-
-// 页面加载
-onMounted(() => {
-  loadProjects()
-  loadFolders()
-  // 监听项目保存事件
-  uni.$on('projectSaved', handleProjectSaved)
-})
-
-// 页面卸载
-onUnmounted(() => {
-  // 移除监听
-  uni.$off('projectSaved', handleProjectSaved)
-})
-
-/**
- * 处理项目保存事件
- * 当其他页面触发 projectSaved 事件时，刷新项目列表数据
- */
-const handleProjectSaved = () => {
-  // 刷新项目列表
-  loadProjects()
-}
+// keep template references simple
+const formatProjectTags = formatProjectTagsLocal
 </script>
 
 <style scoped>
-/* ==================== 项目管理页面样式 ==================== */
-/* 基于 Pin 统一设计系统，使用 CSS 变量和 rpx 单位 */
-
 .project-page {
   min-height: 100vh;
-  background-color: var(--color-bg-page);
-  padding-bottom: 28rpx;
+  background: var(--color-bg-page);
+  position: relative;
 }
 
-/* 顶部区域 */
 .header {
-  margin: 0 24rpx;
-  padding: 22rpx 4rpx 16rpx;
-  background-color: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  padding: 24rpx;
+  padding-bottom: 12rpx;
 }
 
 .title-row {
   display: flex;
   align-items: center;
-  gap: 14rpx;
+  gap: 16rpx;
 }
 
-.title {
-  font-size: 44rpx;
+.back-btn,
+.icon-btn,
+.sheet-close,
+.entry-menu-btn {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.back-btn,
+.icon-btn {
+  background: var(--color-bg-panel);
+  border: 2rpx solid var(--color-border);
+}
+
+.back-btn text,
+.entry-menu-btn text {
+  font-size: 34rpx;
+  color: var(--color-text-primary);
+}
+
+.title-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.page-title {
+  display: block;
+  font-size: 40rpx;
   font-weight: 800;
   color: var(--color-text-primary);
 }
 
-.count {
-  padding: 6rpx 14rpx;
-  border-radius: 999rpx;
-  background-color: var(--color-primary-light);
+.page-subtitle,
+.breadcrumb {
+  display: block;
   font-size: 24rpx;
-  font-weight: 700;
-  color: var(--color-primary-dark);
+  color: var(--color-text-tertiary);
 }
 
-/* 操作栏 */
-.action-bar {
-  margin: 0 24rpx;
-  padding: 12rpx;
-  background-color: rgba(255, 253, 250, .9);
-  border: 2rpx solid var(--color-border);
-  border-radius: 24rpx;
+.header-actions {
   display: flex;
-  align-items: center;
-  gap: 14rpx;
-  box-shadow: var(--shadow-sm);
 }
 
-.search-box {
-  flex: 1;
-  height: 70rpx;
-  background-color: var(--color-bg-panel);
-  border: 2rpx solid var(--color-border-light);
-  border-radius: 18rpx;
-  display: flex;
-  align-items: center;
-  padding: 0 24rpx;
-}
-
-.search-icon {
-  width: 30rpx;
-  height: 30rpx;
-  margin-right: 16rpx;
+.icon-img,
+.sheet-icon,
+.folder-cover-icon,
+.placeholder-icon {
+  width: 34rpx;
+  height: 34rpx;
   display: block;
 }
 
-.search-input {
+.content-scroll {
+  height: calc(100vh - 120rpx);
+  padding: 0 24rpx 180rpx;
+  box-sizing: border-box;
+}
+
+.breadcrumb {
+  margin-bottom: 16rpx;
+}
+
+.list-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.entry-card {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 20rpx;
+  border-radius: 24rpx;
+  background: var(--color-bg-panel);
+  border: 2rpx solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+.entry-cover {
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: 24rpx;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.folder-cover {
+  background: linear-gradient(160deg, rgba(245,166,35,.18), rgba(255,253,250,.88));
+  border: 2rpx solid rgba(245,166,35,.24);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.project-cover {
+  background:
+    linear-gradient(90deg, rgba(35,31,26,.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(35,31,26,.06) 1px, transparent 1px),
+    rgba(255,253,250,.92);
+  background-size: 18rpx 18rpx;
+  border: 2rpx solid var(--color-border);
+}
+
+.entry-cover-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.entry-cover-placeholder {
+  width: 100%;
+  height: 100%;
+  background: rgba(35,31,26,.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-chip {
+  position: absolute;
+  right: 10rpx;
+  top: 10rpx;
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.status-chip.saved {
+  background: rgba(255,255,255,.86);
+  color: var(--color-text-secondary);
+}
+
+.status-chip.published {
+  background: rgba(245,166,35,.92);
+  color: #2b2114;
+}
+
+.entry-main {
   flex: 1;
+  min-width: 0;
+}
+
+.entry-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 10rpx;
+}
+
+.entry-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.folder-badge {
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.entry-meta {
+  display: block;
+  font-size: 24rpx;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+}
+
+.entry-menu-btn {
+  background: rgba(35,31,26,.04);
+}
+
+.empty-state {
+  padding-top: 220rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-icon {
+  width: 116rpx;
+  height: 116rpx;
+  margin-bottom: 24rpx;
+  opacity: .72;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  color: var(--color-text-primary);
+  font-weight: 700;
+  margin-bottom: 10rpx;
+}
+
+.empty-subtitle {
+  font-size: 26rpx;
+  color: var(--color-text-tertiary);
+}
+
+.fab {
+  position: fixed;
+  right: 24rpx;
+  bottom: calc(132rpx + env(safe-area-inset-bottom));
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 50%;
+  background: #f5a623;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 18rpx 36rpx rgba(245, 166, 35, .28);
+  z-index: 20;
+}
+
+.fab-plus {
+  font-size: 54rpx;
+  color: #2b2114;
+  line-height: 1;
+}
+
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 13, 9, .46);
+  display: flex;
+  align-items: flex-end;
+  z-index: 40;
+}
+
+.bottom-sheet {
+  width: 100%;
+  background: var(--color-bg-panel);
+  border-radius: 32rpx 32rpx 0 0;
+  box-sizing: border-box;
+}
+
+.sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx;
+}
+
+.sheet-title {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.sheet-close {
+  background: rgba(35,31,26,.05);
+}
+
+.sheet-close text {
+  font-size: 28rpx;
+}
+
+.sheet-list {
+  padding: 0 24rpx 24rpx;
+}
+
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  padding: 20rpx;
+  border-radius: 22rpx;
+  border: 2rpx solid var(--color-border);
+  margin-bottom: 14rpx;
+}
+
+.sheet-copy {
+  flex: 1;
+}
+
+.sheet-item-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.sheet-item-desc {
+  display: block;
+  font-size: 22rpx;
+  color: var(--color-text-tertiary);
+  margin-top: 4rpx;
+}
+
+.action-grid {
+  padding: 0 24rpx 24rpx;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16rpx;
+}
+
+.action-tile {
+  min-height: 146rpx;
+  border-radius: 22rpx;
+  background: rgba(35,31,26,.04);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.action-tile.disabled {
+  opacity: .35;
+}
+
+.action-emoji {
+  font-size: 34rpx;
+  color: var(--color-text-primary);
+}
+
+.action-label {
+  font-size: 22rpx;
+  color: var(--color-text-secondary);
+}
+
+.action-label.danger {
+  color: var(--color-error);
+}
+
+.publish-body {
+  padding: 0 24rpx 24rpx;
+}
+
+.field-label {
+  display: block;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  margin-bottom: 12rpx;
+  margin-top: 18rpx;
+}
+
+.field-input {
+  height: 84rpx;
+  padding: 0 20rpx;
+  border-radius: 18rpx;
+  background: rgba(35,31,26,.04);
+  border: 2rpx solid var(--color-border);
   font-size: 28rpx;
   color: var(--color-text-primary);
 }
@@ -824,502 +1049,91 @@ const handleProjectSaved = () => {
   color: var(--color-text-disabled);
 }
 
-.action-buttons {
-  display: flex;
-  gap: 16rpx;
-}
-
-.action-btn {
-  min-height: 70rpx;
-  padding: 0 24rpx;
-  border-radius: 18rpx;
-  font-size: 28rpx;
-  color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.action-btn.new-btn {
-  color: var(--color-text-primary);
-  background-color: var(--color-primary);
-  display: flex;
-  align-items: center;
-  gap: 8rpx;
-}
-
-.btn-inline-icon {
-  width: 26rpx;
-  height: 26rpx;
-  display: block;
-}
-
-/* 项目列表 */
-.project-list {
-  padding: 20rpx 24rpx 24rpx;
-  height: calc(100vh - 222rpx);
-}
-
-.project-card {
-  background-color: var(--color-bg-panel);
-  border: 2rpx solid var(--color-border);
-  border-radius: 24rpx;
-  padding: 24rpx;
-  margin-bottom: 20rpx;
-  display: flex;
-  align-items: center;
-  position: relative;
-  box-shadow: var(--shadow-md);
-}
-
-.project-card.selected {
-  background-color: var(--color-primary-light);
-}
-
-.checkbox {
-  width: 40rpx;
-  height: 40rpx;
-  border: 4rpx solid var(--color-primary);
-  border-radius: var(--radius-sm);
-  margin-right: 24rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-primary);
-  font-size: 28rpx;
-}
-
-.thumbnail {
-  width: 128rpx;
-  height: 128rpx;
-  background:
-    linear-gradient(90deg, rgba(35,31,26,.06) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(35,31,26,.06) 1px, transparent 1px),
-    var(--color-primary-soft);
-  background-size: 18rpx 18rpx;
-  border-radius: 18rpx;
-  border: 2rpx solid var(--color-border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 24rpx;
-  overflow: hidden;
-}
-
-.thumbnail-board {
+.tag-scroll {
   width: 100%;
-  height: 100%;
-  background:
-    linear-gradient(90deg, rgba(35,31,26,.08) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(35,31,26,.08) 1px, transparent 1px),
-    rgba(255,253,250,.78);
-  background-size: 18rpx 18rpx;
+  white-space: nowrap;
+}
+
+.tag-row,
+.tag-wrap {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  gap: 12rpx;
+  flex-wrap: wrap;
 }
 
-.thumbnail-placeholder {
-  font-size: 48rpx;
-  color: var(--color-primary-dark);
-  font-weight: 800;
-  opacity: .42;
-}
-
-.thumbnail-img {
-  width: 100%;
-  height: 100%;
-}
-
-.info {
-  flex: 1;
-}
-
-.project-name {
-  font-size: 31rpx;
-  color: var(--color-text-primary);
-  font-weight: 500;
-  display: block;
-  margin-bottom: 8rpx;
-}
-
-.project-size {
-  font-size: 24rpx;
-  color: var(--color-text-secondary);
-  display: block;
-  margin-bottom: 4rpx;
-}
-
-.project-time {
-  font-size: 24rpx;
-  color: var(--color-text-tertiary);
-  display: block;
-}
-
-.status-badge {
-  position: absolute;
-  top: 28rpx;
-  right: 80rpx;
-  padding: 4rpx 16rpx;
-  font-size: 20rpx;
+.tag-pill {
+  padding: 12rpx 20rpx;
   border-radius: 999rpx;
+  background: rgba(35,31,26,.05);
+  color: var(--color-text-secondary);
+  font-size: 24rpx;
+}
+
+.tag-pill.active {
+  background: rgba(245,166,35,.18);
+  color: var(--color-primary-dark);
+  border: 2rpx solid rgba(245,166,35,.4);
+}
+
+.publish-note {
+  display: block;
+  margin-top: 18rpx;
+  font-size: 22rpx;
+  color: var(--color-text-tertiary);
+}
+
+.footer-actions {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 24rpx;
+}
+
+.footer-btn {
+  flex: 1;
+  height: 76rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
   font-weight: 700;
 }
 
-/** 草稿状态标签 - 使用语义化 CSS 变量适配深色主题 */
-.status-badge.draft {
-  background-color: var(--color-warning-light);
-  color: var(--color-warning);
-}
-
-/** 已保存状态标签 - 使用语义化 CSS 变量适配深色主题 */
-.status-badge.saved {
-  background-color: var(--color-success-light);
-  color: var(--color-success);
-}
-
-.status-badge.published {
-  background-color: var(--color-primary-light);
-  color: var(--color-primary-dark);
-}
-
-.menu-btn {
-  position: absolute;
-  top: 28rpx;
-  right: 28rpx;
-  font-size: 36rpx;
-  color: var(--color-text-disabled);
-  padding: 8rpx;
-}
-
-/* 空状态 */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding-top: 200rpx;
-}
-
-.empty-icon {
-  width: 128rpx;
-  height: 128rpx;
-  margin-bottom: 32rpx;
-  opacity: .72;
-}
-
-.empty-text {
-  font-size: 32rpx;
-  color: var(--color-text-primary);
-  margin-bottom: 16rpx;
-}
-
-.empty-subtext {
-  font-size: 28rpx;
-  color: var(--color-text-tertiary);
-  margin-bottom: 48rpx;
-}
-
-.start-btn {
-  padding: 24rpx 64rpx;
-  background-color: var(--color-primary);
-  color: var(--color-text-inverse);
-  border-radius: 48rpx;
-  font-size: 30rpx;
-}
-
-/* 多选操作栏 - 底部固定操作栏，使用 CSS 变量适配深色主题 */
-.select-action-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: var(--color-bg-panel);
-  padding: 32rpx 40rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 -4rpx 20rpx var(--color-shadow);
-}
-
-.selected-count {
-  font-size: 28rpx;
-  color: var(--color-text-primary);
-}
-
-.select-actions {
-  display: flex;
-  gap: 40rpx;
-}
-
-.select-action {
-  font-size: 28rpx;
-  color: var(--color-primary);
-}
-
-.select-action.delete {
-  color: var(--color-error);
-}
-
-/* 创建弹窗 */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--color-bg-mask);
-  display: flex;
-  align-items: flex-end;
-  z-index: 999;
-}
-
-.create-modal {
-  width: 100%;
-  background-color: var(--color-bg-panel);
-  border-radius: 34rpx 34rpx 0 0;
-  max-height: 80vh;
-}
-
-.modal-header {
-  padding: 32rpx 40rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.modal-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.modal-close {
-  font-size: 40rpx;
-  color: var(--color-text-tertiary);
-}
-
-.modal-content {
-  padding: 32rpx 40rpx;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-
-.create-option {
-  display: flex;
-  align-items: center;
-  padding: 24rpx;
-  margin-bottom: 16rpx;
-  border: 2rpx solid var(--color-border);
-  border-radius: 20rpx;
-  background-color: var(--color-bg-panel);
-}
-
-.create-option.primary {
-  background-color: var(--color-primary-light);
-  margin: 0 0 16rpx;
-  padding: 24rpx;
-  border-color: var(--color-primary);
-}
-
-.option-icon-wrap {
-  width: 72rpx;
-  height: 72rpx;
-  margin-right: 24rpx;
-  border-radius: 20rpx;
-  background-color: var(--color-primary-light);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.option-icon {
-  width: 40rpx;
-  height: 40rpx;
-  display: block;
-}
-
-.folder-icon {
-  width: 34rpx;
-  height: 34rpx;
-  margin-right: 24rpx;
-  display: block;
-}
-
-.option-text {
-  flex: 1;
-}
-
-.option-title {
-  font-size: 30rpx;
-  color: var(--color-text-primary);
-  font-weight: 500;
-  display: block;
-  margin-bottom: 4rpx;
-}
-
-.new-tag {
-  font-size: 20rpx;
-  background-color: var(--color-error);
-  color: var(--color-text-inverse);
-  padding: 4rpx 8rpx;
-  border-radius: 4rpx;
-}
-
-.option-desc {
-  font-size: 24rpx;
-  color: var(--color-text-tertiary);
-  display: block;
-}
-
-.divider {
-  height: 16rpx;
-  background-color: var(--color-bg-page);
-  margin: 16rpx -40rpx;
-}
-
-.create-option.folder {
-  border-bottom: none;
-}
-
-/* 操作菜单 */
-.action-sheet {
-  width: 100%;
-  background-color: var(--color-bg-panel);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-}
-
-.action-item {
-  padding: 32rpx 40rpx;
-  text-align: center;
-  font-size: 34rpx;
-  color: var(--color-primary);
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.action-item.danger {
-  color: var(--color-error);
-}
-
-.action-cancel {
-  padding: 32rpx 40rpx;
-  text-align: center;
-  font-size: 34rpx;
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-page);
-  margin-top: 16rpx;
-}
-
-/* 文件夹选择器 */
-.folder-picker {
-  width: 100%;
-  background-color: var(--color-bg-panel);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  max-height: 60vh;
-}
-
-.picker-header {
-  padding: 32rpx 40rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--color-border-light);
-}
-
-.picker-title {
-  font-size: 34rpx;
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.picker-close {
-  font-size: 40rpx;
-  color: var(--color-text-tertiary);
-}
-
-.folder-list {
-  padding: 24rpx 40rpx;
-  max-height: 50vh;
-}
-
-.folder-item {
-  display: flex;
-  align-items: center;
-  padding: 24rpx 0;
-  font-size: 30rpx;
-  color: var(--color-text-primary);
-}
-
-.folder-item.new {
-  color: var(--color-primary);
-}
-
-.folder-name {
-  margin-left: 16rpx;
-}
-
-.publish-modal {
-  width: 100%;
-  background-color: var(--color-bg-panel);
-  border-radius: 34rpx 34rpx 0 0;
-  padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-}
-
-.publish-content {
-  padding: 28rpx 32rpx 18rpx;
-}
-
-.publish-label {
-  display: block;
-  font-size: 28rpx;
-  color: var(--color-text-primary);
-  font-weight: 800;
-  margin-bottom: 16rpx;
-}
-
-.publish-input {
-  height: 82rpx;
-  border-radius: 18rpx;
-  border: 2rpx solid var(--color-border);
-  background-color: var(--color-primary-soft);
-  padding: 0 22rpx;
-  font-size: 30rpx;
-  color: var(--color-text-primary);
-  margin-bottom: 14rpx;
-}
-
-.publish-hint {
-  font-size: 24rpx;
-  line-height: 1.45;
-  color: var(--color-text-tertiary);
-}
-
-.publish-actions {
-  display: flex;
-  gap: 18rpx;
-  padding: 18rpx 32rpx 0;
-}
-
-.publish-btn {
-  flex: 1;
-  height: 76rpx;
-  border-radius: 20rpx;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28rpx;
-  font-weight: 800;
-}
-
-.publish-btn.secondary {
-  background-color: var(--color-primary-soft);
+.footer-btn.secondary {
+  background: rgba(35,31,26,.05);
   color: var(--color-text-secondary);
 }
 
-.publish-btn.primary {
-  background-color: var(--color-text-primary);
-  color: var(--color-text-inverse);
+.footer-btn.primary {
+  background: #f5a623;
+  color: #2b2114;
+}
+
+.folder-scroll {
+  max-height: 56vh;
+  padding: 0 24rpx 24rpx;
+  box-sizing: border-box;
+}
+
+.folder-choice {
+  padding: 22rpx 0;
+  border-bottom: 1rpx solid var(--color-divider);
+}
+
+.folder-choice.new {
+  color: var(--color-primary-dark);
+}
+
+.folder-choice-name {
+  display: block;
+  font-size: 28rpx;
+  color: var(--color-text-primary);
+}
+
+.folder-choice-path {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: var(--color-text-tertiary);
 }
 </style>

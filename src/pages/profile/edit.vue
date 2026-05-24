@@ -20,7 +20,7 @@
           <view class="avatar-right">
             <image
               class="avatar-preview"
-              :src="formData.avatar || '/static/assets/v015/default-avatar.png'"
+              :src="formData.avatar || '/static/assets/v017/avatars/avatar-rat.svg'"
               mode="aspectFill"
             />
           </view>
@@ -44,55 +44,6 @@
             <text class="char-count">{{ formData.username.length }}/20</text>
           </view>
         </view>
-
-        <!-- 性别 -->
-        <view class="form-item gender-item">
-          <text class="form-label">性别</text>
-          <view class="gender-options">
-            <view
-              class="gender-option"
-              :class="{ active: formData.gender === 'male' }"
-              @click="formData.gender = 'male'"
-            >
-              <text class="gender-radio" :class="{ checked: formData.gender === 'male' }">
-                {{ formData.gender === 'male' ? '●' : '○' }}
-              </text>
-              <text class="gender-text" :class="{ 'text-male': formData.gender === 'male' }">男</text>
-            </view>
-            <view
-              class="gender-option"
-              :class="{ active: formData.gender === 'female' }"
-              @click="formData.gender = 'female'"
-            >
-              <text class="gender-radio" :class="{ checked: formData.gender === 'female' }">
-                {{ formData.gender === 'female' ? '●' : '○' }}
-              </text>
-              <text class="gender-text" :class="{ 'text-female': formData.gender === 'female' }">女</text>
-            </view>
-            <view
-              class="gender-option"
-              :class="{ active: formData.gender === 'secret' }"
-              @click="formData.gender = 'secret'"
-            >
-              <text class="gender-radio" :class="{ checked: formData.gender === 'secret' }">
-                {{ formData.gender === 'secret' ? '●' : '○' }}
-              </text>
-              <text class="gender-text" :class="{ 'text-secret': formData.gender === 'secret' }">保密</text>
-            </view>
-          </view>
-        </view>
-
-        <!-- 出生日期 -->
-        <view class="form-item">
-          <text class="form-label">出生日期</text>
-          <picker mode="date" :value="formData.birthday" :start="'1900-01-01'" :end="today" @change="onBirthdayChange">
-            <view class="form-value-wrapper">
-              <text class="form-value" :class="{ placeholder: !formData.birthday }">
-                {{ formData.birthday || '请选择出生日期' }}
-              </text>
-            </view>
-          </picker>
-        </view>
       </view>
     </scroll-view>
 
@@ -113,15 +64,10 @@ import { onShow } from '@dcloudio/uni-app'
 const formData = reactive({
   username: '',
   avatar: '',
-  gender: 'secret' as 'male' | 'female' | 'secret',
-  birthday: '',
 })
 
 /** 状态栏高度 */
 const statusBarHeight = ref(44)
-
-/** 今日日期字符串 */
-const today = new Date().toISOString().split('T')[0]
 
 /** 是否可以保存 */
 const canSave = computed(() => {
@@ -165,8 +111,6 @@ const loadUserData = () => {
   if (userData) {
     formData.username = userData.username || ''
     formData.avatar = userData.avatar || ''
-    formData.gender = userData.gender || 'secret'
-    formData.birthday = userData.birthday || ''
   }
 }
 
@@ -196,14 +140,6 @@ const changeAvatar = () => {
 }
 
 /**
- * 日期选择变更回调
- * @param e - 日期选择事件
- */
-const onBirthdayChange = (e: any) => {
-  formData.birthday = e.detail.value
-}
-
-/**
  * 保存用户资料
  */
 const saveProfile = () => {
@@ -224,8 +160,6 @@ const saveProfile = () => {
     ...userData,
     username: formData.username.trim(),
     avatar: formData.avatar,
-    gender: formData.gender,
-    birthday: formData.birthday,
   }
 
   /** 写入本地存储 */

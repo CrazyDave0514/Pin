@@ -6,7 +6,7 @@
         <image class="search-icon" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
         <input
           class="search-input"
-          placeholder="搜索作品名称"
+          :placeholder="pageMode === 'project' ? '搜索项目 / 文件夹 / 标签' : '搜索作品名称'"
           v-model="keyword"
           @confirm="handleSearch"
           confirm-type="search"
@@ -56,16 +56,16 @@
       <view v-if="keyword && results.length > 0" class="results-section">
         <text class="section-title">搜索结果</text>
         <view class="results-list">
-          <view v-for="item in results" :key="item.id" class="result-item" @click="goToDetail(item.id)">
+          <view v-for="item in results" :key="item.id" class="result-item" @click="goToDetail(item)">
             <text class="result-name">{{ item.name }}</text>
-            <text class="result-author">by {{ item.creatorName }}</text>
+            <text class="result-author">{{ item.subtitle }}</text>
           </view>
         </view>
       </view>
 
       <!-- 无结果 -->
       <view v-if="keyword && results.length === 0" class="empty-state">
-        <text class="empty-text">未找到相关作品</text>
+        <text class="empty-text">{{ pageMode === 'project' ? '未找到相关项目' : '未找到相关作品' }}</text>
       </view>
     </scroll-view>
   </view>
@@ -73,10 +73,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { ensureCommunityArtworks } from '../../utils/community'
 
 /** 搜索关键词 */
 const keyword = ref('')
+const pageMode = ref<'community' | 'project'>('community')
 
 /** 搜索历史记录 */
 const searchHistory = ref<string[]>([])
@@ -86,6 +88,10 @@ const hotSearches = ref(['猫咪', '花朵', '卡通', '动物', '风景', '人�
 
 /** 搜索结果列表 */
 const results = ref<any[]>([])
+
+onLoad((options) => {
+  pageMode.value = options?.mode === 'project' ? 'project' : 'community'
+})
 
 onMounted(() => {
   const history = uni.getStorageSync('pin_search_history') || []
@@ -105,11 +111,41 @@ const handleSearch = () => {
   uni.setStorageSync('pin_search_history', newHistory)
 
   // 执行搜索
+  const normalizedKeyword = keyword.value.toLowerCase()
+  if (pageMode.value === 'project') {
+    const projects = (uni.getStorageSync('pin_projects') || []).map((item: any) => {
+      const tags = [item.tags?.primary, item.tags?.secondary].filter(Boolean).join(' / ')
+      return {
+        id: item.id,
+        type: 'project',
+        name: item.name || '未命名作品',
+        subtitle: tags || '项目作品',
+        folderId: item.folderId || '',
+      }
+    })
+    const folders = (uni.getStorageSync('pin_folders') || []).map((item: any) => ({
+      id: item.id,
+      type: 'folder',
+      name: item.name || '未命名文件夹',
+      subtitle: '文件夹',
+    }))
+    results.value = [...projects, ...folders].filter((item: any) => {
+      const haystack = [item.name, item.subtitle].join(' ').toLowerCase()
+      return haystack.includes(normalizedKeyword)
+    })
+    return
+  }
+
   const artworks = ensureCommunityArtworks()
-  results.value = artworks.filter((a: any) =>
-    a.isPublic !== false &&
-    a.name.toLowerCase().includes(keyword.value.toLowerCase())
-  )
+  results.value = artworks
+    .filter((a: any) =>
+      a.isPublic !== false &&
+      a.name.toLowerCase().includes(normalizedKeyword)
+    )
+    .map((item: any) => ({
+      ...item,
+      subtitle: `by ${item.creatorName}`,
+    }))
 }
 
 /**
@@ -146,8 +182,20 @@ const goBack = () => {
   uni.navigateBack()
 }
 
-const goToDetail = (id: string) => {
-  uni.navigateTo({ url: `/pages/artwork-detail/index?id=${id}` })
+const goToDetail = (item: any) => {
+  if (pageMode.value === 'project') {
+    if (item.type === 'folder') {
+      uni.navigateBack({
+        success: () => {
+          uni.$emit('projectSearchOpenFolder', item.id)
+        },
+      })
+      return
+    }
+    uni.navigateTo({ url: `/pages/canvas-editor/index?mode=edit&projectId=${item.id}` })
+    return
+  }
+  uni.navigateTo({ url: `/pages/artwork-detail/index?id=${item.id}` })
 }
 </script>
 

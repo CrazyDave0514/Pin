@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <circle cx="60" cy="60" r="56" fill="#FDE5EC"/>
+  <path d="M38 36l8-10 8 10M74 36l8-10 8 10" fill="#F4B5C8"/>
+  <circle cx="60" cy="66" r="30" fill="#FFF8FB"/>
+  <circle cx="48" cy="60" r="4" fill="#4A3440"/>
+  <circle cx="72" cy="60" r="4" fill="#4A3440"/>
+  <ellipse cx="60" cy="72" rx="11" ry="8" fill="#F7C3D3"/>
+  <circle cx="56" cy="72" r="1.8" fill="#4A3440"/>
+  <circle cx="64" cy="72" r="1.8" fill="#4A3440"/>
+  <text x="60" y="108" text-anchor="middle" font-family="Arial" font-size="14" font-weight="700" fill="#B7748E">ZH</text>
+</svg>

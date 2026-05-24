@@ -1,5 +1,25 @@
 import { defaultArtworks } from './artworks.js'
 
+export interface ProjectTags {
+  primary?: string
+  secondary?: string
+}
+
+export interface CanvasBead {
+  x: number
+  y: number
+  color: string
+}
+
+export interface CanvasDataLike {
+  width: number
+  height: number
+  backgroundColor?: string
+  beads?: CanvasBead[]
+  beadStyle?: 'square' | 'round'
+  showColorCode?: boolean
+}
+
 export interface CommunityArtwork {
   id: string
   name: string
@@ -11,34 +31,106 @@ export interface CommunityArtwork {
   createdAt: number
   updatedAt: number
   tags: string[]
+  tagMeta?: ProjectTags
   viewCount: number
   useCount: number
   isPublic: boolean
   description: string
+  beadCount: number
+  colorTypeCount: number
   cover?: {
     palette: string[]
     pattern: string
     seed: number
   }
-  canvasData?: {
-    width: number
-    height: number
-    backgroundColor?: string
-    beads?: { x: number; y: number; color: string }[]
-  }
+  canvasData?: CanvasDataLike
   projectId?: string
   thumbnail?: string
 }
 
-export const ARTWORKS_VERSION = 'v016-local-100'
+export const ARTWORKS_VERSION = 'v017-local-100'
 
-const tagPool = ['卡通', '可爱', '动物', '植物', '食物', '人物', '风景', '原创', '像素', '手作']
+export const TAG_OPTIONS = [
+  { primary: '动物', secondary: ['猫咪', '狗狗', '兔子', '小鸟', '鱼类', '恐龙', '熊猫', '其他'] },
+  { primary: '植物', secondary: ['花朵', '向日葵', '仙人掌', '树木', '多肉', '其他'] },
+  { primary: '人物', secondary: ['美食家', '运动健将', '音乐家', '其他'] },
+  { primary: '食物', secondary: ['蛋糕', '冰淇淋', '水果', '饮料', '快餐', '其他'] },
+  { primary: '交通', secondary: ['汽车', '飞机', '轮船', '火车', '火箭', '其他'] },
+  { primary: '建筑', secondary: ['房屋', '城堡', '桥梁', '其他'] },
+  { primary: '节日', secondary: ['圣诞节', '春节', '万圣节', '情人节', '生日', '其他'] },
+  { primary: '字母', secondary: ['A-Z', '0-9', '其他'] },
+  { primary: '卡通', secondary: ['皮卡丘', '龙猫', '小黄人', '迪士尼', '其他'] },
+  { primary: '抽象', secondary: ['几何图形', '像素艺术', '棋盘格', '其他'] },
+] as const
 
-const safeArray = <T>(value: T[] | unknown): T[] => Array.isArray(value) ? value as T[] : []
+const safeArray = <T>(value: T[] | unknown): T[] => Array.isArray(value) ? (value as T[]) : []
+
+const safeCanvasData = (value: any): CanvasDataLike => ({
+  width: Number(value?.width || 29),
+  height: Number(value?.height || 29),
+  backgroundColor: value?.backgroundColor || '#FFFFFF',
+  beads: safeArray<CanvasBead>(value?.beads).map((bead: any) => ({
+    x: Number(bead.x || 0),
+    y: Number(bead.y || 0),
+    color: String(bead.color || '#FFFFFF'),
+  })),
+  beadStyle: value?.beadStyle === 'round' ? 'round' : 'square',
+  showColorCode: value?.showColorCode === true,
+})
+
+export const normalizeProjectTags = (value: any): ProjectTags => {
+  if (!value || typeof value !== 'object') return {}
+  const primary = typeof value.primary === 'string' ? value.primary.trim() : ''
+  const secondary = typeof value.secondary === 'string' ? value.secondary.trim() : ''
+  return {
+    primary: primary || undefined,
+    secondary: secondary || undefined,
+  }
+}
+
+export const projectTagsToList = (tags: ProjectTags | undefined): string[] => {
+  const result = [tags?.primary, tags?.secondary].filter(Boolean) as string[]
+  return result.slice(0, 5).map((item) => item.slice(0, 8))
+}
+
+export const getBeadCount = (canvasData?: CanvasDataLike) => {
+  return safeArray(canvasData?.beads).length
+}
+
+export const getColorTypeCount = (canvasData?: CanvasDataLike) => {
+  const set = new Set(safeArray(canvasData?.beads).map((bead) => bead.color))
+  return set.size
+}
+
+export const buildProjectThumbnail = (canvasData?: CanvasDataLike) => {
+  const data = safeCanvasData(canvasData)
+  if (!data.beads?.length) return ''
+
+  const colorMap: Record<string, { x: number; y: number }[]> = {}
+  data.beads.forEach((bead) => {
+    if (!colorMap[bead.color]) colorMap[bead.color] = []
+    colorMap[bead.color].push({ x: bead.x, y: bead.y })
+  })
+
+  let rects = ''
+  Object.entries(colorMap).forEach(([color, positions]) => {
+    positions.forEach((position) => {
+      rects += `<rect x="${position.x}" y="${position.y}" width="1" height="1" fill="${color}"/>`
+    })
+  })
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${data.width}" height="${data.height}" viewBox="0 0 ${data.width} ${data.height}"><rect width="${data.width}" height="${data.height}" fill="${data.backgroundColor || '#FFFFFF'}"/>${rects}</svg>`
+  return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+}
 
 export const normalizeArtwork = (item: any, index = 0): CommunityArtwork => {
-  const width = item.canvasData?.width || 29
-  const height = item.canvasData?.height || 29
+  const canvasData = safeCanvasData(item.canvasData)
+  const tagMeta = normalizeProjectTags(item.tagMeta)
+  const tags = safeArray<string>(item.tags)
+    .map((tag) => String(tag).slice(0, 8))
+    .filter(Boolean)
+    .slice(0, 5)
+
   return {
     id: item.id || `artwork_${String(index + 1).padStart(3, '0')}`,
     name: item.name || '未命名作品',
@@ -49,15 +141,18 @@ export const normalizeArtwork = (item: any, index = 0): CommunityArtwork => {
     points: Number(item.points || 0),
     createdAt: Number(item.createdAt || Date.now()),
     updatedAt: Number(item.updatedAt || item.createdAt || Date.now()),
-    tags: safeArray<string>(item.tags).map((tag) => String(tag).slice(0, 5)).slice(0, 3),
+    tags: tags.length ? tags : projectTagsToList(tagMeta),
+    tagMeta,
     viewCount: Number(item.viewCount || 0),
     useCount: Number(item.useCount || 0),
     isPublic: item.isPublic !== false,
     description: item.description || '',
+    beadCount: Number(item.beadCount || getBeadCount(canvasData)),
+    colorTypeCount: Number(item.colorTypeCount || getColorTypeCount(canvasData)),
     cover: item.cover,
-    canvasData: item.canvasData || { width, height, backgroundColor: '#FFFFFF', beads: [] },
+    canvasData,
     projectId: item.projectId,
-    thumbnail: item.thumbnail || '',
+    thumbnail: item.thumbnail || buildProjectThumbnail(canvasData),
   }
 }
 
@@ -73,32 +168,98 @@ const buildDefaultArtworks = (): CommunityArtwork[] => {
       height,
       backgroundColor: '#FFFDFA',
       beads: [],
+      beadStyle: 'round',
+      showColorCode: false,
     }
+    normalized.beadCount = 0
+    normalized.colorTypeCount = 0
     return normalized
   })
+}
+
+const getStoredProjects = () => safeArray<any>(uni.getStorageSync('pin_projects'))
+
+const getPublishedProjectArtworkId = (project: any) => {
+  return String(project?.publishedArtworkId || '')
+}
+
+export const createArtworkFromProject = (
+  project: any,
+  options: {
+    existing?: CommunityArtwork
+    forcePublic?: boolean
+  } = {}
+): CommunityArtwork => {
+  const user = uni.getStorageSync('pin_user') || {}
+  const existing = options.existing
+  const canvasData = safeCanvasData(project.canvasData)
+  const tagMeta = normalizeProjectTags(project.tags)
+  const thumbnail = project.thumbnail || buildProjectThumbnail(canvasData)
+  const createdAt = Number(existing?.createdAt || project.createdAt || Date.now())
+  const updatedAt = Number(project.updatedAt || Date.now())
+
+  return normalizeArtwork({
+    id: existing?.id || getPublishedProjectArtworkId(project) || `local_${project.id}`,
+    name: project.name || '未命名作品',
+    creatorName: user.username || existing?.creatorName || 'Pin用户',
+    creatorAvatar: user.avatar || existing?.creatorAvatar || '',
+    likes: existing?.likes || 0,
+    favorites: existing?.favorites || 0,
+    points: Number(project.publishPoints ?? existing?.points ?? 0),
+    createdAt,
+    updatedAt,
+    tags: projectTagsToList(tagMeta),
+    tagMeta,
+    viewCount: existing?.viewCount || 0,
+    useCount: existing?.useCount || 0,
+    isPublic: options.forcePublic !== false,
+    description: existing?.description || '',
+    canvasData,
+    projectId: project.id,
+    thumbnail,
+    beadCount: getBeadCount(canvasData),
+    colorTypeCount: getColorTypeCount(canvasData),
+  })
+}
+
+export const saveCommunityArtworks = (artworks: CommunityArtwork[]) => {
+  uni.setStorageSync('pin_artworks', artworks)
+  uni.setStorageSync('pin_artworks_version', ARTWORKS_VERSION)
+}
+
+export const syncPublishedProjectsWithArtworks = (artworksInput?: CommunityArtwork[]) => {
+  const artworkMap = new Map((artworksInput || []).map((item) => [item.id, normalizeArtwork(item)]))
+  const projectArtworksByProjectId = new Map(
+    Array.from(artworkMap.values())
+      .filter((item) => item.projectId)
+      .map((item) => [String(item.projectId), item])
+  )
+
+  getStoredProjects().forEach((project) => {
+    const publishedArtworkId = getPublishedProjectArtworkId(project)
+    const existing = artworkMap.get(publishedArtworkId) || projectArtworksByProjectId.get(String(project.id))
+    if (project.isPublished) {
+      const synced = createArtworkFromProject(project, { existing, forcePublic: true })
+      artworkMap.set(synced.id, synced)
+    } else if (existing) {
+      artworkMap.set(existing.id, normalizeArtwork({ ...existing, isPublic: false, updatedAt: Date.now() }))
+    }
+  })
+
+  return Array.from(artworkMap.values())
 }
 
 export const ensureCommunityArtworks = (): CommunityArtwork[] => {
   const cached = uni.getStorageSync('pin_artworks')
   const cachedVersion = uni.getStorageSync('pin_artworks_version')
 
-  if (!Array.isArray(cached) || cached.length === 0 || cachedVersion !== ARTWORKS_VERSION) {
-    const defaults = buildDefaultArtworks()
-    uni.setStorageSync('pin_artworks', defaults)
-    uni.setStorageSync('pin_artworks_version', ARTWORKS_VERSION)
-    return defaults
-  }
+  let artworks = !Array.isArray(cached) || cached.length === 0 || cachedVersion !== ARTWORKS_VERSION
+    ? buildDefaultArtworks()
+    : cached.map((item: any, index: number) => normalizeArtwork(item, index))
 
-  const normalized = cached.map((item: any, index: number) => normalizeArtwork(item, index))
-  if (normalized.length !== cached.length) {
-    uni.setStorageSync('pin_artworks', normalized)
-  }
-  return normalized
-}
-
-export const saveCommunityArtworks = (artworks: CommunityArtwork[]) => {
-  uni.setStorageSync('pin_artworks', artworks)
-  uni.setStorageSync('pin_artworks_version', ARTWORKS_VERSION)
+  artworks = syncPublishedProjectsWithArtworks(artworks)
+  saveCommunityArtworks(artworks)
+  return artworks
 }
 
 export const getArtworkById = (id: string): CommunityArtwork | undefined => {
@@ -109,9 +270,40 @@ export const updateArtwork = (id: string, updater: (artwork: CommunityArtwork) =
   const artworks = ensureCommunityArtworks()
   const index = artworks.findIndex((item) => item.id === id)
   if (index < 0) return undefined
-  artworks[index] = updater({ ...artworks[index] })
+  artworks[index] = normalizeArtwork(updater({ ...artworks[index] }))
   saveCommunityArtworks(artworks)
   return artworks[index]
+}
+
+export const publishProjectAsArtwork = (project: any, points: number) => {
+  const artworks = ensureCommunityArtworks()
+  const existing = artworks.find((item) => item.id === getPublishedProjectArtworkId(project) || item.projectId === project.id)
+  const normalizedProject = {
+    ...project,
+    publishPoints: points,
+    thumbnail: project.thumbnail || buildProjectThumbnail(project.canvasData),
+  }
+  const artwork = createArtworkFromProject(normalizedProject, {
+    existing,
+    forcePublic: true,
+  })
+  const next = existing
+    ? artworks.map((item) => (item.id === existing.id ? artwork : item))
+    : [artwork, ...artworks]
+  saveCommunityArtworks(next)
+  return artwork
+}
+
+export const syncProjectArtwork = (project: any) => {
+  if (!project?.isPublished) return undefined
+  return publishProjectAsArtwork(project, Number(project.publishPoints || 0))
+}
+
+export const unpublishProjectArtwork = (projectId: string) => {
+  const artworks = ensureCommunityArtworks().map((item) => (
+    item.projectId === projectId ? normalizeArtwork({ ...item, isPublic: false, updatedAt: Date.now() }) : item
+  ))
+  saveCommunityArtworks(artworks)
 }
 
 export const getIdList = (key: string): string[] => safeArray<string>(uni.getStorageSync(key))
@@ -126,63 +318,6 @@ export const toggleId = (key: string, id: string) => {
   const next = exists ? ids.filter((item) => item !== id) : [...ids, id]
   setIdList(key, next)
   return !exists
-}
-
-export const generateProjectTags = (project: any): string[] => {
-  const title = String(project.name || '')
-  const tags: string[] = []
-  const add = (tag: string) => {
-    const safe = tag.slice(0, 5)
-    if (safe && !tags.includes(safe) && tags.length < 3) tags.push(safe)
-  }
-
-  if (/猫|狗|兔|熊|鱼|鸟/.test(title)) add('动物')
-  if (/花|树|草|叶/.test(title)) add('植物')
-  if (/爱心|星|月|云/.test(title)) add('可爱')
-  if (/人|头像|角色/.test(title)) add('人物')
-  const beadCount = project.canvasData?.beads?.length || 0
-  if (beadCount > 120) add('精细')
-  if ((project.canvasData?.width || 0) <= 20) add('迷你')
-  add('原创')
-  add('拼豆')
-  return tags
-}
-
-export const publishProjectAsArtwork = (project: any, points: number): CommunityArtwork => {
-  const user = uni.getStorageSync('pin_user') || {}
-  const now = Date.now()
-  const artworks = ensureCommunityArtworks()
-  const existedIndex = artworks.findIndex((item) => item.projectId === project.id)
-  const artwork: CommunityArtwork = normalizeArtwork({
-    id: existedIndex >= 0 ? artworks[existedIndex].id : `local_${project.id}`,
-    name: project.name || '未命名作品',
-    creatorName: user.username || 'Pin用户',
-    creatorAvatar: user.avatar || '',
-    likes: existedIndex >= 0 ? artworks[existedIndex].likes : 0,
-    favorites: existedIndex >= 0 ? artworks[existedIndex].favorites : 0,
-    points,
-    createdAt: existedIndex >= 0 ? artworks[existedIndex].createdAt : now,
-    updatedAt: now,
-    tags: generateProjectTags(project),
-    viewCount: existedIndex >= 0 ? artworks[existedIndex].viewCount : 0,
-    useCount: existedIndex >= 0 ? artworks[existedIndex].useCount : 0,
-    isPublic: true,
-    canvasData: project.canvasData,
-    projectId: project.id,
-    thumbnail: project.thumbnail || '',
-  })
-
-  if (existedIndex >= 0) artworks[existedIndex] = artwork
-  else artworks.unshift(artwork)
-  saveCommunityArtworks(artworks)
-  return artwork
-}
-
-export const unpublishProjectArtwork = (projectId: string) => {
-  const artworks = ensureCommunityArtworks().map((item) => (
-    item.projectId === projectId ? { ...item, isPublic: false, updatedAt: Date.now() } : item
-  ))
-  saveCommunityArtworks(artworks)
 }
 
 export const addPointsRecord = (title: string, amount: number) => {
