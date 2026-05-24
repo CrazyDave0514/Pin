@@ -3,7 +3,7 @@
     <!-- 搜索栏 -->
     <view class="search-header">
       <view class="search-bar">
-        <text class="search-icon">🔍</text>
+        <image class="search-icon" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
         <input
           class="search-input"
           placeholder="搜索作品名称"
@@ -170,8 +170,10 @@ const goBack = () => {
 }
 
 .search-icon {
-  font-size: 28rpx;
+  width: 28rpx;
+  height: 28rpx;
   margin-right: 16rpx;
+  display: block;
 }
 
 .search-input {

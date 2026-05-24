@@ -1,5 +1,23 @@
 <template>
   <view class="index-page">
+    <view class="home-hero">
+      <view class="hero-copy">
+        <text class="hero-kicker">Pin Studio</text>
+        <text class="hero-title">今天做什么</text>
+        <text class="hero-subtitle">为你的下一块拼豆板找灵感</text>
+      </view>
+      <view class="hero-preview">
+        <view class="hero-preview-grid">
+          <view
+            v-for="(bead, index) in heroBeads"
+            :key="index"
+            class="hero-bead"
+            :style="{ backgroundColor: bead }"
+          ></view>
+        </view>
+      </view>
+    </view>
+
     <!-- 顶部导航栏 -->
     <view class="nav-bar">
       <view class="tab-list">
@@ -13,12 +31,12 @@
         </view>
       </view>
       <view class="search-btn" @click="goToSearch">
-        <text class="search-icon">🔍</text>
+        <image class="search-icon" src="/static/assets/v015/icons/search.png" mode="aspectFit" />
       </view>
     </view>
 
     <!-- 瀑布流内容区 -->
-    <scroll-view class="waterfall-container" scroll-y @scrolltolower="onLoadMore">
+    <scroll-view class="waterfall-container" scroll-y :show-scrollbar="false" @scrolltolower="onLoadMore">
       <view class="waterfall-list">
         <view
           v-for="artwork in displayArtworks"
@@ -35,7 +53,7 @@
             />
             <!-- 积分显示在封面右上角 -->
             <view class="points-badge">
-              <text class="points-icon">💰</text>
+              <image class="points-icon" src="/static/assets/v015/icons/points-active.png" mode="aspectFit" />
               <text class="points-value">{{ artwork.points }}</text>
             </view>
           </view>
@@ -48,7 +66,7 @@
                 <text class="creator-name">{{ artwork.creatorName }}</text>
               </view>
               <view class="likes">
-                <text class="like-icon">♥</text>
+                <image class="like-icon" src="/static/assets/v015/icons/favorite.png" mode="aspectFit" />
                 <text class="like-count">{{ artwork.likes }}</text>
               </view>
             </view>
@@ -132,6 +150,14 @@ const tabs = [
   { key: 'hot', label: '热门' },
   { key: 'latest', label: '最新' },
   { key: 'following', label: '关注' },
+]
+
+const heroBeads = [
+  '#f7b733', '#f7b733', '#fffdfa', '#fffdfa', '#cf5c4d', '#cf5c4d', '#fffdfa', '#fffdfa', '#f7b733', '#f7b733',
+  '#f7b733', '#fffdfa', '#5f9b73', '#5f9b73', '#fffdfa', '#fffdfa', '#4c7f9f', '#4c7f9f', '#fffdfa', '#f7b733',
+  '#fffdfa', '#5f9b73', '#5f9b73', '#5f9b73', '#8b6fad', '#8b6fad', '#4c7f9f', '#4c7f9f', '#4c7f9f', '#fffdfa',
+  '#fffdfa', '#fffdfa', '#5f9b73', '#8b6fad', '#8b6fad', '#8b6fad', '#4c7f9f', '#fffdfa', '#fffdfa', '#fffdfa',
+  '#f7b733', '#fffdfa', '#fffdfa', '#cf5c4d', '#cf5c4d', '#cf5c4d', '#fffdfa', '#fffdfa', '#f7b733', '#f7b733'
 ]
 
 onMounted(() => {
@@ -364,6 +390,92 @@ const goToSearch = () => {
   max-width: 100vw;
   overflow-x: hidden;
   box-sizing: border-box;
+  padding-bottom: 24rpx;
+}
+
+.home-hero {
+  position: relative;
+  min-height: 252rpx;
+  margin: 16rpx 24rpx 0;
+  padding: 24rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 28rpx;
+  overflow: hidden;
+  background-color: var(--color-bg-panel);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  box-sizing: border-box;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-kicker {
+  align-self: flex-start;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid var(--color-border);
+  background-color: rgba(255, 253, 250, .82);
+  color: var(--color-primary-dark);
+  font-size: 22rpx;
+  font-weight: 700;
+  margin-bottom: 12rpx;
+}
+
+.hero-title {
+  font-size: 36rpx;
+  line-height: 1.1;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.hero-subtitle {
+  margin-top: 10rpx;
+  font-size: 23rpx;
+  line-height: 1.35;
+  color: var(--color-text-secondary);
+}
+
+.hero-preview {
+  width: 248rpx;
+  height: 156rpx;
+  margin: 0;
+  border: 2rpx solid var(--color-border-light);
+  border-radius: 22rpx;
+  background:
+    linear-gradient(90deg, rgba(35,31,26,.05) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(35,31,26,.05) 1px, transparent 1px),
+    var(--color-primary-soft);
+  background-size: 22rpx 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hero-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 17rpx);
+  gap: 8rpx;
+  padding: 12rpx;
+  border-radius: 18rpx;
+  background-color: rgba(255,253,250,.72);
+}
+
+.hero-bead {
+  width: 17rpx;
+  height: 17rpx;
+  border-radius: 50%;
+  box-shadow: inset 0 -1rpx 0 rgba(0,0,0,.16), inset 0 1rpx 0 rgba(255,255,255,.5);
 }
 
 /** 顶部导航栏 */
@@ -371,10 +483,12 @@ const goToSearch = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 88rpx;
-  padding: 0 32rpx;
-  background-color: var(--color-bg-panel);
-  border-bottom: 2rpx solid var(--color-border);
+  height: 80rpx;
+  margin: 14rpx 24rpx 0;
+  padding: 8rpx;
+  background-color: rgba(255, 253, 250, .9);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -393,28 +507,20 @@ const goToSearch = () => {
 /** 单个 Tab 项 */
 .tab-item {
   position: relative;
-  margin-right: 48rpx;
-  padding: 24rpx 0;
+  margin-right: 8rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 18rpx;
   flex-shrink: 0;
 }
 
 /** Tab 激活态文字 - 使用品牌主色 */
 .tab-item.active .tab-text {
-  color: var(--color-primary);
+  color: var(--color-text-inverse);
   font-weight: 600;
 }
 
-/** Tab 激活态底部指示器 - 品牌色 */
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 8rpx;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 32rpx;
-  height: 4rpx;
-  background-color: var(--color-primary);
-  border-radius: 2rpx;
+.tab-item.active {
+  background-color: var(--color-text-primary);
 }
 
 /** Tab 文字默认态 */
@@ -431,17 +537,21 @@ const goToSearch = () => {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border-radius: 20rpx;
+  background-color: var(--color-primary-light);
 }
 
 /** 搜索图标 */
 .search-icon {
-  font-size: 36rpx;
+  width: 34rpx;
+  height: 34rpx;
+  display: block;
 }
 
 /** 瀑布流滚动容器 */
 .waterfall-container {
-  height: calc(100vh - 188rpx);
-  padding: 16rpx;
+  height: calc(100vh - 424rpx);
+  padding: 18rpx 24rpx;
   box-sizing: border-box;
 }
 
@@ -454,10 +564,11 @@ const goToSearch = () => {
 
 /** 作品卡片 - 统一圆角 12px + 标准阴影 */
 .artwork-card {
-  width: calc(50% - 8rpx);
-  margin-bottom: 16rpx;
+  width: calc(50% - 10rpx);
+  margin-bottom: 20rpx;
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 22rpx;
   overflow: hidden;
   box-shadow: var(--shadow-md);
 }
@@ -468,7 +579,7 @@ const goToSearch = () => {
   width: 100%;
   padding-bottom: 100%;
   overflow: hidden;
-  background-color: var(--color-bg-page);
+  background-color: #F1E7DA;
 }
 
 /** Canvas 封面画布 - 绝对定位铺满容器 */
@@ -487,23 +598,25 @@ const goToSearch = () => {
   right: 12rpx;
   display: flex;
   align-items: center;
-  background: var(--color-bg-mask);
-  padding: 6rpx 12rpx;
-  border-radius: 20rpx;
+  background: rgba(255, 253, 250, .9);
+  padding: 8rpx 12rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid var(--color-border);
   z-index: 1;
 }
 
 /** 积分图标 */
 .points-icon {
-  font-size: 20rpx;
-  margin-right: 4rpx;
+  width: 24rpx;
+  height: 24rpx;
+  margin-right: 6rpx;
 }
 
 /** 积分数值 */
 .points-value {
   font-size: 20rpx;
-  color: var(--color-text-inverse);
-  font-weight: 500;
+  color: var(--color-primary-dark);
+  font-weight: 700;
 }
 
 /** 作品信息区域 */
@@ -560,9 +673,9 @@ const goToSearch = () => {
 
 /** 点赞图标 */
 .like-icon {
-  font-size: 22rpx;
-  color: var(--color-error);
-  margin-right: 4rpx;
+  width: 22rpx;
+  height: 22rpx;
+  margin-right: 6rpx;
 }
 
 /** 点赞数量 - 辅助文字色 */

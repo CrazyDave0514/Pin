@@ -9,7 +9,9 @@
     <!-- 图片选择区域 -->
     <view class="upload-section">
       <view v-if="!selectedImage" class="upload-area" @click="chooseImage">
-        <view class="upload-icon"><text class="icon-text">📷</text></view>
+        <view class="upload-icon">
+          <image class="icon-image" src="/static/assets/v015/icons/image-import-active.png" mode="aspectFit" />
+        </view>
         <text class="upload-text">点击选择图片</text>
         <text class="upload-hint">支持 JPG、PNG 格式</text>
       </view>
@@ -39,7 +41,6 @@
               :src="blueprintPreviewUrl"
               mode="aspectFit"
               class="bp-preview-img"
-              :style="{ width: resultCanvasSize.width + 'px', height: resultCanvasSize.height + 'px' }"
               @touchstart="onPreviewTouch"
             ></image>
             <text v-else class="no-result-text">点击下方按钮生成</text>
@@ -59,19 +60,7 @@
       <!-- 输出尺寸 -->
       <view class="setting-item">
         <text class="setting-label">输出尺寸（拼豆格子数）</text>
-        <view class="size-inputs">
-          <view class="input-group">
-            <text class="input-label">宽</text>
-            <input type="number" v-model="outputWidth" class="size-input" @input="onSizeChange('w')"/>
-            <text class="input-unit">格</text>
-          </view>
-          <text class="size-separator">×</text>
-          <view class="input-group">
-            <text class="input-label">高</text>
-            <input type="number" v-model="outputHeight" class="size-input" @input="onSizeChange('h')"/>
-            <text class="input-unit">格</text>
-          </view>
-        </view>
+        <text class="setting-desc">当前 {{ outputWidth }} × {{ outputHeight }} 格</text>
         <view class="size-presets">
           <text
             :class="['preset-btn', activePreset === '小(20×20)' ? 'active' : '']"
@@ -91,7 +80,7 @@
           >超大(60)格</text>
           <text
             :class="['preset-btn', isCustomSize ? 'active' : '']"
-            @click="isCustomSize = true"
+            @click="openCustomSize"
           >自定义</text>
         </view>
       </view>
@@ -140,6 +129,31 @@
         <view class="result-stats">
           <text class="stat-item">总格子数：{{ totalCells }}</text>
           <text class="stat-item">有效像素：{{ generatedBlueprint.beads?.length || 0 }}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 自定义尺寸弹窗 -->
+    <view v-if="showCustomSizeModal" class="modal-overlay" @click="closeCustomSize">
+      <view class="custom-size-modal" @click.stop>
+        <text class="modal-title">自定义图纸尺寸</text>
+        <text class="modal-subtitle">建议控制在 4-200 格之间，便于编辑器操作</text>
+        <view class="custom-size-row">
+          <view class="input-group">
+            <text class="input-label">宽</text>
+            <input type="number" v-model="customOutputWidth" class="size-input" />
+            <text class="input-unit">格</text>
+          </view>
+          <text class="size-separator">×</text>
+          <view class="input-group">
+            <text class="input-label">高</text>
+            <input type="number" v-model="customOutputHeight" class="size-input" />
+            <text class="input-unit">格</text>
+          </view>
+        </view>
+        <view class="modal-actions">
+          <view class="modal-btn secondary" @click="closeCustomSize">取消</view>
+          <view class="modal-btn primary" @click="confirmCustomSize">确定</view>
         </view>
       </view>
     </view>
@@ -218,6 +232,9 @@ const outputHeight = ref(30)
 const activePreset = ref('中(30×30)')
 const imageAspectRatio = ref(1)  // 原图宽高比
 const isCustomSize = ref(false)   // 是否自定义尺寸
+const showCustomSizeModal = ref(false)
+const customOutputWidth = ref(30)
+const customOutputHeight = ref(30)
 const detectedColors = ref<string[]>([])
 const isProcessing = ref(false)
 const generatedBlueprint = ref<any>(null)
@@ -280,6 +297,26 @@ const applyPreset = (size: { label: string, width: number, height: number }) => 
   isCustomSize.value = false
   outputWidth.value = size.width
   outputHeight.value = size.height
+}
+
+const openCustomSize = () => {
+  customOutputWidth.value = outputWidth.value
+  customOutputHeight.value = outputHeight.value
+  showCustomSizeModal.value = true
+}
+
+const closeCustomSize = () => {
+  showCustomSizeModal.value = false
+}
+
+const confirmCustomSize = () => {
+  const width = Math.min(200, Math.max(4, Number(customOutputWidth.value) || 30))
+  const height = Math.min(200, Math.max(4, Number(customOutputHeight.value) || 30))
+  outputWidth.value = width
+  outputHeight.value = height
+  activePreset.value = ''
+  isCustomSize.value = true
+  showCustomSizeModal.value = false
 }
 
 // onSizeChange：窄边变化时自动计算高，反之亦然
@@ -780,18 +817,18 @@ const startCreation = () => {
 <style scoped>
 .image-import-page { min-height: 100vh; background-color: var(--color-bg-page); padding-bottom: 200rpx; }
 
-.page-header { padding: 32rpx; background-color: var(--color-bg-panel); margin-bottom: 24rpx; border-radius: 0 0 var(--radius-lg) var(--radius-lg); box-shadow: var(--shadow-sm); }
-.page-title { font-size: 36rpx; font-weight: 600; color: var(--color-text-primary); display: block; }
+.page-header { margin: 24rpx; padding: 34rpx 32rpx; background-color: var(--color-bg-panel); border: 2rpx solid var(--color-border); border-radius: 28rpx; box-shadow: var(--shadow-md); }
+.page-title { font-size: 42rpx; font-weight: 800; color: var(--color-text-primary); display: block; }
 .page-subtitle { font-size: 26rpx; color: var(--color-text-tertiary); margin-top: 8rpx; }
 
-.upload-section { padding: 0 32rpx; margin-bottom: 24rpx; }
+.upload-section { padding: 0 24rpx; margin-bottom: 24rpx; }
 .upload-area {
-  height: 240rpx; background-color: var(--color-bg-panel); border-radius: var(--radius-lg); border: 4rpx dashed var(--color-border);
+  height: 260rpx; background-color: var(--color-bg-panel); border-radius: 28rpx; border: 4rpx dashed var(--color-border);
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   box-shadow: var(--shadow-sm);
 }
-.upload-icon { width: 100rpx; height: 100rpx; background-color: var(--color-primary-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; }
-.icon-text { font-size: 48rpx; }
+.upload-icon { width: 104rpx; height: 104rpx; background-color: var(--color-primary-light); border-radius: 26rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; border: 2rpx solid var(--color-primary); }
+.icon-image { width: 48rpx; height: 48rpx; display: block; }
 .upload-text { font-size: 28rpx; color: var(--color-text-primary); margin-bottom: 4rpx; }
 .upload-hint { font-size: 22rpx; color: var(--color-text-tertiary); }
 
@@ -805,28 +842,60 @@ const startCreation = () => {
   border: 2rpx solid var(--color-border); overflow: hidden; display: flex; align-items: center; justify-content: center;
 }
 .compare-image-wrap.has-result { border-color: var(--color-success); }
-.compare-img { width: 100%; height: 100%; }
+.compare-img,
+.bp-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .bp-preview-img { image-rendering: pixelated; image-rendering: crisp-edges; background-color: var(--color-bg-panel); }
 .no-result-text { font-size: 22rpx; color: var(--color-text-disabled); }
 .compare-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 12rpx; }
 .action-link { font-size: 24rpx; color: var(--color-primary); }
 
 /* 设置 */
-.settings-section { padding: 32rpx; background-color: var(--color-bg-panel); margin-bottom: 24rpx; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); }
+.settings-section { margin: 0 24rpx 24rpx; padding: 28rpx; background-color: var(--color-bg-panel); border: 2rpx solid var(--color-border); border-radius: 24rpx; box-shadow: var(--shadow-md); }
 .section-title { font-size: 30rpx; font-weight: 600; color: var(--color-text-primary); margin-bottom: 24rpx; display: block; }
 .setting-item { margin-bottom: 28rpx; }
 .setting-item:last-child { margin-bottom: 0; }
 .setting-label { font-size: 26rpx; color: var(--color-text-secondary); margin-bottom: 14rpx; display: block; }
 
-.size-inputs { display: flex; align-items: center; justify-content: center; margin-bottom: 16rpx; }
-.input-group { display: flex; align-items: center; background-color: var(--color-bg-page); border-radius: 12rpx; padding: 14rpx 18rpx; }
+.setting-desc { display: block; margin-bottom: 16rpx; font-size: 24rpx; color: var(--color-text-tertiary); }
+.custom-size-row { display: flex; align-items: center; justify-content: center; margin: 26rpx 0; }
+.input-group { display: flex; align-items: center; background-color: var(--color-bg-panel); border: 2rpx solid var(--color-border); border-radius: 16rpx; padding: 14rpx 18rpx; }
 .input-label { font-size: 26rpx; color: var(--color-text-secondary); margin-right: 10rpx; }
 .size-input { width: 80rpx; font-size: 28rpx; color: var(--color-text-primary); text-align: center; }
 .input-unit { font-size: 22rpx; color: var(--color-text-tertiary); margin-left: 6rpx; }
 .size-separator { font-size: 32rpx; color: var(--color-text-tertiary); margin: 0 20rpx; }
 .size-presets { display: flex; justify-content: center; gap: 12rpx; flex-wrap: wrap; }
-.preset-btn { padding: 10rpx 20rpx; background-color: var(--color-bg-page); border-radius: 32rpx; font-size: 22rpx; color: var(--color-text-secondary); }
-.preset-btn.active { background-color: var(--color-primary-light); color: var(--color-primary); }
+.preset-btn { padding: 12rpx 22rpx; background-color: var(--color-bg-panel); border: 2rpx solid var(--color-border); border-radius: 999rpx; font-size: 22rpx; color: var(--color-text-secondary); }
+.preset-btn.active { background-color: var(--color-text-primary); color: var(--color-text-inverse); border-color: var(--color-text-primary); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background-color: var(--color-bg-mask);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.custom-size-modal {
+  width: 100%;
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  background-color: var(--color-bg-panel);
+  border-radius: 32rpx 32rpx 0 0;
+  box-shadow: 0 -16rpx 48rpx rgba(56,42,26,.14);
+  box-sizing: border-box;
+}
+
+.modal-title { display: block; font-size: 34rpx; font-weight: 800; color: var(--color-text-primary); }
+.modal-subtitle { display: block; margin-top: 8rpx; font-size: 24rpx; color: var(--color-text-tertiary); }
+.modal-actions { display: flex; gap: 16rpx; }
+.modal-btn { flex: 1; height: 84rpx; border-radius: 999rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: 700; }
+.modal-btn.secondary { background-color: var(--color-bg-page); color: var(--color-text-secondary); border: 2rpx solid var(--color-border); }
+.modal-btn.primary { background-color: var(--color-primary); color: var(--color-text-primary); border: 2rpx solid var(--color-primary); }
 
 /* 颜色横向滑动 */
 .color-scroll { white-space: nowrap; }
@@ -859,7 +928,7 @@ const startCreation = () => {
 .stat-item { font-size: 24rpx; color: var(--color-text-secondary); }
 
 /* 底部 */
-.bottom-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 32rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background-color: var(--color-bg-panel); box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05); }
+.bottom-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 32rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background-color: rgba(255,253,250,.96); border-top: 2rpx solid var(--color-border); box-shadow: 0 -10rpx 30rpx rgba(56,42,26,.08); }
 .btn-generate {
   width: 100%; height: 88rpx;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));

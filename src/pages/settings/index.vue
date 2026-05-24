@@ -1,6 +1,14 @@
 <template>
   <!-- 设置页面 -->
   <view class="settings-page">
+    <view class="page-nav">
+      <view class="nav-back" @click="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="nav-title">设置</text>
+      <view class="nav-placeholder"></view>
+    </view>
+
     <!-- 账号设置 -->
     <view class="settings-section">
       <view class="section-title">账号设置</view>
@@ -220,7 +228,7 @@
 import { ref, onMounted } from 'vue'
 
 // 应用版本号
-const version = ref('0.1.3')
+const version = ref('0.1.5')
 
 // 缓存大小
 const cacheSize = ref('0 MB')
@@ -424,6 +432,10 @@ const confirmDeleteAccount = () => {
 onMounted(() => {
   loadSettings()
 })
+
+const goBack = () => {
+  uni.navigateBack()
+}
 </script>
 
 <style scoped>
@@ -431,6 +443,39 @@ onMounted(() => {
   min-height: 100vh;
   background: var(--color-bg-page);
   padding-bottom: 40rpx;
+}
+
+.page-nav {
+  height: 88rpx;
+  padding: 0 24rpx;
+  background-color: var(--color-bg-panel);
+  border-bottom: 1rpx solid var(--color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.nav-back,
+.nav-placeholder {
+  width: 80rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+}
+
+.back-icon {
+  font-size: 42rpx;
+  color: var(--color-text-primary);
+}
+
+.nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
 /* 设置区块 */

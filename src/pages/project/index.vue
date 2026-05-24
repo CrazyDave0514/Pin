@@ -2,14 +2,16 @@
   <view class="project-page">
     <!-- 顶部区域 -->
     <view class="header">
-      <text class="title">我的项目</text>
-      <text class="count" v-if="projects.length > 0">{{ projects.length }} 个项目</text>
+      <view class="title-row">
+        <text class="title">我的项目</text>
+        <text class="count" v-if="projects.length > 0">{{ projects.length }} 个项目</text>
+      </view>
     </view>
 
     <!-- 操作栏 -->
     <view class="action-bar">
       <view class="search-box">
-        <text class="search-icon">🔍</text>
+        <image class="search-icon" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
         <input
           class="search-input"
           v-model="searchKeyword"
@@ -21,7 +23,10 @@
         <text class="action-btn select-btn" @click="toggleSelectMode">
           {{ isSelectMode ? '完成' : '选择' }}
         </text>
-        <text class="action-btn new-btn" @click="showCreateModal">+ 新建</text>
+        <view class="action-btn new-btn" @click="showCreateModal">
+          <image class="btn-inline-icon" src="/static/assets/v015/icons/create-active.png" mode="aspectFit" />
+          <text>新建</text>
+        </view>
       </view>
     </view>
 
@@ -42,8 +47,9 @@
 
         <!-- 项目缩略图 -->
         <view class="thumbnail">
-          <text class="thumbnail-placeholder" v-if="!project.thumbnail">{{ project.name?.charAt(0) || 'P' }}</text>
-          <image v-else :src="project.thumbnail" mode="aspectFill" class="thumbnail-img" />
+          <view class="thumbnail-board">
+            <text class="thumbnail-placeholder">{{ project.name?.charAt(0) || 'P' }}</text>
+          </view>
         </view>
 
         <!-- 项目信息 -->
@@ -67,7 +73,7 @@
 
     <!-- 空状态 -->
     <view class="empty-state" v-else>
-      <text class="empty-icon">📁</text>
+      <image class="empty-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
       <text class="empty-text">还没有项目</text>
       <text class="empty-subtext">开始创作你的第一个作品吧</text>
       <button class="start-btn" @click="showCreateModal">开始创作</button>
@@ -95,7 +101,9 @@
         <view class="modal-content">
           <!-- 无需导入（主要方式） -->
           <view class="create-option primary" @click="createCanvas('blank')">
-            <view class="option-icon">➕</view>
+            <view class="option-icon-wrap">
+              <image class="option-icon" src="/static/assets/v015/icons/blank-canvas-active.png" mode="aspectFit" />
+            </view>
             <view class="option-text">
               <text class="option-title">无需导入</text>
               <text class="option-desc">建立空白画布，从零开始创作</text>
@@ -104,7 +112,9 @@
 
           <!-- 小红书链接导入 -->
           <view class="create-option" @click="importFromXiaohongshu">
-            <view class="option-icon">🔗</view>
+            <view class="option-icon-wrap">
+              <image class="option-icon" src="/static/assets/v015/icons/export-muted.png" mode="aspectFit" />
+            </view>
             <view class="option-text">
               <text class="option-title">从小红书链接导入 <text class="new-tag">NEW</text></text>
               <text class="option-desc">粘贴小红书链接获取高清图纸</text>
@@ -113,7 +123,9 @@
 
           <!-- 导入图片生成 -->
           <view class="create-option" @click="createCanvas('image')">
-            <view class="option-icon">🖼️</view>
+            <view class="option-icon-wrap">
+              <image class="option-icon" src="/static/assets/v015/icons/image-import-muted.png" mode="aspectFit" />
+            </view>
             <view class="option-text">
               <text class="option-title">导入图片生成</text>
               <text class="option-desc">导入图片和像素图，生成拼豆图纸</text>
@@ -122,7 +134,9 @@
 
           <!-- 导入已有拼豆图纸 -->
           <view class="create-option" @click="createCanvas('blueprint')">
-            <view class="option-icon">📐</view>
+            <view class="option-icon-wrap">
+              <image class="option-icon" src="/static/assets/v015/icons/blueprint-import-muted.png" mode="aspectFit" />
+            </view>
             <view class="option-text">
               <text class="option-title">导入已有拼豆图纸</text>
               <text class="option-desc">要求图纸清晰</text>
@@ -133,7 +147,9 @@
 
           <!-- 新建文件夹 -->
           <view class="create-option folder" @click="createFolder">
-            <view class="option-icon">📁</view>
+            <view class="option-icon-wrap">
+              <image class="option-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
+            </view>
             <view class="option-text">
               <text class="option-title">新建文件夹</text>
               <text class="option-desc">请输入文件夹名称</text>
@@ -176,11 +192,11 @@
             :key="folder.id"
             @click="selectFolder(folder)"
           >
-            <text>📁</text>
+            <image class="folder-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
             <text class="folder-name">{{ folder.name }}</text>
           </view>
           <view class="folder-item new" @click="createNewFolderInPicker">
-            <text>➕</text>
+            <image class="folder-icon" src="/static/assets/v015/icons/create-active.png" mode="aspectFit" />
             <text class="folder-name">新建文件夹</text>
           </view>
         </scroll-view>
@@ -638,50 +654,69 @@ const handleProjectSaved = () => {
 .project-page {
   min-height: 100vh;
   background-color: var(--color-bg-page);
+  padding-bottom: 28rpx;
 }
 
 /* 顶部区域 */
 .header {
-  padding: 32rpx 40rpx;
-  background-color: var(--color-bg-panel);
+  margin: 0 24rpx;
+  padding: 22rpx 4rpx 16rpx;
+  background-color: transparent;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
 }
 
 .title {
-  font-size: 40rpx;
-  font-weight: 600;
+  font-size: 44rpx;
+  font-weight: 800;
   color: var(--color-text-primary);
 }
 
 .count {
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  background-color: var(--color-primary-light);
   font-size: 24rpx;
-  color: var(--color-text-tertiary);
+  font-weight: 700;
+  color: var(--color-primary-dark);
 }
 
 /* 操作栏 */
 .action-bar {
-  padding: 24rpx 40rpx;
-  background-color: var(--color-bg-panel);
+  margin: 0 24rpx;
+  padding: 12rpx;
+  background-color: rgba(255, 253, 250, .9);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   display: flex;
   align-items: center;
-  gap: 24rpx;
+  gap: 14rpx;
+  box-shadow: var(--shadow-sm);
 }
 
 .search-box {
   flex: 1;
-  height: 72rpx;
-  background-color: var(--color-bg-page);
-  border-radius: 36rpx;
+  height: 70rpx;
+  background-color: var(--color-bg-panel);
+  border: 2rpx solid var(--color-border-light);
+  border-radius: 18rpx;
   display: flex;
   align-items: center;
   padding: 0 24rpx;
 }
 
 .search-icon {
-  font-size: 28rpx;
+  width: 30rpx;
+  height: 30rpx;
   margin-right: 16rpx;
+  display: block;
 }
 
 .search-input {
@@ -700,28 +735,42 @@ const handleProjectSaved = () => {
 }
 
 .action-btn {
-  padding: 16rpx 24rpx;
+  min-height: 70rpx;
+  padding: 0 24rpx;
+  border-radius: 18rpx;
   font-size: 28rpx;
   color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn.new-btn {
-  color: var(--color-text-inverse);
+  color: var(--color-text-primary);
   background-color: var(--color-primary);
-  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.btn-inline-icon {
+  width: 26rpx;
+  height: 26rpx;
+  display: block;
 }
 
 /* 项目列表 */
 .project-list {
-  padding: 24rpx 40rpx;
-  height: calc(100vh - 360rpx);
+  padding: 20rpx 24rpx 24rpx;
+  height: calc(100vh - 222rpx);
 }
 
 .project-card {
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-lg);
-  padding: 28rpx;
-  margin-bottom: 24rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
   display: flex;
   align-items: center;
   position: relative;
@@ -746,10 +795,15 @@ const handleProjectSaved = () => {
 }
 
 .thumbnail {
-  width: 120rpx;
-  height: 120rpx;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-md);
+  width: 128rpx;
+  height: 128rpx;
+  background:
+    linear-gradient(90deg, rgba(35,31,26,.06) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(35,31,26,.06) 1px, transparent 1px),
+    var(--color-primary-soft);
+  background-size: 18rpx 18rpx;
+  border-radius: 18rpx;
+  border: 2rpx solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -757,9 +811,24 @@ const handleProjectSaved = () => {
   overflow: hidden;
 }
 
+.thumbnail-board {
+  width: 100%;
+  height: 100%;
+  background:
+    linear-gradient(90deg, rgba(35,31,26,.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(35,31,26,.08) 1px, transparent 1px),
+    rgba(255,253,250,.78);
+  background-size: 18rpx 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .thumbnail-placeholder {
   font-size: 48rpx;
-  color: var(--color-text-disabled);
+  color: var(--color-primary-dark);
+  font-weight: 800;
+  opacity: .42;
 }
 
 .thumbnail-img {
@@ -772,7 +841,7 @@ const handleProjectSaved = () => {
 }
 
 .project-name {
-  font-size: 30rpx;
+  font-size: 31rpx;
   color: var(--color-text-primary);
   font-weight: 500;
   display: block;
@@ -798,7 +867,8 @@ const handleProjectSaved = () => {
   right: 80rpx;
   padding: 4rpx 16rpx;
   font-size: 20rpx;
-  border-radius: var(--radius-sm);
+  border-radius: 999rpx;
+  font-weight: 700;
 }
 
 /** 草稿状态标签 - 使用语义化 CSS 变量适配深色主题 */
@@ -832,8 +902,10 @@ const handleProjectSaved = () => {
 }
 
 .empty-icon {
-  font-size: 128rpx;
+  width: 128rpx;
+  height: 128rpx;
   margin-bottom: 32rpx;
+  opacity: .72;
 }
 
 .empty-text {
@@ -905,7 +977,7 @@ const handleProjectSaved = () => {
 .create-modal {
   width: 100%;
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-radius: 34rpx 34rpx 0 0;
   max-height: 80vh;
 }
 
@@ -937,22 +1009,43 @@ const handleProjectSaved = () => {
 .create-option {
   display: flex;
   align-items: center;
-  padding: 28rpx 0;
-  border-bottom: 1px solid var(--color-border-light);
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 20rpx;
+  background-color: var(--color-bg-panel);
 }
 
 .create-option.primary {
-  background-color: var(--color-bg-page);
-  margin: 0 -40rpx;
-  padding: 28rpx 40rpx;
-  border-radius: var(--radius-lg);
-  margin-bottom: 16rpx;
-  border-bottom: none;
+  background-color: var(--color-primary-light);
+  margin: 0 0 16rpx;
+  padding: 24rpx;
+  border-color: var(--color-primary);
+}
+
+.option-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
+  margin-right: 24rpx;
+  border-radius: 20rpx;
+  background-color: var(--color-primary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .option-icon {
-  font-size: 48rpx;
+  width: 40rpx;
+  height: 40rpx;
+  display: block;
+}
+
+.folder-icon {
+  width: 34rpx;
+  height: 34rpx;
   margin-right: 24rpx;
+  display: block;
 }
 
 .option-text {

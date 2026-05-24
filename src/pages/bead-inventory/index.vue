@@ -1,9 +1,17 @@
 <template>
   <!-- 豆仓管理页面 -->
   <view class="bead-inventory-page">
+    <view class="page-nav">
+      <view class="nav-back" @click="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="nav-title">豆仓管理</text>
+      <view class="nav-placeholder"></view>
+    </view>
+
     <!-- 品牌选择器 -->
     <view class="brand-selector">
-      <scroll-view class="brand-scroll" scroll-x>
+      <scroll-view class="brand-scroll" scroll-x :show-scrollbar="false">
         <view class="brand-list">
           <view 
             v-for="brand in brands" 
@@ -19,8 +27,8 @@
 
     <!-- 套装选择器 -->
     <view class="kit-selector">
-      <view class="kit-label">套装:</view>
-      <scroll-view class="kit-scroll" scroll-x>
+      <view class="kit-label">套装</view>
+      <scroll-view class="kit-scroll" scroll-x :show-scrollbar="false">
         <view class="kit-list">
           <view 
             v-for="kit in currentKits" 
@@ -28,7 +36,9 @@
             :class="['kit-item', activeKit === kit.id ? 'active' : '']"
             @click="switchKit(kit.id)"
           >
-            <text class="kit-name">{{ kit.name }}</text>
+            <text class="kit-brand">{{ getKitBrand(kit.name) }}</text>
+            <text class="kit-count">{{ getKitCount(kit.name) }}</text>
+            <text class="kit-type">{{ getKitType(kit.name) }}</text>
           </view>
         </view>
       </scroll-view>
@@ -51,7 +61,7 @@
     </view>
 
     <!-- 颜色列表 -->
-    <scroll-view class="color-list" scroll-y>
+    <scroll-view class="color-list" scroll-y :show-scrollbar="false">
       <view v-if="currentColors.length === 0" class="empty-state">
         <text class="empty-text">暂无颜色数据</text>
       </view>
@@ -149,6 +159,21 @@ const currentColors = computed(() => {
   }))
 })
 
+const getKitBrand = (name: string) => name.split(' ')[0] || activeBrand.value.toUpperCase()
+
+const getKitCount = (name: string) => {
+  const match = name.match(/(\d+色)/)
+  return match ? match[1] : name
+}
+
+const getKitType = (name: string) => {
+  if (name.includes('全套')) return '全套装'
+  if (name.includes('进阶')) return '进阶套装'
+  if (name.includes('标准')) return '标准套装'
+  if (name.includes('入门')) return '入门套装'
+  return '套装'
+}
+
 /**
  * 颜色总数
  */
@@ -177,6 +202,10 @@ const switchBrand = (brandKey: string) => {
   if (kits && kits.length > 0) {
     activeKit.value = kits[0].id
   }
+}
+
+const goBack = () => {
+  uni.navigateBack()
 }
 
 /**
@@ -415,6 +444,39 @@ onMounted(() => {
   padding-bottom: 120rpx;
 }
 
+.page-nav {
+  height: 88rpx;
+  padding: 0 24rpx;
+  background-color: var(--color-bg-panel);
+  border-bottom: 1rpx solid var(--color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.nav-back,
+.nav-placeholder {
+  width: 80rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+}
+
+.back-icon {
+  font-size: 42rpx;
+  color: var(--color-text-primary);
+}
+
+.nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
 /* 品牌选择器 */
 .brand-selector {
   background: var(--color-bg-panel);
@@ -454,16 +516,19 @@ onMounted(() => {
 /* 套装选择器 */
 .kit-selector {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   background: var(--color-bg-panel);
-  padding: 16rpx 24rpx;
+  padding: 18rpx 24rpx;
   border-bottom: 1rpx solid var(--color-divider);
+  gap: 14rpx;
 }
 
 .kit-label {
   font-size: 26rpx;
-  color: var(--color-text-tertiary);
-  margin-right: 16rpx;
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  line-height: 92rpx;
+  flex-shrink: 0;
 }
 
 .kit-scroll {
@@ -473,26 +538,49 @@ onMounted(() => {
 
 .kit-list {
   display: inline-flex;
-  gap: 16rpx;
+  gap: 14rpx;
 }
 
 .kit-item {
-  padding: 8rpx 20rpx;
-  border-radius: 24rpx;
+  min-width: 138rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 20rpx;
   background: var(--color-bg-page);
+  border: 2rpx solid var(--color-border-light);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4rpx;
 }
 
 .kit-item.active {
   background: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-.kit-name {
+.kit-brand {
+  font-size: 22rpx;
+  line-height: 1.2;
+  color: var(--color-text-tertiary);
+}
+
+.kit-count {
   font-size: 24rpx;
+  line-height: 1.2;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.kit-type {
+  font-size: 22rpx;
+  line-height: 1.2;
   color: var(--color-text-secondary);
 }
 
-.kit-item.active .kit-name {
-  color: var(--color-text-inverse);
+.kit-item.active .kit-brand,
+.kit-item.active .kit-count,
+.kit-item.active .kit-type {
+  color: var(--color-text-primary);
 }
 
 /* 统计栏 */
@@ -523,7 +611,7 @@ onMounted(() => {
 
 /* 颜色列表 */
 .color-list {
-  height: calc(100vh - 320rpx);
+  height: calc(100vh - 408rpx);
   padding: 0 24rpx;
 }
 

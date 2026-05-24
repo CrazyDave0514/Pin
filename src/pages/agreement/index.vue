@@ -1,6 +1,14 @@
 <template>
   <view class="agreement-page">
-    <scroll-view class="content-scroll" scroll-y>
+    <view class="page-nav">
+      <view class="nav-back" @click="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="nav-title">{{ currentTitle }}</text>
+      <view class="nav-placeholder"></view>
+    </view>
+
+    <scroll-view class="content-scroll" scroll-y :show-scrollbar="false">
       <!-- 用户协议 -->
       <view v-if="type === 'user'" class="agreement-content">
         <text class="title">用户协议</text>
@@ -202,10 +210,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 
 // 协议类型
 const type = ref('user')
+
+const currentTitle = computed(() => {
+  const titles: Record<string, string> = {
+    user: '用户协议',
+    privacy: '隐私政策',
+    community: '社区规范'
+  }
+  return titles[type.value] || '协议'
+})
 
 /**
  * 加载协议类型
@@ -219,29 +236,54 @@ onMounted(() => {
     type.value = options.type
   }
 
-  // 设置页面标题
-  const titles: Record<string, string> = {
-    user: '用户协议',
-    privacy: '隐私政策',
-    community: '社区规范'
-  }
-
-  if (titles[type.value]) {
-    uni.setNavigationBarTitle({
-      title: titles[type.value]
-    })
-  }
 })
+
+const goBack = () => {
+  uni.navigateBack()
+}
 </script>
 
 <style scoped>
 .agreement-page {
   min-height: 100vh;
+  background-color: var(--color-bg-page);
+}
+
+.page-nav {
+  height: 88rpx;
+  padding: 0 24rpx;
   background-color: var(--color-bg-panel);
+  border-bottom: 1rpx solid var(--color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.nav-back,
+.nav-placeholder {
+  width: 80rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+}
+
+.back-icon {
+  font-size: 42rpx;
+  color: var(--color-text-primary);
+}
+
+.nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
 .content-scroll {
-  height: 100vh;
+  height: calc(100vh - 88rpx);
   padding: 32rpx;
   box-sizing: border-box;
 }
@@ -251,12 +293,7 @@ onMounted(() => {
 }
 
 .title {
-  font-size: 40rpx;
-  font-weight: 700;
-  color: var(--color-text-primary);
-  display: block;
-  text-align: center;
-  margin-bottom: 16rpx;
+  display: none;
 }
 
 .update-time {

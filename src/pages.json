@@ -3,37 +3,43 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "Pin"
+        "navigationBarTitleText": "Pin",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/project/index",
       "style": {
-        "navigationBarTitleText": "我的项目"
+        "navigationBarTitleText": "我的项目",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/mine/index",
       "style": {
-        "navigationBarTitleText": "我的"
+        "navigationBarTitleText": "我的",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/search/index",
       "style": {
-        "navigationBarTitleText": "搜索"
+        "navigationBarTitleText": "搜索",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/points/index",
       "style": {
-        "navigationBarTitleText": "积分中心"
+        "navigationBarTitleText": "积分中心",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/bead-inventory/index",
       "style": {
-        "navigationBarTitleText": "豆仓管理"
+        "navigationBarTitleText": "豆仓管理",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -45,7 +51,8 @@
     {
       "path": "pages/settings/index",
       "style": {
-        "navigationBarTitleText": "设置"
+        "navigationBarTitleText": "设置",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -64,19 +71,22 @@
     {
       "path": "pages/image-import/index",
       "style": {
-        "navigationBarTitleText": "导入图片"
+        "navigationBarTitleText": "导入图片",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/blueprint-import/index",
       "style": {
-        "navigationBarTitleText": "导入图纸"
+        "navigationBarTitleText": "导入图纸",
+        "navigationStyle": "custom"
       }
     },
     {
       "path": "pages/agreement/index",
       "style": {
-        "navigationBarTitleText": "协议"
+        "navigationBarTitleText": "协议",
+        "navigationStyle": "custom"
       }
     },
     {
@@ -97,19 +107,19 @@
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "Pin",
-    "navigationBarBackgroundColor": "#FFFFFF",
-    "backgroundColor": "#F5F5F5",
+    "navigationBarBackgroundColor": "#FFFDFA",
+    "backgroundColor": "#F7F3EC",
     "app-plus": {
       "titleNView": {
         "titleColor": "#1A1A1A",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#FFFDFA"
       }
     }
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#F5A623",
-    "backgroundColor": "#FFFFFF",
+    "color": "#8E8377",
+    "selectedColor": "#CE7B1D",
+    "backgroundColor": "#FFFDFA",
     "borderStyle": "white",
     "height": "50px",
     "fontSize": "10px",

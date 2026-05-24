@@ -18,35 +18,40 @@ export default {
 /* CSS 自定义属性 - 设计 Token */
 page {
   /* 品牌色 */
-  --color-primary: #F5A623;
-  --color-primary-dark: #E09400;
-  --color-primary-light: #FFF4E0;
+  --color-primary: #F7B733;
+  --color-primary-dark: #CE7B1D;
+  --color-primary-light: #FFF0C9;
+  --color-primary-soft: #FFF7E4;
 
   /* 功能色 */
-  --color-success: #52C41A;
-  --color-warning: #FAAD14;
-  --color-error: #FF4D4F;
-  --color-info: #1890FF;
+  --color-success: #5F9B73;
+  --color-success-light: #E4F0E8;
+  --color-warning: #CE7B1D;
+  --color-warning-light: #FFF4D5;
+  --color-error: #CF5C4D;
+  --color-error-light: #FFF0ED;
+  --color-info: #4C7F9F;
+  --color-info-light: #E5F0F5;
 
   /* 文字色 */
-  --color-text-primary: #1A1A1A;
-  --color-text-secondary: #666666;
-  --color-text-tertiary: #999999;
-  --color-text-disabled: #CCCCCC;
-  --color-text-inverse: #FFFFFF;
+  --color-text-primary: #231F1A;
+  --color-text-secondary: #70675C;
+  --color-text-tertiary: #A39788;
+  --color-text-disabled: #C9BCAA;
+  --color-text-inverse: #FFF7EC;
 
   /* 背景色 */
-  --color-bg-page: #F5F5F5;
-  --color-bg-panel: #FFFFFF;
+  --color-bg-page: #F7F3EC;
+  --color-bg-panel: #FFFDFA;
   --color-bg-elevated: #FFFFFF;
-  --color-bg-hover: #F8F8F8;
-  --color-bg-active: #F0F0F0;
-  --color-bg-mask: rgba(0, 0, 0, 0.5);
+  --color-bg-hover: #FDF7EF;
+  --color-bg-active: #F3E8DA;
+  --color-bg-mask: rgba(35, 31, 26, 0.52);
 
   /* 边框色 */
-  --color-border: #E8E8E8;
-  --color-border-light: #F0F0F0;
-  --color-divider: #EEEEEE;
+  --color-border: #E7DDD0;
+  --color-border-light: #F0E7DC;
+  --color-divider: #EDE3D7;
 
   /* 字体 */
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -68,17 +73,17 @@ page {
   --space-3xl: 32px;
 
   /* 圆角 */
-  --radius-sm: 4px;
+  --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-full: 9999px;
 
   /* 阴影 */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
-  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.16);
+  --shadow-sm: 0 4px 12px rgba(56, 42, 26, 0.05);
+  --shadow-md: 0 8px 24px rgba(56, 42, 26, 0.08);
+  --shadow-lg: 0 14px 34px rgba(56, 42, 26, 0.11);
+  --shadow-xl: 0 18px 46px rgba(56, 42, 26, 0.14);
 
   /* 动效 */
   --duration-fast: 200ms;
@@ -114,6 +119,18 @@ body {
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::-webkit-scrollbar,
+.uni-scroll-view::-webkit-scrollbar,
+.uni-scroll-view-content::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
+}
+
+* {
+  scrollbar-width: none;
 }
 
 page {

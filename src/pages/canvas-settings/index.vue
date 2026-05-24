@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 // ==================== 状态定义 ====================
 // 尺寸预设选项
@@ -258,8 +258,6 @@ const createCanvas = () => {
   })
 }
 
-// 使用 computed 需要引入
-import { computed } from 'vue'
 </script>
 
 <style scoped>

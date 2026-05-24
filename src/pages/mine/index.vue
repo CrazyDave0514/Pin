@@ -7,17 +7,22 @@
           <view class="avatar-wrapper">
             <image class="user-avatar" :src="getAvatarUrl()" mode="aspectFill" />
           </view>
-          <view class="name-row">
-            <text class="user-name">{{ user.username }}</text>
-            <text class="gender-icon" :class="genderClass">{{ genderSymbol }}</text>
+          <view class="profile-text">
+            <view class="name-row">
+              <text class="user-name">{{ user.username }}</text>
+              <view class="gender-icon" :class="genderClass"></view>
+            </view>
+            <text class="user-uid">UID: {{ user.uid }}</text>
           </view>
-          <text class="user-uid">UID: {{ user.uid }}</text>
         </template>
         <template v-else>
           <view class="avatar-wrapper">
-            <image class="user-avatar" src="/static/default-avatar.png" mode="aspectFill" />
+            <image class="user-avatar" src="/static/assets/v015/default-avatar.png" mode="aspectFill" />
           </view>
-          <text class="login-text">点击登录</text>
+          <view class="profile-text">
+            <text class="login-text">点击登录</text>
+            <text class="user-uid">登录后同步项目、库存和收藏</text>
+          </view>
         </template>
       </view>
     </view>
@@ -48,7 +53,9 @@
         class="function-item"
         @click="handleFunctionClick(item.path)"
       >
-        <text class="function-icon">{{ item.icon }}</text>
+        <view class="function-icon-wrap">
+          <image class="function-icon" :src="item.icon" mode="aspectFit" />
+        </view>
         <text class="function-name">{{ item.name }}</text>
         <text class="function-arrow">›</text>
       </view>
@@ -105,7 +112,7 @@ import { ref, computed, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 
 const user = ref<any>(null)
-const defaultAvatar = '/static/default-avatar.png'
+const defaultAvatar = '/static/assets/v015/default-avatar.png'
 const stats = ref({
   artworks: 0,
   favorites: 0,
@@ -122,10 +129,10 @@ const tempAvatar = ref('')
 const rotation = ref(0)
 
 const functionList = [
-  { icon: '💰', name: '积分中心', path: '/pages/points/index' },
-  { icon: '🫘', name: '豆仓管理', path: '/pages/bead-inventory/index' },
-  { icon: '📞', name: '联系作者', path: '/pages/contact/index' },
-  { icon: '⚙️', name: '更多设置', path: '/pages/settings/index' },
+  { icon: '/static/assets/v015/icons/points-active.png', name: '积分中心', path: '/pages/points/index' },
+  { icon: '/static/assets/v015/icons/bead-inventory-active.png', name: '豆仓管理', path: '/pages/bead-inventory/index' },
+  { icon: '/static/assets/v015/icons/favorite-active.png', name: '联系作者', path: '/pages/contact/index' },
+  { icon: '/static/assets/v015/icons/settings-active.png', name: '更多设置', path: '/pages/settings/index' },
 ]
 
 onMounted(() => {
@@ -155,18 +162,6 @@ const loadStats = () => {
 }
 
 /**
- * 获取性别标识符号
- */
-const genderSymbol = computed(() => {
-  if (!user.value) return ''
-  switch (user.value.gender) {
-    case 'male': return '♂'
-    case 'female': return '♀'
-    default: return '⚪'
-  }
-})
-
-/**
  * 获取性别标识样式类名
  */
 const genderClass = computed(() => {
@@ -185,7 +180,7 @@ const getAvatarUrl = () => {
   if (user.value && user.value.avatar) {
     return user.value.avatar
   }
-  return '/static/default-avatar.png'
+  return defaultAvatar
 }
 
 /**
@@ -311,28 +306,61 @@ const handleFunctionClick = (path: string) => {
 
 /* ==================== 用户信息卡片 ==================== */
 .user-card {
+  position: relative;
+  overflow: hidden;
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 28rpx;
   box-shadow: var(--shadow-md);
-  padding: 80rpx 48rpx 48rpx;
+  padding: 42rpx 36rpx;
   margin-bottom: 24rpx;
 }
 
+.user-card::before {
+  content: '';
+  position: absolute;
+  right: 26rpx;
+  top: 24rpx;
+  width: 180rpx;
+  height: 132rpx;
+  border-radius: 28rpx;
+  background:
+    radial-gradient(circle, rgba(247,183,51,.20) 0 8rpx, transparent 9rpx),
+    radial-gradient(circle, rgba(95,155,115,.14) 0 8rpx, transparent 9rpx),
+    radial-gradient(circle, rgba(76,127,159,.12) 0 8rpx, transparent 9rpx);
+  background-size: 40rpx 40rpx, 40rpx 40rpx, 40rpx 40rpx;
+  background-position: 0 0, 20rpx 0, 10rpx 20rpx;
+  opacity: .7;
+}
+
 .user-info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  text-align: left;
+}
+
+.profile-text {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
 }
 
 /* 头像包装器 */
 .avatar-wrapper {
   position: relative;
-  margin-bottom: 24rpx;
+  margin-right: 28rpx;
+  margin-bottom: 0;
 }
 
 .user-avatar {
-  width: 160rpx;
-  height: 160rpx;
+  width: 128rpx;
+  height: 128rpx;
   border-radius: 50%;
   border: 4rpx solid var(--color-bg-panel);
   box-shadow: var(--shadow-lg);
@@ -377,20 +405,74 @@ const handleFunctionClick = (path: string) => {
 
 /* 性别标识 */
 .gender-icon {
-  font-size: 30rpx;
+  position: relative;
   margin-left: 12rpx;
+  width: 28rpx;
+  height: 28rpx;
+  border-radius: 50%;
+  border: 2rpx solid var(--color-border);
+  flex-shrink: 0;
 }
 
 .gender-icon.gender-male {
-  color: var(--color-info);
+  background-color: rgba(76,127,159,.12);
+  border-color: var(--color-info);
+}
+
+.gender-icon.gender-male::after {
+  content: '';
+  position: absolute;
+  right: -6rpx;
+  top: -4rpx;
+  width: 10rpx;
+  height: 2rpx;
+  background-color: var(--color-info);
+  transform: rotate(-45deg);
+  border-radius: 999rpx;
 }
 
 .gender-icon.gender-female {
-  color: var(--color-female);
+  background-color: rgba(207,92,77,.10);
+  border-color: var(--color-error);
+}
+
+.gender-icon.gender-female::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8rpx;
+  width: 2rpx;
+  height: 8rpx;
+  background-color: var(--color-error);
+  transform: translateX(-50%);
+}
+
+.gender-icon.gender-female::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5rpx;
+  width: 10rpx;
+  height: 2rpx;
+  background-color: var(--color-error);
+  transform: translateX(-50%);
 }
 
 .gender-icon.gender-secret {
-  color: var(--color-text-tertiary);
+  background-color: rgba(255,253,250,.86);
+  border-color: var(--color-text-disabled);
+}
+
+.gender-icon.gender-secret::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 8rpx;
+  height: 8rpx;
+  border-radius: 50%;
+  background-color: var(--color-text-disabled);
+  transform: translate(-50%, -50%);
 }
 
 .user-uid {
@@ -399,8 +481,9 @@ const handleFunctionClick = (path: string) => {
 }
 
 .login-text {
-  font-size: 28rpx;
-  color: var(--color-text-secondary);
+  font-size: 34rpx;
+  font-weight: 800;
+  color: var(--color-text-primary);
 }
 
 /* ==================== 数据概览 ==================== */
@@ -408,7 +491,8 @@ const handleFunctionClick = (path: string) => {
   display: flex;
   align-items: center;
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   box-shadow: var(--shadow-md);
   padding: 32rpx 0;
   margin-bottom: 24rpx;
@@ -428,7 +512,7 @@ const handleFunctionClick = (path: string) => {
 }
 
 .stat-value {
-  font-size: 36rpx;
+  font-size: 38rpx;
   color: var(--color-text-primary);
   font-weight: 600;
   margin-bottom: 8rpx;
@@ -442,7 +526,8 @@ const handleFunctionClick = (path: string) => {
 /* ==================== 功能列表 ==================== */
 .function-section {
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   box-shadow: var(--shadow-md);
   overflow: hidden;
 }
@@ -450,8 +535,8 @@ const handleFunctionClick = (path: string) => {
 .function-item {
   display: flex;
   align-items: center;
-  height: 112rpx;
-  padding: 0 32rpx;
+  height: 120rpx;
+  padding: 0 28rpx;
   border-bottom: 2rpx solid var(--color-divider);
 }
 
@@ -471,14 +556,29 @@ const handleFunctionClick = (path: string) => {
   background-color: var(--color-bg-panel);
 }
 
-.function-icon {
-  font-size: 40rpx;
+.function-icon-wrap {
+  width: 72rpx;
+  height: 72rpx;
   margin-right: 24rpx;
+  border-radius: 18rpx;
+  background-color: var(--color-primary-soft);
+  border: 1rpx solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.function-icon {
+  width: 36rpx;
+  height: 36rpx;
+  display: block;
 }
 
 .function-name {
   flex: 1;
   font-size: 30rpx;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 

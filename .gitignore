@@ -11,6 +11,8 @@ node_modules
 .DS_Store
 dist
 *.local
+.codex-tools/
+.lark-home/
 
 # Editor directories and files
 .idea

@@ -1,0 +1,1664 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pin V2.0 全量设计草图</title>
+  <style>
+    :root {
+      --bg: #f7f3ec;
+      --surface: #fffdfa;
+      --surface-soft: #fdf7ef;
+      --surface-ink: #231f1a;
+      --text: #24201b;
+      --text-2: #70675c;
+      --text-3: #a39788;
+      --line: #e7ddd0;
+      --line-strong: #d8cabc;
+      --brand: #f7b733;
+      --brand-deep: #ce7b1d;
+      --green: #5f9b73;
+      --blue: #4c7f9f;
+      --red: #cf5c4d;
+      --violet: #8b6fad;
+      --shadow: 0 18px 46px rgba(56, 42, 26, .12);
+      --shadow-soft: 0 10px 28px rgba(56, 42, 26, .08);
+      --r4: 4px;
+      --r8: 8px;
+      --r12: 12px;
+      --r16: 16px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-width: 1180px;
+      color: var(--text);
+      font-family: var(--font);
+      background:
+        linear-gradient(90deg, rgba(35,31,26,.035) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(35,31,26,.035) 1px, transparent 1px),
+        var(--bg);
+      background-size: 32px 32px;
+      letter-spacing: 0;
+    }
+
+    .board {
+      width: 1320px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 420px;
+      gap: 40px;
+      align-items: end;
+      padding-bottom: 38px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--line-strong);
+      border-radius: 999px;
+      background: rgba(255,253,250,.74);
+      color: var(--brand-deep);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 20px 0 12px;
+      max-width: 760px;
+      font-size: 52px;
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 780px;
+      color: var(--text-2);
+      font-size: 17px;
+      line-height: 1.8;
+    }
+
+    .hero-panel {
+      padding: 20px;
+      border: 1px solid var(--line);
+      border-radius: var(--r16);
+      background: rgba(255,253,250,.8);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .hero-panel h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .principle {
+      min-height: 82px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--r8);
+      background: var(--surface);
+    }
+
+    .principle strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .principle span {
+      color: var(--text-2);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .section {
+      margin-top: 56px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.2;
+    }
+
+    .section-head p {
+      width: 520px;
+      margin: 0;
+      color: var(--text-2);
+      font-size: 14px;
+      line-height: 1.65;
+    }
+
+    .phones {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    .phone-wrap,
+    .pc-wrap,
+    .component-panel {
+      position: relative;
+    }
+
+    .caption {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 0 0 10px;
+      color: var(--text-2);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .caption em {
+      color: var(--text-3);
+      font-style: normal;
+      font-weight: 500;
+    }
+
+    .phone {
+      width: 286px;
+      height: 620px;
+      overflow: hidden;
+      border: 1px solid #1f1b17;
+      border-radius: 30px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .screen {
+      position: relative;
+      height: 100%;
+      padding: 18px 16px 76px;
+      background: var(--surface);
+    }
+
+    .screen.soft { background: var(--surface-soft); }
+    .screen.dark { background: #211e1a; color: #fff7ec; }
+
+    .status {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 18px;
+      margin-bottom: 16px;
+      color: currentColor;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .dots {
+      display: flex;
+      gap: 3px;
+    }
+
+    .dots i {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: .78;
+    }
+
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .title-block h3 {
+      margin: 0;
+      font-size: 23px;
+      line-height: 1.18;
+      text-align: left;
+    }
+
+    .title-block p {
+      margin: 5px 0 0;
+      color: var(--text-2);
+      font-size: 12px;
+      text-align: left;
+    }
+
+    .top .title-block {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dark .title-block p,
+    .dark .muted,
+    .dark .meta { color: rgba(255,247,236,.62); }
+
+    .avatar,
+    .icon-btn,
+    .tab-icon,
+    .tool-icon {
+      display: grid;
+      place-items: center;
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 800;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: #efe0ca;
+      color: var(--brand-deep);
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      box-shadow: 0 4px 12px rgba(56,42,26,.06);
+    }
+
+    .dark .icon-btn {
+      border-color: rgba(255,247,236,.15);
+      background: rgba(255,253,250,.08);
+      color: #fff7ec;
+    }
+
+    .searchbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 42px;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: #fff;
+      color: var(--text-3);
+      font-size: 13px;
+    }
+
+    .glyph {
+      position: relative;
+      display: block;
+      width: 16px;
+      height: 16px;
+      color: currentColor;
+    }
+
+    .glyph-search::before {
+      content: "";
+      position: absolute;
+      left: 2px;
+      top: 2px;
+      width: 8px;
+      height: 8px;
+      border: 1.8px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .glyph-search::after {
+      content: "";
+      position: absolute;
+      right: 2px;
+      bottom: 3px;
+      width: 6px;
+      height: 1.8px;
+      border-radius: 999px;
+      background: currentColor;
+      transform: rotate(45deg);
+      transform-origin: center;
+    }
+
+    .glyph-home::before {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 2px;
+      width: 9px;
+      height: 9px;
+      border-left: 1.8px solid currentColor;
+      border-top: 1.8px solid currentColor;
+      transform: rotate(45deg);
+    }
+
+    .glyph-home::after {
+      content: "";
+      position: absolute;
+      left: 4px;
+      bottom: 2px;
+      width: 8px;
+      height: 7px;
+      border: 1.8px solid currentColor;
+      border-top: 0;
+      border-radius: 0 0 3px 3px;
+    }
+
+    .glyph-user::before {
+      content: "";
+      position: absolute;
+      left: 5px;
+      top: 2px;
+      width: 6px;
+      height: 6px;
+      border: 1.8px solid currentColor;
+      border-radius: 50%;
+    }
+
+    .glyph-user::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      bottom: 2px;
+      width: 10px;
+      height: 6px;
+      border: 1.8px solid currentColor;
+      border-radius: 8px 8px 3px 3px;
+    }
+
+    .glyph-plus::before,
+    .glyph-plus::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 7px;
+      width: 10px;
+      height: 2px;
+      border-radius: 999px;
+      background: currentColor;
+    }
+
+    .glyph-plus::after {
+      transform: rotate(90deg);
+    }
+
+    .seg {
+      display: flex;
+      gap: 6px;
+      margin: 14px 0;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: rgba(255,255,255,.68);
+    }
+
+    .seg span {
+      flex: 1;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .seg .on {
+      background: var(--text);
+      color: #fff7ec;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(56,42,26,.06);
+    }
+
+    .work-card {
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .work-hero {
+      height: 148px;
+      display: grid;
+      place-items: center;
+      background: #f1e7da;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .work-card-body {
+      padding: 12px;
+    }
+
+    .work-card-body strong {
+      display: block;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: var(--text-2);
+      font-size: 11px;
+    }
+
+    .feed-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .mini-work {
+      overflow: hidden;
+      min-height: 174px;
+    }
+
+    .mini-work .work-hero {
+      height: 104px;
+    }
+
+    .mini-work .work-card-body {
+      padding: 9px;
+    }
+
+    .mini-work strong {
+      font-size: 12px;
+    }
+
+    .tabbar {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 13px;
+      height: 56px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,253,250,.92);
+      box-shadow: 0 16px 34px rgba(56,42,26,.14);
+      backdrop-filter: blur(12px);
+    }
+
+    .tabbar.four {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .tab {
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      color: var(--text-3);
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .tab-icon {
+      width: 22px;
+      height: 22px;
+      border-radius: 8px;
+    }
+
+    .tab.on {
+      color: var(--text);
+    }
+
+    .tab.on .tab-icon {
+      border-color: var(--brand);
+      background: var(--brand);
+    }
+
+    .fab {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      margin-top: -18px;
+      border: 2px solid var(--surface);
+      border-radius: 50%;
+      background: var(--brand);
+      color: var(--text);
+      box-shadow: 0 12px 24px rgba(206,123,29,.28);
+      font-weight: 500;
+    }
+
+    .fab .glyph {
+      width: 20px;
+      height: 20px;
+    }
+
+    .fab .glyph-plus::before,
+    .fab .glyph-plus::after {
+      left: 3px;
+      top: 9px;
+      width: 14px;
+      height: 2.4px;
+    }
+
+    .bead-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--n), var(--s));
+      gap: var(--g);
+      padding: var(--pad);
+      border-radius: var(--r8);
+      background: rgba(255,255,255,.58);
+    }
+
+    .bead-grid i {
+      width: var(--s);
+      height: var(--s);
+      border-radius: 50%;
+      background: var(--c);
+      box-shadow: inset 0 -1px 0 rgba(0,0,0,.16), inset 0 1px 0 rgba(255,255,255,.45);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 14px 0;
+    }
+
+    .stat {
+      padding: 10px 8px;
+      border: 1px solid var(--line);
+      border-radius: var(--r8);
+      background: rgba(255,255,255,.78);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 16px;
+    }
+
+    .stat span {
+      color: var(--text-2);
+      font-size: 10px;
+    }
+
+    .list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: rgba(255,255,255,.82);
+    }
+
+    .row-main {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .row-main strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .row-main span {
+      display: block;
+      margin-top: 3px;
+      color: var(--text-2);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 24px;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pill.on {
+      border-color: var(--brand);
+      background: #fff0c9;
+      color: #7b4b0f;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .btn {
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 0 14px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--r12);
+      background: #fff;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .btn.primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: var(--surface-ink);
+      box-shadow: 0 10px 22px rgba(247,183,51,.24);
+    }
+
+    .btn.dark {
+      border-color: #2f2922;
+      background: #2f2922;
+      color: #fff7ec;
+    }
+
+    .btn.block { flex: 1; }
+
+    .sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      padding: 16px 16px 18px;
+      border-top: 1px solid var(--line);
+      border-radius: 24px 24px 0 0;
+      background: var(--surface);
+      box-shadow: 0 -16px 40px rgba(56,42,26,.16);
+    }
+
+    .sheet h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .create-options {
+      display: grid;
+      gap: 9px;
+    }
+
+    .create-option {
+      display: flex;
+      gap: 11px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: #fffdfa;
+    }
+
+    .option-mark {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border-radius: var(--r8);
+      background: #fff0c9;
+      color: var(--brand-deep);
+      font-weight: 900;
+    }
+
+    .canvas-preview {
+      height: 172px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--r16);
+      background:
+        linear-gradient(90deg, rgba(35,31,26,.08) 1px, transparent 1px),
+        linear-gradient(180deg, rgba(35,31,26,.08) 1px, transparent 1px),
+        #fffdfa;
+      background-size: 12px 12px;
+    }
+
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .field {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: #fff;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .field strong {
+      display: block;
+      font-size: 17px;
+    }
+
+    .upload-zone {
+      height: 176px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 13px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--r16);
+      background: #fffdfa;
+      text-align: center;
+    }
+
+    .upload-zone strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 15px;
+    }
+
+    .upload-zone span {
+      display: block;
+      margin-top: 5px;
+      color: var(--text-2);
+      font-size: 11px;
+    }
+
+    .blueprint-preview {
+      height: 220px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--r16);
+      background: #fffdfa;
+    }
+
+    .blueprint-preview .work-hero {
+      height: 152px;
+    }
+
+    .editor-screen {
+      padding: 14px 12px 92px;
+      background: #26211c;
+      color: #fff7ec;
+    }
+
+    .editor-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 11px;
+    }
+
+    .editor-title strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .editor-title span {
+      color: rgba(255,247,236,.6);
+      font-size: 11px;
+    }
+
+    .canvas-stage {
+      height: 330px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: #161411;
+      box-shadow: inset 0 0 0 1px rgba(255,247,236,.08);
+    }
+
+    .canvas-board {
+      display: grid;
+      grid-template-columns: repeat(15, 10px);
+      grid-auto-rows: 10px;
+      gap: 2px;
+      padding: 12px;
+      border-radius: var(--r8);
+      background: #fffdfa;
+    }
+
+    .canvas-board i {
+      width: 10px;
+      height: 10px;
+      border: 1px solid #ddd1c4;
+      border-radius: 50%;
+      background: var(--c, #fff9ee);
+    }
+
+    .palette-strip {
+      display: flex;
+      gap: 7px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+
+    .swatch {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      border: 2px solid rgba(255,253,250,.88);
+      border-radius: 50%;
+      background: var(--c);
+      box-shadow: 0 3px 10px rgba(0,0,0,.18);
+    }
+
+    .tool-dock {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      height: 66px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px;
+      padding: 8px;
+      border: 1px solid rgba(255,247,236,.12);
+      border-radius: 18px;
+      background: rgba(45,39,32,.94);
+    }
+
+    .tool {
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      color: rgba(255,247,236,.62);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .tool-icon {
+      width: 28px;
+      height: 28px;
+      border-color: rgba(255,247,236,.15);
+      border-radius: 10px;
+      background: rgba(255,247,236,.07);
+      color: #fff7ec;
+      font-size: 11px;
+    }
+
+    .tool.on .tool-icon {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #211e1a;
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+    }
+
+    .bead-card {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: #fff;
+    }
+
+    .bead-color {
+      height: 42px;
+      border-radius: var(--r8);
+      background: var(--c);
+      box-shadow: inset 0 -8px 12px rgba(0,0,0,.08);
+    }
+
+    .bead-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+
+    .bead-card span {
+      color: var(--text-2);
+      font-size: 10px;
+    }
+
+    .profile-head {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--r16);
+      background: #fffdfa;
+    }
+
+    .profile-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .profile-row .avatar {
+      width: 54px;
+      height: 54px;
+      font-size: 20px;
+    }
+
+    .level-bar {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #eadfce;
+    }
+
+    .level-bar i {
+      display: block;
+      width: 64%;
+      height: 100%;
+      background: var(--brand);
+    }
+
+    .login-card {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 102px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255,253,250,.96);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .login-card h3 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
+    .login-card p {
+      margin: 0 0 16px;
+      color: var(--text-2);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .settings-list .row {
+      min-height: 47px;
+    }
+
+    .notice {
+      padding: 12px;
+      border: 1px solid #ead6a8;
+      border-radius: var(--r12);
+      background: #fff4d5;
+      color: #735016;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .agreement {
+      height: 420px;
+      overflow: hidden;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--r16);
+      background: #fffdfa;
+    }
+
+    .agreement h4 {
+      margin: 0 0 10px;
+      font-size: 15px;
+    }
+
+    .agreement p {
+      margin: 0 0 10px;
+      color: var(--text-2);
+      font-size: 12px;
+      line-height: 1.65;
+    }
+
+    .pcs {
+      display: grid;
+      gap: 28px;
+    }
+
+    .pc {
+      height: 680px;
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .pc.editor {
+      display: grid;
+      grid-template-columns: 248px 1fr 286px;
+      background: #211e1a;
+      color: #fff7ec;
+    }
+
+    .pc-sidebar,
+    .pc-panel {
+      padding: 18px;
+      background: #2a251f;
+      border-right: 1px solid rgba(255,247,236,.09);
+    }
+
+    .pc-panel {
+      border-right: 0;
+      border-left: 1px solid rgba(255,247,236,.09);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 24px;
+      font-weight: 900;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--brand);
+      color: #211e1a;
+    }
+
+    .pc-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .pc-nav .row {
+      min-height: 42px;
+      border-color: rgba(255,247,236,.1);
+      background: transparent;
+      color: rgba(255,247,236,.68);
+    }
+
+    .pc-nav .row.on {
+      background: rgba(247,183,51,.16);
+      color: #fff7ec;
+    }
+
+    .pc-stage {
+      min-width: 0;
+      padding: 18px;
+    }
+
+    .pc-toolbar {
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .pc-tools {
+      display: flex;
+      gap: 8px;
+    }
+
+    .pc-tools .icon-btn {
+      border-color: rgba(255,247,236,.12);
+      background: rgba(255,247,236,.06);
+      color: #fff7ec;
+    }
+
+    .big-canvas {
+      height: 514px;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      background: #14120f;
+      box-shadow: inset 0 0 0 1px rgba(255,247,236,.08);
+    }
+
+    .big-canvas .canvas-board {
+      grid-template-columns: repeat(26, 13px);
+      grid-auto-rows: 13px;
+      gap: 3px;
+      padding: 18px;
+    }
+
+    .big-canvas .canvas-board i {
+      width: 13px;
+      height: 13px;
+    }
+
+    .panel-title {
+      margin: 0 0 12px;
+      font-size: 16px;
+    }
+
+    .layer-card,
+    .color-row {
+      padding: 12px;
+      border: 1px solid rgba(255,247,236,.1);
+      border-radius: var(--r12);
+      background: rgba(255,247,236,.05);
+    }
+
+    .color-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .color-dot {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--c);
+    }
+
+    .pc.manager {
+      display: grid;
+      grid-template-columns: 230px 1fr;
+    }
+
+    .pc.manager .pc-sidebar {
+      background: var(--surface);
+      color: var(--text);
+      border-right: 1px solid var(--line);
+    }
+
+    .pc.manager .pc-nav .row {
+      border-color: var(--line);
+      color: var(--text-2);
+    }
+
+    .pc.manager .pc-nav .row.on {
+      background: #fff0c9;
+      color: var(--text);
+    }
+
+    .pc-main {
+      padding: 22px;
+      background: var(--surface-soft);
+    }
+
+    .pc-main-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .project-grid .work-hero {
+      height: 150px;
+    }
+
+    .tokens {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 24px;
+    }
+
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .token-swatch {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: #fff;
+    }
+
+    .token-color {
+      height: 70px;
+      background: var(--c);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .token-swatch div:last-child {
+      padding: 10px;
+      font-size: 12px;
+    }
+
+    .component-panel {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--r16);
+      background: rgba(255,253,250,.82);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .component-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .component-panel h3 {
+      margin: 0 0 14px;
+      font-size: 17px;
+    }
+
+    .state-stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .input {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--r12);
+      background: #fff;
+      color: var(--text-2);
+      font-size: 13px;
+    }
+
+    .input.focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(247,183,51,.18);
+    }
+
+    .toast {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: var(--r12);
+      background: #231f1a;
+      color: #fff7ec;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .empty {
+      display: grid;
+      place-items: center;
+      min-height: 154px;
+      padding: 18px;
+      border: 1px dashed var(--line-strong);
+      border-radius: var(--r16);
+      background: #fffdfa;
+      text-align: center;
+    }
+
+    .empty strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 14px;
+    }
+
+    .empty span {
+      color: var(--text-2);
+      font-size: 12px;
+    }
+
+    .redlines {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+
+    .redline {
+      min-height: 136px;
+      padding: 14px;
+      border: 1px solid #edc6bf;
+      border-radius: var(--r12);
+      background: #fff3f1;
+    }
+
+    .redline strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #9b3c30;
+      font-size: 14px;
+    }
+
+    .redline span {
+      color: #704d49;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="hero">
+      <div>
+        <span class="kicker">Pin V2.0 Design Sketches</span>
+        <h1>让拼豆工具从“能用”变成“想打开继续做”</h1>
+        <p>这套草图基于 V2.0 设计语言，把首页、项目、创作、编辑器、豆仓、个人中心、设置和 PC 工作台一次性拉齐。视觉方向是温暖的手作工作室，不做廉价卡通，也不做冷冰冰的工程面板。</p>
+      </div>
+      <aside class="hero-panel">
+        <h2>落地方向</h2>
+        <div class="principles">
+          <div class="principle"><strong>作品优先</strong><span>首屏先看作品和进度，功能入口服务创作。</span></div>
+          <div class="principle"><strong>工具克制</strong><span>编辑器深色聚焦，非编辑页保持轻量温暖。</span></div>
+          <div class="principle"><strong>像素秩序</strong><span>间距、圆角、卡片和按钮都按 4/8 栅格收束。</span></div>
+          <div class="principle"><strong>材料真实</strong><span>颜色、库存、编号和消耗量必须可扫读。</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>移动端主流程</h2>
+        <p>覆盖用户从发现灵感、新建画布、导入图片或图纸，到进入编辑器、管理库存和个人资料的完整路径。</p>
+      </div>
+      <div class="phones">
+        <div class="phone-wrap">
+          <div class="caption">首页 / 灵感流 <em>作品先行</em></div>
+          <div class="phone"><div class="screen soft">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><div class="title-block"><h3>今天做什么</h3><p>为你的下一块拼豆板找灵感</p></div><div class="avatar">P</div></div>
+            <div class="searchbar"><span class="glyph glyph-search"></span>搜索图案、颜色或作者</div>
+            <div class="seg"><span class="on">推荐</span><span>最新</span><span>收藏</span></div>
+            <div class="work-card card">
+              <div class="work-hero"><div class="bead-grid" style="--n:9;--s:9px;--g:3px;--pad:10px">
+                <i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i><i style="--c:#2f2922"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#2f2922"></i><i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i>
+                <i style="--c:#f6c64b"></i><i style="--c:#2f2922"></i><i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i><i style="--c:#fffdfa"></i><i style="--c:#f6c64b"></i><i style="--c:#2f2922"></i><i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i>
+                <i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i><i style="--c:#e96957"></i><i style="--c:#e96957"></i><i style="--c:#e96957"></i><i style="--c:#e96957"></i><i style="--c:#e96957"></i><i style="--c:#f6c64b"></i><i style="--c:#f6c64b"></i>
+              </div></div>
+              <div class="work-card-body"><strong>暖黄色小鸟杯垫</strong><div class="meta"><span>28 × 28 · 12 色</span><span>收藏 2.4k</span></div></div>
+            </div>
+            <div class="feed-grid">
+              <div class="mini-work card"><div class="work-hero"></div><div class="work-card-body"><strong>复古花砖</strong><div class="meta"><span>16 色</span></div></div></div>
+              <div class="mini-work card"><div class="work-hero" style="background:#dbe9e6"></div><div class="work-card-body"><strong>像素猫咪</strong><div class="meta"><span>9 色</span></div></div></div>
+            </div>
+            <div class="tabbar"><div class="tab on"><span class="tab-icon"><i class="glyph glyph-home"></i></span>首页</div><div class="tab"><span class="fab"><i class="glyph glyph-plus"></i></span>创作</div><div class="tab"><span class="tab-icon"><i class="glyph glyph-user"></i></span>我的</div></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">项目 / 作品管理 <em>进度明确</em></div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><div class="title-block"><h3>我的项目</h3><p>5 个进行中，2 个已完成</p></div><button class="icon-btn">＋</button></div>
+            <div class="stats"><div class="stat"><strong>7</strong><span>项目</span></div><div class="stat"><strong>68%</strong><span>平均进度</span></div><div class="stat"><strong>1432</strong><span>珠子</span></div></div>
+            <div class="seg"><span class="on">进行中</span><span>完成</span><span>归档</span></div>
+            <div class="list">
+              <div class="row"><div class="option-mark">28</div><div class="row-main"><strong>日落海岸挂件</strong><span>剩余 184 颗 · 今天 19:20 编辑</span></div><span class="pill on">68%</span></div>
+              <div class="row"><div class="option-mark" style="background:#dbe9e6;color:#326250">16</div><div class="row-main"><strong>薄荷猫咪头像</strong><span>缺少 Hama 76 浅绿 12 颗</span></div><span class="pill">补货</span></div>
+              <div class="row"><div class="option-mark" style="background:#f0d6d3;color:#9b3c30">32</div><div class="row-main"><strong>草莓蛋糕牌</strong><span>草稿 · 未开始</span></div><span class="pill">草稿</span></div>
+            </div>
+            <div class="tabbar"><div class="tab"><span class="tab-icon"><i class="glyph glyph-home"></i></span>首页</div><div class="tab"><span class="fab"><i class="glyph glyph-plus"></i></span>创作</div><div class="tab on"><span class="tab-icon"><i class="glyph glyph-user"></i></span>我的</div></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">创作入口 <em>底部操作面板</em></div>
+          <div class="phone"><div class="screen soft">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><div class="title-block"><h3>选择创作方式</h3><p>让入口更像工作流，而不是弹窗列表</p></div></div>
+            <div class="work-card card"><div class="work-hero" style="height:260px"></div><div class="work-card-body"><strong>最近编辑：日落海岸挂件</strong><div class="meta"><span>可直接继续</span><span>68%</span></div></div></div>
+            <div class="sheet">
+              <h3>新建项目</h3>
+              <div class="create-options">
+                <div class="create-option"><span class="option-mark">□</span><div class="row-main"><strong>空白画布</strong><span>选择尺寸、底板和珠子规格</span></div></div>
+                <div class="create-option"><span class="option-mark">◎</span><div class="row-main"><strong>图片转拼豆</strong><span>导入照片并自动降色</span></div></div>
+                <div class="create-option"><span class="option-mark">▦</span><div class="row-main"><strong>图纸导入</strong><span>从已有图纸继续编辑</span></div></div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">画布设置 <em>尺寸可预览</em></div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><button class="icon-btn">‹</button><div class="title-block"><h3>画布设置</h3><p>确认底板尺寸和珠子规格</p></div></div>
+            <div class="canvas-preview"><div class="bead-grid" style="--n:10;--s:8px;--g:3px;--pad:12px">
+              <i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i>
+              <i style="--c:#fffdfa"></i><i style="--c:#f7b733"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#f7b733"></i><i style="--c:#fffdfa"></i>
+            </div></div>
+            <div class="settings-grid"><div class="field"><label>宽度</label><strong>30 格</strong></div><div class="field"><label>高度</label><strong>30 格</strong></div><div class="field"><label>珠子</label><strong>5 mm</strong></div><div class="field"><label>底板</label><strong>方形</strong></div></div>
+            <div class="seg"><span>16×16</span><span class="on">30×30</span><span>自定义</span></div>
+            <div class="notice">预估需要 900 颗珠子，建议开启库存检查。</div>
+            <div class="actions"><button class="btn block">存为草稿</button><button class="btn primary block">开始编辑</button></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">图片导入 <em>自动降色</em></div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><button class="icon-btn">‹</button><div class="title-block"><h3>图片导入</h3><p>照片会被转换成拼豆色板</p></div></div>
+            <div class="upload-zone"><div><span class="option-mark" style="margin:auto">↑</span><strong>选择图片</strong><span>支持正方形裁剪和透明背景</span></div></div>
+            <div class="settings-grid"><div class="field"><label>输出尺寸</label><strong>48 × 48</strong></div><div class="field"><label>颜色上限</label><strong>24 色</strong></div></div>
+            <div class="list" style="margin-top:12px"><div class="row"><span class="swatch" style="--c:#f7b733"></span><div class="row-main"><strong>暖黄保留</strong><span>接近 Hama 03 黄色</span></div><span class="pill on">锁定</span></div><div class="row"><span class="swatch" style="--c:#5f9b73"></span><div class="row-main"><strong>绿色自动匹配</strong><span>将合并相近颜色</span></div></div></div>
+            <div class="actions"><button class="btn block">重新选择</button><button class="btn primary block">生成图纸</button></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">图纸导入 <em>识别与校验</em></div>
+          <div class="phone"><div class="screen soft">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><button class="icon-btn">‹</button><div class="title-block"><h3>图纸导入</h3><p>从截图或 PDF 建立可编辑项目</p></div></div>
+            <div class="blueprint-preview"><div class="work-hero"><div class="bead-grid" style="--n:8;--s:9px;--g:3px;--pad:10px">
+              <i style="--c:#e96957"></i><i style="--c:#e96957"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#e96957"></i><i style="--c:#e96957"></i>
+              <i style="--c:#e96957"></i><i style="--c:#fffdfa"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i style="--c:#fffdfa"></i><i style="--c:#e96957"></i>
+            </div></div><div class="work-card-body"><strong>识别到 32 × 32，18 色</strong><div class="meta"><span>网格置信度 92%</span><span>需校准 2 色</span></div></div></div>
+            <div class="list" style="margin-top:12px"><div class="row"><div class="option-mark">1</div><div class="row-main"><strong>校准网格</strong><span>拖动四角让格线贴合图纸</span></div><span class="pill on">当前</span></div><div class="row"><div class="option-mark">2</div><div class="row-main"><strong>确认色号</strong><span>合并相近颜色并生成清单</span></div></div></div>
+            <div class="actions"><button class="btn primary block">进入校准</button></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">移动编辑器 <em>沉浸深色</em></div>
+          <div class="phone"><div class="screen editor-screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="editor-top"><button class="icon-btn">‹</button><div class="editor-title"><strong>日落海岸挂件</strong><span>30 × 30 · 自动保存于 19:20</span></div><button class="icon-btn">↗</button></div>
+            <div class="canvas-stage"><div class="canvas-board">
+              <i></i><i></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              <i></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i></i><i></i><i></i><i></i><i></i>
+              <i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i></i><i></i><i></i><i></i>
+            </div></div>
+            <div class="palette-strip"><span class="swatch" style="--c:#f7b733"></span><span class="swatch" style="--c:#cf5c4d"></span><span class="swatch" style="--c:#4c7f9f"></span><span class="swatch" style="--c:#5f9b73"></span><span class="swatch" style="--c:#fffdfa"></span><span class="swatch" style="--c:#231f1a"></span></div>
+            <div class="tool-dock"><div class="tool on"><span class="tool-icon">●</span>画笔</div><div class="tool"><span class="tool-icon">⌫</span>橡皮</div><div class="tool"><span class="tool-icon">▦</span>网格</div><div class="tool"><span class="tool-icon">↶</span>撤销</div><div class="tool"><span class="tool-icon">◎</span>吸色</div><div class="tool"><span class="tool-icon">☰</span>更多</div></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">豆仓 / 库存 <em>材料可控</em></div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><div class="title-block"><h3>豆仓</h3><p>按品牌、色号和数量管理</p></div><button class="icon-btn">＋</button></div>
+            <div class="searchbar"><span class="glyph glyph-search"></span>搜索色号或名称</div>
+            <div class="seg"><span class="on">全部</span><span>不足</span><span>常用</span></div>
+            <div class="inventory-grid">
+              <div class="bead-card"><div class="bead-color" style="--c:#f7b733"></div><strong>Hama 03</strong><span>黄色 · 246 颗</span></div>
+              <div class="bead-card"><div class="bead-color" style="--c:#cf5c4d"></div><strong>Hama 22</strong><span>红色 · 42 颗</span></div>
+              <div class="bead-card"><div class="bead-color" style="--c:#5f9b73"></div><strong>Hama 10</strong><span>绿色 · 18 颗</span></div>
+              <div class="bead-card"><div class="bead-color" style="--c:#4c7f9f"></div><strong>Hama 31</strong><span>蓝色 · 96 颗</span></div>
+            </div>
+            <div class="notice" style="margin-top:12px">日落海岸挂件缺少红色 23 颗，绿色 12 颗。</div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">我的 / 个人中心 <em>轻社区感</em></div>
+          <div class="phone"><div class="screen soft">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><div class="title-block"><h3>我的</h3><p>创作、收藏和材料都在这里</p></div><button class="icon-btn">⚙</button></div>
+            <div class="profile-head"><div class="profile-row"><div class="avatar">P</div><div class="row-main"><strong>小豆匠 Chendong</strong><span>连续创作 6 天 · Lv.4</span></div></div><div class="level-bar"><i></i></div></div>
+            <div class="stats"><div class="stat"><strong>12</strong><span>作品</span></div><div class="stat"><strong>38</strong><span>收藏</span></div><div class="stat"><strong>2.1k</strong><span>积分</span></div></div>
+            <div class="list"><div class="row"><span class="option-mark">◆</span><div class="row-main"><strong>我的收藏</strong><span>保存的图案与配色</span></div></div><div class="row"><span class="option-mark">●</span><div class="row-main"><strong>豆仓库存</strong><span>检查项目缺色</span></div></div><div class="row"><span class="option-mark">◎</span><div class="row-main"><strong>积分中心</strong><span>兑换模板和色卡</span></div></div></div>
+            <div class="tabbar"><div class="tab"><span class="tab-icon"><i class="glyph glyph-home"></i></span>首页</div><div class="tab"><span class="fab"><i class="glyph glyph-plus"></i></span>创作</div><div class="tab on"><span class="tab-icon"><i class="glyph glyph-user"></i></span>我的</div></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">登录 <em>柔和引导</em></div>
+          <div class="phone"><div class="screen soft">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="work-hero" style="height:310px;border-radius:20px;border:1px solid var(--line)"><div class="bead-grid" style="--n:11;--s:8px;--g:3px;--pad:12px">
+              <i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#fffdfa"></i><i style="--c:#fffdfa"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i>
+            </div></div>
+            <div class="login-card"><h3>保存你的拼豆作品</h3><p>登录后可同步项目、库存和收藏，换设备也能继续编辑。</p><button class="btn primary block">微信一键登录</button><div class="actions"><button class="btn block">手机号</button><button class="btn block">稍后再说</button></div></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">积分中心 <em>任务清晰</em></div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><button class="icon-btn">‹</button><div class="title-block"><h3>积分中心</h3><p>当前 2,180 积分</p></div></div>
+            <div class="profile-head" style="background:#231f1a;color:#fff7ec"><div class="title-block"><h3>本周还可获得 420</h3><p>完成创作和分享任务</p></div><div class="actions"><button class="btn primary block">去兑换</button></div></div>
+            <div class="list" style="margin-top:14px"><div class="row"><span class="option-mark">＋</span><div class="row-main"><strong>完成一次编辑</strong><span>今日可做 1 次</span></div><span class="pill on">+80</span></div><div class="row"><span class="option-mark">◇</span><div class="row-main"><strong>上传原创图案</strong><span>通过审核后发放</span></div><span class="pill">+200</span></div><div class="row"><span class="option-mark">◎</span><div class="row-main"><strong>补全豆仓库存</strong><span>记录 10 个色号</span></div><span class="pill">+60</span></div></div>
+          </div></div>
+        </div>
+
+        <div class="phone-wrap">
+          <div class="caption">设置 / 资料 / 协议 <em>信息有层级</em></div>
+          <div class="phone"><div class="screen">
+            <div class="status"><span>09:41</span><span class="dots"><i></i><i></i><i></i></span></div>
+            <div class="top"><button class="icon-btn">‹</button><div class="title-block"><h3>设置</h3><p>账号、安全和偏好</p></div></div>
+            <div class="settings-list list">
+              <div class="row"><div class="row-main"><strong>个人资料</strong><span>头像、昵称、简介</span></div><span>›</span></div>
+              <div class="row"><div class="row-main"><strong>编辑器偏好</strong><span>网格、吸附、自动保存</span></div><span>›</span></div>
+              <div class="row"><div class="row-main"><strong>通知设置</strong><span>补货提醒和审核消息</span></div><span class="pill on">开启</span></div>
+              <div class="row"><div class="row-main"><strong>用户协议</strong><span>隐私与服务条款</span></div><span>›</span></div>
+            </div>
+            <div class="agreement" style="margin-top:14px"><h4>用户协议预览</h4><p>协议页不使用装饰性卡片堆叠，正文保持清晰行距，重要条款用小标题切分。</p><p>底部固定确认操作，避免用户滚动后丢失下一步。</p><p>资料编辑页使用同一套输入框、头像裁剪入口和保存状态。</p></div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>PC 工作台</h2>
+        <p>PC 端不复制移动端卡片流，而是强化长时间编辑、颜色管理、图层/步骤和项目批量管理。</p>
+      </div>
+      <div class="pcs">
+        <div class="pc-wrap">
+          <div class="caption">桌面编辑器 <em>画布最大化，工具贴边</em></div>
+          <div class="pc editor">
+            <aside class="pc-sidebar">
+              <div class="brand"><span class="brand-mark">P</span>Pin Studio</div>
+              <div class="pc-nav">
+                <div class="row on"><span class="tool-icon">●</span><div class="row-main"><strong>画笔</strong><span>快捷键 B</span></div></div>
+                <div class="row"><span class="tool-icon">⌫</span><div class="row-main"><strong>橡皮</strong><span>快捷键 E</span></div></div>
+                <div class="row"><span class="tool-icon">◎</span><div class="row-main"><strong>吸色</strong><span>快捷键 I</span></div></div>
+                <div class="row"><span class="tool-icon">▦</span><div class="row-main"><strong>网格</strong><span>显示坐标</span></div></div>
+              </div>
+            </aside>
+            <section class="pc-stage">
+              <div class="pc-toolbar"><div class="editor-title"><strong>日落海岸挂件</strong><span>30 × 30 · 已保存 · 68%</span></div><div class="pc-tools"><button class="icon-btn">↶</button><button class="icon-btn">↷</button><button class="btn primary">导出图纸</button></div></div>
+              <div class="big-canvas"><div class="canvas-board">
+                <i></i><i></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                <i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#f7b733"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#cf5c4d"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#4c7f9f"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i style="--c:#5f9b73"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div></div>
+            </section>
+            <aside class="pc-panel">
+              <h3 class="panel-title">颜色与用量</h3>
+              <div class="color-row"><span class="color-dot" style="--c:#f7b733"></span><div class="row-main"><strong>Hama 03 黄色</strong><span>预计 286 · 库存 246</span></div></div>
+              <div class="color-row"><span class="color-dot" style="--c:#cf5c4d"></span><div class="row-main"><strong>Hama 22 红色</strong><span>预计 65 · 缺 23</span></div></div>
+              <div class="color-row"><span class="color-dot" style="--c:#4c7f9f"></span><div class="row-main"><strong>Hama 31 蓝色</strong><span>预计 132 · 库存充足</span></div></div>
+              <h3 class="panel-title" style="margin-top:20px">步骤</h3>
+              <div class="layer-card"><div class="row-main"><strong>1. 外轮廓</strong><span>已完成</span></div></div>
+              <div class="layer-card" style="margin-top:8px"><div class="row-main"><strong>2. 主色填充</strong><span>进行中 68%</span></div></div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="pc-wrap">
+          <div class="caption">桌面项目管理 <em>批量筛选与状态扫读</em></div>
+          <div class="pc manager">
+            <aside class="pc-sidebar">
+              <div class="brand"><span class="brand-mark">P</span>Pin Studio</div>
+              <div class="pc-nav"><div class="row on"><div class="row-main"><strong>项目</strong><span>全部作品</span></div></div><div class="row"><div class="row-main"><strong>豆仓</strong><span>库存与缺色</span></div></div><div class="row"><div class="row-main"><strong>模板库</strong><span>收藏与导入</span></div></div><div class="row"><div class="row-main"><strong>设置</strong><span>账号和偏好</span></div></div></div>
+            </aside>
+            <section class="pc-main">
+              <div class="pc-main-head"><div class="title-block"><h3>项目管理</h3><p>筛选、继续编辑或导出制作清单</p></div><div class="actions"><button class="btn">导入</button><button class="btn primary">新建项目</button></div></div>
+              <div class="searchbar" style="margin-bottom:16px;background:#fff"><span class="glyph glyph-search"></span>搜索项目、颜色、标签</div>
+              <div class="project-grid">
+                <div class="work-card card"><div class="work-hero"></div><div class="work-card-body"><strong>日落海岸挂件</strong><div class="meta"><span>68% · 缺 35 颗</span><span>编辑</span></div></div></div>
+                <div class="work-card card"><div class="work-hero" style="background:#dbe9e6"></div><div class="work-card-body"><strong>薄荷猫咪头像</strong><div class="meta"><span>草稿 · 9 色</span><span>继续</span></div></div></div>
+                <div class="work-card card"><div class="work-hero" style="background:#f0d6d3"></div><div class="work-card-body"><strong>草莓蛋糕牌</strong><div class="meta"><span>完成 · 18 色</span><span>导出</span></div></div></div>
+                <div class="work-card card"><div class="work-hero" style="background:#e7dfef"></div><div class="work-card-body"><strong>紫色花砖</strong><div class="meta"><span>收藏模板</span><span>使用</span></div></div></div>
+                <div class="work-card card"><div class="work-hero" style="background:#e1edf2"></div><div class="work-card-body"><strong>蓝色小屋</strong><div class="meta"><span>42% · 16 色</span><span>编辑</span></div></div></div>
+                <div class="work-card card"><div class="work-hero" style="background:#efe0ca"></div><div class="work-card-body"><strong>复古杯垫套组</strong><div class="meta"><span>套图 · 4 张</span><span>管理</span></div></div></div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>组件与状态板</h2>
+        <p>把按钮、输入、卡片、空状态、提示、颜色和禁用规则做成可复用的前端实现基准。</p>
+      </div>
+      <div class="tokens">
+        <div class="component-panel">
+          <h3>核心颜色</h3>
+          <div class="swatch-grid">
+            <div class="token-swatch"><div class="token-color" style="--c:#f7f3ec"></div><div><strong>背景</strong><br>#f7f3ec</div></div>
+            <div class="token-swatch"><div class="token-color" style="--c:#fffdfa"></div><div><strong>卡片</strong><br>#fffdfa</div></div>
+            <div class="token-swatch"><div class="token-color" style="--c:#231f1a"></div><div><strong>墨色</strong><br>#231f1a</div></div>
+            <div class="token-swatch"><div class="token-color" style="--c:#f7b733"></div><div><strong>品牌黄</strong><br>#f7b733</div></div>
+            <div class="token-swatch"><div class="token-color" style="--c:#5f9b73"></div><div><strong>成功绿</strong><br>#5f9b73</div></div>
+            <div class="token-swatch"><div class="token-color" style="--c:#cf5c4d"></div><div><strong>警示红</strong><br>#cf5c4d</div></div>
+          </div>
+        </div>
+        <div class="component-grid">
+          <div class="component-panel"><h3>按钮</h3><div class="state-stack"><button class="btn primary">主操作</button><button class="btn">次操作</button><button class="btn dark">编辑器操作</button><button class="btn" style="opacity:.48">禁用状态</button></div></div>
+          <div class="component-panel"><h3>输入与筛选</h3><div class="state-stack"><div class="input">默认输入框</div><div class="input focus">聚焦输入框</div><div class="seg"><span class="on">全部</span><span>不足</span><span>常用</span></div><span class="pill on">已选标签</span></div></div>
+          <div class="component-panel"><h3>反馈状态</h3><div class="state-stack"><div class="toast">✓ 已自动保存</div><div class="notice">库存不足时使用黄色提示，不遮挡编辑画布。</div><div class="empty"><div><span class="option-mark" style="margin:auto">□</span><strong>还没有项目</strong><span>创建第一个拼豆画布</span></div></div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <h2>设计红线</h2>
+        <p>这些问题是当前版本显得“丑”和不专业的主要来源，后续落代码时需要逐项清掉。</p>
+      </div>
+      <div class="redlines">
+        <div class="redline"><strong>不要让深色块吞掉内容</strong><span>PC 首页卡片不能出现大面积黑底但标题、作者、状态不可读的情况。</span></div>
+        <div class="redline"><strong>不要混用圆角体系</strong><span>按钮、卡片、弹窗、底部栏要固定半径，不随手写 6、10、20、28。</span></div>
+        <div class="redline"><strong>不要把功能入口做成杂乱按钮堆</strong><span>创作入口必须按空白、图片、图纸三种任务组织，并解释下一步。</span></div>
+        <div class="redline"><strong>不要只用单一暖色</strong><span>温暖不是全屏米黄，作品、色卡、状态色需要形成真实材料层次。</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

@@ -16,7 +16,7 @@
           :class="['source-tab', activeSource === tab.id ? 'active' : '']"
           @click="activeSource = tab.id"
         >
-          <text class="tab-icon">{{ tab.icon }}</text>
+          <image class="tab-icon" :src="tab.icon" mode="aspectFit" />
           <text class="tab-label">{{ tab.label }}</text>
         </view>
       </view>
@@ -28,7 +28,7 @@
 
       <!-- 搜索 -->
       <view class="search-bar">
-        <text class="search-icon">🔍</text>
+        <image class="search-icon" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
         <input
           type="text"
           v-model="searchKeyword"
@@ -79,7 +79,7 @@
       <!-- 上传区域 -->
       <view class="upload-area" @click="chooseFile">
         <view class="upload-icon">
-          <text class="icon-text">📁</text>
+          <image class="icon-image" src="/static/assets/v015/icons/blueprint-import-active.png" mode="aspectFit" />
         </view>
         <text class="upload-text">点击选择文件</text>
         <text class="upload-hint">或拖拽文件到此处</text>
@@ -94,7 +94,7 @@
           class="recent-item"
           @click="loadRecentImport(item)"
         >
-          <text class="recent-icon">📄</text>
+          <image class="recent-icon" src="/static/assets/v015/icons/blueprint-import-muted.png" mode="aspectFit" />
           <view class="recent-info">
             <text class="recent-name">{{ item.name }}</text>
             <text class="recent-date">{{ formatDate(item.importedAt) }}</text>
@@ -166,9 +166,9 @@ import { ref, computed, onMounted } from 'vue'
 // ==================== 常量定义 ====================
 // 来源选项
 const sourceTabs = [
-  { id: 'local', label: '我的项目', icon: '📁' },
-  { id: 'file', label: '本地文件', icon: '📄' },
-  { id: 'qrcode', label: '扫码导入', icon: '📷' },
+  { id: 'local', label: '我的项目', icon: '/static/assets/v015/icons/project-muted.png' },
+  { id: 'file', label: '本地文件', icon: '/static/assets/v015/icons/blueprint-import-muted.png' },
+  { id: 'qrcode', label: '扫码导入', icon: '/static/assets/v015/icons/image-import-muted.png' },
 ]
 
 // ==================== 状态定义 ====================
@@ -430,16 +430,17 @@ const importBlueprint = () => {
 
 /* 页面标题 */
 .page-header {
-  padding: 32rpx;
+  margin: 24rpx;
+  padding: 34rpx 32rpx;
   background-color: var(--color-bg-panel);
-  margin-bottom: 24rpx;
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border: 2rpx solid var(--color-border);
+  border-radius: 28rpx;
+  box-shadow: var(--shadow-md);
 }
 
 .page-title {
-  font-size: 36rpx;
-  font-weight: 600;
+  font-size: 42rpx;
+  font-weight: 800;
   color: var(--color-text-primary);
   display: block;
 }
@@ -452,10 +453,11 @@ const importBlueprint = () => {
 
 /* 来源选择 */
 .source-section {
-  padding: 32rpx;
+  margin: 0 24rpx 24rpx;
+  padding: 28rpx;
   background-color: var(--color-bg-panel);
-  margin-bottom: 24rpx;
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   box-shadow: var(--shadow-md);
 }
 
@@ -478,9 +480,9 @@ const importBlueprint = () => {
   flex-direction: column;
   align-items: center;
   padding: 24rpx;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-lg);
-  border: 4rpx solid transparent;
+  background-color: var(--color-bg-panel);
+  border-radius: 22rpx;
+  border: 2rpx solid var(--color-border);
 }
 
 .source-tab.active {
@@ -489,8 +491,10 @@ const importBlueprint = () => {
 }
 
 .tab-icon {
-  font-size: 48rpx;
+  width: 48rpx;
+  height: 48rpx;
   margin-bottom: 8rpx;
+  display: block;
 }
 
 .tab-label {
@@ -505,25 +509,29 @@ const importBlueprint = () => {
 
 /* 本地项目 */
 .local-section {
-  padding: 32rpx;
+  margin: 0 24rpx 24rpx;
+  padding: 28rpx;
   background-color: var(--color-bg-panel);
-  margin-bottom: 24rpx;
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   box-shadow: var(--shadow-md);
 }
 
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: var(--color-bg-page);
-  border-radius: 32rpx;
+  background-color: var(--color-bg-panel);
+  border: 2rpx solid var(--color-border);
+  border-radius: 18rpx;
   padding: 16rpx 24rpx;
   margin-bottom: 24rpx;
 }
 
 .search-icon {
-  font-size: 28rpx;
+  width: 28rpx;
+  height: 28rpx;
   margin-right: 12rpx;
+  display: block;
 }
 
 .search-input {
@@ -582,10 +590,11 @@ const importBlueprint = () => {
 
 /* 文件导入 */
 .file-section {
-  padding: 32rpx;
+  margin: 0 24rpx 24rpx;
+  padding: 28rpx;
   background-color: var(--color-bg-panel);
-  margin-bottom: 24rpx;
-  border-radius: var(--radius-lg);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
   box-shadow: var(--shadow-md);
 }
 
@@ -618,7 +627,7 @@ const importBlueprint = () => {
 .upload-area {
   height: 300rpx;
   background-color: var(--color-bg-panel);
-  border-radius: var(--radius-lg);
+  border-radius: 28rpx;
   border: 4rpx dashed var(--color-border);
   display: flex;
   flex-direction: column;
@@ -629,17 +638,16 @@ const importBlueprint = () => {
 .upload-icon {
   width: 100rpx;
   height: 100rpx;
-  background-color: var(--color-bg-page);
-  border-radius: 50%;
+  background-color: var(--color-primary-light);
+  border-radius: 26rpx;
+  border: 2rpx solid var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 20rpx;
 }
 
-.icon-text {
-  font-size: 56rpx;
-}
+.icon-image { width: 56rpx; height: 56rpx; display: block; }
 
 .upload-text {
   font-size: 30rpx;
@@ -668,8 +676,10 @@ const importBlueprint = () => {
 }
 
 .recent-icon {
-  font-size: 40rpx;
+  width: 40rpx;
+  height: 40rpx;
   margin-right: 16rpx;
+  display: block;
 }
 
 .recent-info {

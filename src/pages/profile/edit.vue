@@ -20,7 +20,7 @@
           <view class="avatar-right">
             <image
               class="avatar-preview"
-              :src="formData.avatar || '/static/default-avatar.png'"
+              :src="formData.avatar || '/static/assets/v015/default-avatar.png'"
               mode="aspectFill"
             />
           </view>
@@ -261,6 +261,7 @@ const goBack = () => {
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 2rpx solid var(--color-border);
 }
 
 .nav-content {
@@ -280,7 +281,7 @@ const goBack = () => {
 }
 
 .back-icon {
-  font-size: 40rpx;
+  font-size: 36rpx;
   color: var(--color-text-primary);
 }
 
@@ -297,12 +298,17 @@ const goBack = () => {
 /* 表单滚动区域 */
 .form-scroll {
   flex: 1;
-  padding: 24rpx 0;
+  padding: 24rpx;
+  box-sizing: border-box;
 }
 
 .form-section {
   background-color: var(--color-bg-panel);
   margin-bottom: 24rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
 }
 
 /* 表单项 */
@@ -340,7 +346,9 @@ const goBack = () => {
   width: 100rpx;
   height: 100rpx;
   border-radius: 50%;
-  background-color: var(--color-divider);
+  background-color: var(--color-primary-soft);
+  border: 4rpx solid var(--color-bg-panel);
+  box-shadow: var(--shadow-sm);
 }
 
 /* 输入框 */
@@ -377,14 +385,24 @@ const goBack = () => {
 
 .gender-options {
   display: flex;
-  gap: 32rpx;
+  gap: 12rpx;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .gender-option {
   display: flex;
   align-items: center;
   gap: 8rpx;
-  padding: 8rpx 0;
+  padding: 12rpx 18rpx;
+  border-radius: 999rpx;
+  background-color: var(--color-bg-page);
+  border: 2rpx solid transparent;
+}
+
+.gender-option.active {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
 }
 
 .gender-radio {
@@ -438,7 +456,8 @@ const goBack = () => {
 .save-section {
   padding: 24rpx 32rpx;
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background-color: var(--color-bg-panel);
+  background-color: rgba(255,253,250,.96);
+  border-top: 2rpx solid var(--color-border);
 }
 
 .save-btn {
@@ -447,7 +466,7 @@ const goBack = () => {
   line-height: 88rpx;
   text-align: center;
   background-color: var(--color-primary);
-  color: var(--color-bg-panel);
+  color: var(--color-text-primary);
   font-size: 32rpx;
   font-weight: 600;
   border-radius: var(--radius-lg);
@@ -455,7 +474,8 @@ const goBack = () => {
 }
 
 .save-btn.disabled {
-  background-color: var(--color-text-disabled);
+  background-color: var(--color-bg-disabled);
+  color: var(--color-text-disabled);
 }
 
 .save-btn::after {

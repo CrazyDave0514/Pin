@@ -1,12 +1,20 @@
 <template>
   <!-- 积分中心页面 -->
   <view class="points-page">
+    <view class="page-nav">
+      <view class="nav-back" @click="goBack">
+        <text class="back-icon">‹</text>
+      </view>
+      <text class="nav-title">积分中心</text>
+      <view class="nav-placeholder"></view>
+    </view>
+
     <!-- 积分卡片 -->
     <view class="points-card">
       <view class="points-header">
         <text class="points-label">我的积分</text>
         <view class="points-value">
-          <text class="points-icon">💎</text>
+          <image class="points-icon" src="/static/assets/v015/icons/points-active.png" mode="aspectFit" />
           <text class="points-number">{{ userPoints }}</text>
         </view>
       </view>
@@ -90,7 +98,8 @@
                 <text class="earn-desc">{{ task.desc }}</text>
               </view>
               <view class="earn-reward">
-                <text class="reward-text">+{{ task.points }}💎</text>
+                <text class="reward-text">+{{ task.points }}</text>
+                <image class="reward-icon" src="/static/assets/v015/icons/points-active.png" mode="aspectFit" />
               </view>
             </view>
           </view>
@@ -200,6 +209,10 @@ const formatTime = (timestamp: number): string => {
 onMounted(() => {
   loadPointsData()
 })
+
+const goBack = () => {
+  uni.navigateBack()
+}
 </script>
 
 <style scoped>
@@ -207,6 +220,39 @@ onMounted(() => {
   min-height: 100vh;
   background: var(--color-bg-page);
   padding-bottom: 40rpx;
+}
+
+.page-nav {
+  height: 88rpx;
+  padding: 0 24rpx;
+  background-color: var(--color-bg-panel);
+  border-bottom: 1rpx solid var(--color-divider);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+}
+
+.nav-back,
+.nav-placeholder {
+  width: 80rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+}
+
+.back-icon {
+  font-size: 42rpx;
+  color: var(--color-text-primary);
+}
+
+.nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
 }
 
 /* 积分卡片 */
@@ -237,7 +283,9 @@ onMounted(() => {
 }
 
 .points-icon {
-  font-size: 48rpx;
+  width: 52rpx;
+  height: 52rpx;
+  display: block;
 }
 
 .points-number {
@@ -465,10 +513,22 @@ onMounted(() => {
   color: var(--color-text-tertiary);
 }
 
+.earn-reward {
+  display: flex;
+  align-items: center;
+}
+
 .reward-text {
   font-size: 28rpx;
   color: var(--color-success);
   font-weight: 600;
+}
+
+.reward-icon {
+  width: 28rpx;
+  height: 28rpx;
+  margin-left: 6rpx;
+  display: block;
 }
 
 .modal-footer {

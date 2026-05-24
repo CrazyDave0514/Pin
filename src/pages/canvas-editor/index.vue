@@ -3,15 +3,15 @@
     <!-- ==================== 顶部导航 ==================== -->
     <view class="editor-nav">
       <view class="nav-left" @tap="goBack">
-        <text class="nav-back-icon">←</text>
+        <image class="nav-back-icon" src="/static/assets/v015/icons/back.png" mode="aspectFit" />
       </view>
       <text class="nav-title">{{ isEditMode ? '编辑画布' : '画布编辑' }}</text>
       <view class="nav-right">
         <view class="nav-btn" @tap="saveCanvas">
-          <text class="nav-btn-text">保存图纸</text>
+          <text class="nav-btn-text">保存</text>
         </view>
         <view class="nav-btn nav-btn-export" @tap="handleExport">
-          <text class="nav-btn-text">导出图纸</text>
+          <text class="nav-btn-text">导出</text>
         </view>
       </view>
     </view>
@@ -23,10 +23,15 @@
         <view
           v-for="tool in sideTools"
           :key="tool.id"
-          :class="['sidebar-tool-item', activeTool === tool.id ? 'active' : '']"
+          :class="['sidebar-tool-item', (activeTool === tool.id || (tool.id === 'color' && showColorPanel)) ? 'active' : '']"
           @click="onToolClick(tool.id)"
         >
-          <text class="sidebar-tool-icon">{{ tool.icon }}</text>
+          <image
+            class="sidebar-tool-icon"
+            :src="(activeTool === tool.id || (tool.id === 'color' && showColorPanel)) ? tool.activeIcon : tool.icon"
+            mode="aspectFit"
+          />
+          <text class="sidebar-tool-label">{{ tool.label }}</text>
           <!-- 颜色工具下方显示当前颜色小圆点 -->
           <view
             v-if="tool.id === 'color'"
@@ -156,25 +161,22 @@
     <view class="bottom-shortcuts">
       <view class="shortcuts-left">
         <view
-          :class="['shortcut-btn', historyIndex > 0 ? 'active' : 'disabled']"
+          :class="['shortcut-btn', 'icon-only', historyIndex > 0 ? 'active' : 'disabled']"
           @click="undo"
         >
-          <text class="shortcut-icon">↩️</text>
-          <text class="shortcut-label">撤销</text>
+          <image class="shortcut-icon" src="/static/assets/v015/icons/undo-muted.png" mode="aspectFit" />
         </view>
         <view
-          :class="['shortcut-btn', historyIndex < history.length - 1 ? 'active' : 'disabled']"
+          :class="['shortcut-btn', 'icon-only', historyIndex < history.length - 1 ? 'active' : 'disabled']"
           @click="redo"
         >
-          <text class="shortcut-icon">↪️</text>
-          <text class="shortcut-label">重做</text>
+          <image class="shortcut-icon" src="/static/assets/v015/icons/redo-muted.png" mode="aspectFit" />
         </view>
         <view
-          :class="['shortcut-btn', canvasData.beads.length > 0 ? 'active' : 'disabled']"
+          :class="['shortcut-btn', 'icon-only', canvasData.beads.length > 0 ? 'active' : 'disabled']"
           @click="clearCanvas"
         >
-          <text class="shortcut-icon">🗑️</text>
-          <text class="shortcut-label">清空</text>
+          <image class="shortcut-icon" src="/static/assets/v015/icons/trash-muted.png" mode="aspectFit" />
         </view>
       </view>
       <view class="shortcuts-right">
@@ -182,33 +184,39 @@
           :class="['shortcut-btn', canvasData.showGrid ? 'active' : '']"
           @click="toggleGrid"
         >
-          <text class="shortcut-icon">📐</text>
+          <image class="shortcut-icon" :src="canvasData.showGrid ? '/static/assets/v015/icons/grid-active.png' : '/static/assets/v015/icons/grid-muted.png'" mode="aspectFit" />
           <text class="shortcut-label">网格</text>
         </view>
         <view
           :class="['shortcut-btn', showColorCode ? 'active' : '']"
           @click="showColorCode = !showColorCode"
         >
-          <text class="shortcut-icon">🏷️</text>
+          <image class="shortcut-icon" :src="showColorCode ? '/static/assets/v015/icons/tag-active.png' : '/static/assets/v015/icons/tag-muted.png'" mode="aspectFit" />
           <text class="shortcut-label">色号</text>
         </view>
       </view>
     </view>
 
-    <!-- ==================== 豆子统计区（常驻） ==================== -->
+    <!-- ==================== 豆子统计区（独立信息行） ==================== -->
     <view class="bead-stats-bar">
-      <text class="stats-summary">{{ beadStats.totalTypes }}种 共{{ beadStats.totalCount.toLocaleString() }}颗</text>
-      <scroll-view class="stats-scroll" scroll-x>
+      <view class="stats-total">
+        <text class="stats-main">{{ beadStats.totalTypes }} 种</text>
+        <text class="stats-sub">豆子 {{ beadStats.totalCount.toLocaleString() }}</text>
+      </view>
+      <view class="stats-divider"></view>
+      <scroll-view class="stats-scroll" scroll-x :show-scrollbar="false">
         <view class="stats-list">
           <view
             v-for="item in beadStats.colorList"
             :key="item.color"
             class="stats-item"
           >
-            <view class="stats-swatch" :style="{ backgroundColor: item.color }"></view>
-            <text class="stats-code">{{ item.code }}</text>
-            <text class="stats-count">x{{ item.count }}</text>
+            <view class="stats-chip" :style="{ backgroundColor: item.color }">
+              <text class="stats-chip-code" :style="{ color: getTextColor(item.color) }">{{ item.code }}</text>
+              <text class="stats-chip-count" :style="{ color: getTextColor(item.color) }">{{ item.count }}</text>
+            </view>
           </view>
+          <text v-if="beadStats.colorList.length === 0" class="stats-empty">暂无颜色用量</text>
         </view>
       </scroll-view>
     </view>
@@ -243,7 +251,7 @@
           <view
             v-for="opt in sizeOptions"
             :key="opt.label"
-            :class="['size-option', canvasData.width === opt.w && canvasData.height === opt.h ? 'active' : '']"
+            :class="['size-option', isSizeOptionActive(opt) ? 'active' : '']"
             @click="onSizeOptionClick(opt)"
           >
             <text class="size-option-text">{{ opt.label }}</text>
@@ -255,15 +263,15 @@
       <view v-if="activeTab === 'edit'" class="tab-panel-content">
         <view class="edit-options">
           <view class="edit-option" @click="flipHorizontal">
-            <text class="edit-option-icon">↔️</text>
+            <image class="edit-option-icon" src="/static/assets/v015/icons/flip-horizontal.png" mode="aspectFit" />
             <text class="edit-option-text">水平翻转</text>
           </view>
           <view class="edit-option" @click="flipVertical">
-            <text class="edit-option-icon">↕️</text>
+            <image class="edit-option-icon" src="/static/assets/v015/icons/flip-vertical.png" mode="aspectFit" />
             <text class="edit-option-text">垂直翻转</text>
           </view>
           <view class="edit-option" @click="rotate90">
-            <text class="edit-option-icon">🔄</text>
+            <image class="edit-option-icon" src="/static/assets/v015/icons/rotate.png" mode="aspectFit" />
             <text class="edit-option-text">旋转90°</text>
           </view>
         </view>
@@ -301,7 +309,7 @@
           <text class="color-panel-close" @click="showColorPanel = false">✕</text>
         </view>
         <!-- 系列筛选栏 -->
-        <scroll-view class="color-series-scroll" scroll-x>
+        <scroll-view class="color-series-scroll" scroll-x :show-scrollbar="false">
           <view class="color-series-list">
             <view
               v-for="s in colorSeries"
@@ -314,7 +322,7 @@
           </view>
         </scroll-view>
         <!-- 色卡网格 -->
-        <scroll-view class="color-card-scroll" scroll-y>
+        <scroll-view class="color-card-scroll" scroll-y :show-scrollbar="false">
           <view class="color-card-grid">
             <view
               v-for="c in filteredMardColors"
@@ -399,6 +407,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance, toRaw, onUnmounted } from 'vue'
+import { onLoad } from '@dcloudio/uni-app'
 import { consumeBlueprintData } from '@/utils/blueprint-transfer'
 import { mardColorPalette, getMardCodeByHex } from '@/utils/mard-colors'
 
@@ -438,6 +447,7 @@ interface ToolItem {
   id: string
   label: string
   icon: string
+  activeIcon: string
 }
 
 /** 尺寸选项结构 */
@@ -477,18 +487,17 @@ const SCALE_STEP = 0.25
 
 /** 侧边工具列表 */
 const sideTools: ToolItem[] = [
-  { id: 'pan', label: '拖动', icon: '✋' },
-  { id: 'draw', label: '画笔', icon: '✏️' },
-  { id: 'picker', label: '吸色', icon: '💉' },
-  { id: 'fill', label: '填充', icon: '🪣' },
-  { id: 'erase', label: '擦除', icon: '🧹' },
-  { id: 'color', label: '颜色', icon: '🎨' },
+  { id: 'pan', label: '拖动', icon: '/static/assets/v015/icons/move-muted.png', activeIcon: '/static/assets/v015/icons/move-active.png' },
+  { id: 'draw', label: '画笔', icon: '/static/assets/v015/icons/brush-muted.png', activeIcon: '/static/assets/v015/icons/brush-active.png' },
+  { id: 'picker', label: '吸色', icon: '/static/assets/v015/icons/eyedropper-muted.png', activeIcon: '/static/assets/v015/icons/eyedropper-active.png' },
+  { id: 'fill', label: '填充', icon: '/static/assets/v015/icons/fill-muted.png', activeIcon: '/static/assets/v015/icons/fill-active.png' },
+  { id: 'erase', label: '擦除', icon: '/static/assets/v015/icons/eraser-muted.png', activeIcon: '/static/assets/v015/icons/eraser-active.png' },
+  { id: 'color', label: '色卡', icon: '/static/assets/v015/icons/palette-muted.png', activeIcon: '/static/assets/v015/icons/palette-active.png' },
 ]
 
 /** 预设尺寸选项 */
 const sizeOptions: SizeOption[] = [
   { label: '自定义', w: 0, h: 0, custom: true },
-  { label: '29 x 29', w: 29, h: 29 },
   { label: '52 x 52', w: 52, h: 52 },
   { label: '72 x 72', w: 72, h: 72 },
   { label: '104 x 104', w: 104, h: 104 },
@@ -582,6 +591,9 @@ const showCustomSizeModal = ref(false)
 const customWidth = ref('29')
 const customHeight = ref('29')
 
+/** 页面路由参数初始化标记 */
+let hasInitializedFromRoute = false
+
 /** 豆子样式：方豆/圆豆 */
 const beadStyle = ref<'square' | 'round'>('square')
 
@@ -664,10 +676,17 @@ const beadStats = computed<BeadStats>(() => {
 
 // ==================== 生命周期 ====================
 
-onMounted(() => {
-  const pages = getCurrentPages()
-  const currentPage = pages[pages.length - 1] as any
-  const options = currentPage?.options || {}
+onLoad((options) => {
+  initializeFromRouteOptions(options || {})
+})
+
+/**
+ * 根据路由参数初始化编辑器数据。
+ * H5 下 getCurrentPages() 的 options 在 onMounted 时可能尚未稳定，因此优先使用 uni-app onLoad 参数。
+ */
+const initializeFromRouteOptions = (options: Record<string, any>) => {
+  if (hasInitializedFromRoute) return
+  hasInitializedFromRoute = true
 
   if (options.mode === 'edit' && options.projectId) {
     /** 编辑已有项目：从本地存储加载 */
@@ -726,9 +745,19 @@ onMounted(() => {
     }
   }
 
+  syncCustomSizeFields()
+}
+
+onMounted(() => {
+  if (!hasInitializedFromRoute) {
+    const pages = getCurrentPages()
+    const currentPage = pages[pages.length - 1] as any
+    initializeFromRouteOptions(currentPage?.options || {})
+  }
+
   /** 保存初始状态到历史 */
   nextTick(() => {
-    if (options.mode === 'edit' && options.projectId) {
+    if (isEditMode.value) {
       history.value = []
       historyIndex.value = -1
     }
@@ -1353,13 +1382,16 @@ const redo = () => {
 const clearCanvas = () => {
   if (canvasData.beads.length === 0) return
   uni.showModal({
-    title: '确认清空',
-    content: '确定要清空画布吗？此操作不可撤销。',
+    title: '确认全删除',
+    content: '确定要删除全部拼豆内容吗？此操作不可撤销。',
     confirmColor: '#FF3B30',
     success: (res) => {
       if (res.confirm) {
         canvasData.beads.splice(0, canvasData.beads.length)
-        saveHistory()
+        history.value = []
+        historyIndex.value = -1
+        selectedCell.value = null
+        hasUnsavedChanges.value = true
       }
     },
   })
@@ -1483,17 +1515,37 @@ const onSizeOptionClick = (opt: SizeOption) => {
   if (canvasData.beads.length > 0) {
     uni.showModal({
       title: '确认切换尺寸',
-      content: `切换为 ${opt.w} x ${opt.h} 后，超出范围的拼豆将被删除，是否继续？`,
+      content: '切换尺寸将清空当前画布内容，确定继续吗？',
       confirmColor: '#FF3B30',
       success: (res) => {
         if (res.confirm) {
-          resizeCanvas(opt.w, opt.h)
+          resizeCanvas(opt.w, opt.h, true)
         }
       },
     })
   } else {
     resizeCanvas(opt.w, opt.h)
   }
+}
+
+/**
+ * 判断尺寸按钮是否为当前选中状态。
+ * 非预设尺寸归为“自定义”，避免从 30x30 等入口进入时错误高亮 29x29。
+ */
+const isSizeOptionActive = (opt: SizeOption) => {
+  if (opt.custom) {
+    return !sizeOptions.some((item) => !item.custom && item.w === canvasData.width && item.h === canvasData.height)
+  }
+
+  return canvasData.width === opt.w && canvasData.height === opt.h
+}
+
+/**
+ * 同步自定义尺寸输入框。
+ */
+const syncCustomSizeFields = () => {
+  customWidth.value = String(canvasData.width)
+  customHeight.value = String(canvasData.height)
 }
 
 /**
@@ -1514,11 +1566,11 @@ const confirmCustomSize = () => {
   if (canvasData.beads.length > 0 && (w !== canvasData.width || h !== canvasData.height)) {
     uni.showModal({
       title: '确认切换尺寸',
-      content: `切换为 ${w} x ${h} 后，超出范围的拼豆将被删除，是否继续？`,
+      content: '切换尺寸将清空当前画布内容，确定继续吗？',
       confirmColor: '#FF3B30',
       success: (res) => {
         if (res.confirm) {
-          resizeCanvas(w, h)
+          resizeCanvas(w, h, true)
         }
       },
     })
@@ -1529,18 +1581,24 @@ const confirmCustomSize = () => {
 
 /**
  * 调整画布尺寸
- * - 删除超出新尺寸范围的拼豆
+ * - 按 V0.1.4 需求，已有内容时确认后清空画布再切换尺寸
  * @param w - 新宽度
  * @param h - 新高度
  */
-const resizeCanvas = (w: number, h: number) => {
+const resizeCanvas = (w: number, h: number, clearContent = false) => {
   canvasData.width = w
   canvasData.height = h
+  syncCustomSizeFields()
 
-  /** 删除超出范围的拼豆 */
-  canvasData.beads = canvasData.beads.filter(
-    (bead) => bead.x >= 0 && bead.x < w && bead.y >= 0 && bead.y < h
-  )
+  if (clearContent) {
+    canvasData.beads.splice(0, canvasData.beads.length)
+    selectedCell.value = null
+  } else {
+    /** 无内容或兼容路径：保留范围内拼豆 */
+    canvasData.beads = canvasData.beads.filter(
+      (bead) => bead.x >= 0 && bead.x < w && bead.y >= 0 && bead.y < h
+    )
+  }
 
   saveHistory()
   resetView()
@@ -2041,7 +2099,7 @@ const exportBlueprintImage = (projectName: string) => {
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: var(--color-bg-page, #F5F5F5);
+  background-color: #FBFAF7;
   overflow: hidden;
 }
 
@@ -2054,20 +2112,20 @@ const exportBlueprintImage = (projectName: string) => {
 .editor-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   height: calc(88rpx + var(--status-bar-height, 44px));
-  padding: 0 24rpx;
+  padding: 0 18rpx;
   padding-top: calc(var(--status-bar-height, 44px) + 8px);
   padding-bottom: 8px;
   background-color: var(--color-bg-panel, #FFFFFF);
-  border-bottom: 2rpx solid var(--color-border, #E8E8E8);
+  border-bottom: 1px solid var(--color-border-light, #E8E8E8);
   position: relative;
   z-index: 100;
   flex-shrink: 0;
 }
 
 .nav-left {
-  width: 80rpx;
+  width: 60rpx;
   min-height: 44px;
   display: flex;
   align-items: center;
@@ -2075,45 +2133,57 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .nav-back-icon {
-  font-size: 40rpx;
-  color: var(--color-text-primary, #333333);
+  width: 40rpx;
+  height: 40rpx;
   padding: 8rpx;
+  display: block;
 }
 
 .nav-title {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   font-size: 32rpx;
   font-weight: 600;
   color: var(--color-text-primary, #333333);
+  max-width: 220rpx;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .nav-right {
   display: flex;
   align-items: center;
-  gap: 12rpx;
+  gap: 8rpx;
+  margin-left: auto;
+  position: relative;
+  z-index: 1;
 }
 
 .nav-btn {
-  padding: 8rpx 20rpx;
-  border-radius: 12rpx;
-  background-color: var(--color-bg-page, #F5F5F5);
-  min-height: 44px;
+  padding: 6rpx 14rpx;
+  border-radius: 14rpx;
+  background-color: var(--color-bg-panel, #F5F5F5);
+  border: 2rpx solid var(--color-text-primary);
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .nav-btn-export {
-  background-color: #F5A623;
+  background-color: var(--color-primary);
+  border-color: var(--color-text-primary);
 }
 
 .nav-btn-text {
-  font-size: 26rpx;
+  font-size: 23rpx;
   color: var(--color-text-primary, #333333);
   font-weight: 500;
 }
 
 .nav-btn-export .nav-btn-text {
-  color: #FFFFFF;
+  color: var(--color-text-primary);
 }
 
 /* ==================== 主体区域（侧边栏 + 画布） ==================== */
@@ -2133,7 +2203,8 @@ const exportBlueprintImage = (projectName: string) => {
 .sidebar-tools {
   width: 56px;
   background-color: var(--color-bg-panel, #FFFFFF);
-  border-right: 1px solid var(--color-border, #E8E8E8);
+  border: 2px solid var(--color-text-primary);
+  border-radius: 999px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2141,15 +2212,19 @@ const exportBlueprintImage = (projectName: string) => {
   gap: 4px;
   flex-shrink: 0;
   z-index: 10;
+  margin: 14px 0 14px 8px;
+  box-shadow: var(--shadow-lg);
 }
 
 .sidebar-tool-item {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
+  width: 46px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   position: relative;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -2160,23 +2235,31 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .sidebar-tool-item.active {
-  background-color: var(--color-primary-light, #FFF5E0);
+  background-color: var(--color-primary, #FFF5E0);
+  box-shadow: 0 10px 22px rgba(247, 183, 51, .24);
 }
 
-.sidebar-tool-item.active .sidebar-tool-icon {
-  filter: none;
+.sidebar-tool-item.active .sidebar-tool-label {
+  color: var(--color-text-primary, #231F1A);
+  font-weight: 600;
 }
 
 .sidebar-tool-icon {
-  font-size: 22px;
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.sidebar-tool-label {
+  font-size: 9px;
   line-height: 1;
+  color: var(--color-text-tertiary, #999999);
 }
 
 .sidebar-color-dot {
   position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 5px;
+  top: 6px;
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -2192,6 +2275,10 @@ const exportBlueprintImage = (projectName: string) => {
   align-items: center;
   justify-content: center;
   position: relative;
+  background:
+    radial-gradient(circle, rgba(35,31,26,.08) 1px, transparent 1px),
+    #FBFAF7;
+  background-size: 48rpx 48rpx;
 }
 
 .canvas-transform-wrapper {
@@ -2334,9 +2421,9 @@ const exportBlueprintImage = (projectName: string) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background-color: var(--color-bg-panel, #FFFFFF);
-  border-top: 1px solid var(--color-border, #E8E8E8);
+  padding: 10px 14px;
+  background-color: rgba(255, 253, 250, .96);
+  border-top: 1px solid var(--color-border-light, #E8E8E8);
   flex-shrink: 0;
 }
 
@@ -2344,18 +2431,29 @@ const exportBlueprintImage = (projectName: string) => {
 .shortcuts-right {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .shortcut-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  border-radius: 8px;
-  background-color: var(--color-bg-page, #F5F5F5);
+  justify-content: center;
+  gap: 5px;
+  min-width: 58px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background-color: var(--color-bg-panel, #F5F5F5);
+  border: 1px solid var(--color-border-light);
+  box-shadow: var(--shadow-sm);
   cursor: pointer;
   transition: all 0.15s;
+}
+
+.shortcut-btn.icon-only {
+  width: 46px;
+  min-width: 46px;
+  padding: 8px;
 }
 
 .shortcut-btn.active {
@@ -2367,13 +2465,19 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .shortcut-icon {
-  font-size: 16px;
-  line-height: 1;
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .shortcut-label {
   font-size: 12px;
   color: var(--color-text-secondary, #666666);
+}
+
+.shortcut-btn.active .shortcut-label {
+  color: var(--color-primary, #CE7B1D);
+  font-weight: 600;
 }
 
 /* ==================== 豆子统计区 ====================
@@ -2383,18 +2487,41 @@ const exportBlueprintImage = (projectName: string) => {
 .bead-stats-bar {
   display: flex;
   align-items: center;
-  padding: 6px 16px;
-  background-color: var(--color-bg-panel, #FFFFFF);
+  padding: 8px 16px;
+  background-color: rgba(255,253,250,.96);
   border-top: 1px solid var(--color-border, #E8E8E8);
   flex-shrink: 0;
-  gap: 12px;
+  gap: 8px;
 }
 
-.stats-summary {
-  font-size: 12px;
-  color: var(--color-text-secondary, #666666);
-  white-space: nowrap;
+.stats-total {
+  min-width: 54px;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.stats-main {
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--color-text-primary, #333333);
+}
+
+.stats-sub {
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--color-text-tertiary, #999999);
+}
+
+.stats-divider {
+  width: 1px;
+  height: 28px;
+  background-color: var(--color-border-light, #F0F0F0);
+  flex-shrink: 0;
+  margin: 0 2px;
 }
 
 .stats-scroll {
@@ -2404,15 +2531,40 @@ const exportBlueprintImage = (projectName: string) => {
 
 .stats-list {
   display: inline-flex;
-  gap: 8px;
+  gap: 10px;
   padding: 2px 0;
 }
 
 .stats-item {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   flex-shrink: 0;
+}
+
+.stats-chip {
+  min-width: 46px;
+  height: 46px;
+  padding: 5px 8px;
+  border-radius: 12px;
+  border: 3px solid var(--color-primary, #F5A623);
+  box-shadow: 0 6px 14px rgba(245, 166, 35, 0.18);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.stats-chip-code {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.stats-chip-count {
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1;
+  font-weight: 800;
 }
 
 .stats-swatch {
@@ -2433,6 +2585,11 @@ const exportBlueprintImage = (projectName: string) => {
   color: var(--color-text-tertiary, #999999);
 }
 
+.stats-empty {
+  font-size: 12px;
+  color: var(--color-text-tertiary, #999999);
+}
+
 /* ==================== Tab栏 ====================
  * 背景色：var(--color-bg-panel) - 面板背景
  * 边框色：var(--color-border) - 分隔线
@@ -2441,8 +2598,12 @@ const exportBlueprintImage = (projectName: string) => {
  */
 .tab-bar {
   display: flex;
+  margin: 0 20px 12px;
+  padding: 6px;
   background-color: var(--color-bg-panel, #FFFFFF);
-  border-top: 1px solid var(--color-border, #E8E8E8);
+  border: 3px solid var(--color-text-primary);
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
   flex-shrink: 0;
 }
 
@@ -2452,30 +2613,19 @@ const exportBlueprintImage = (projectName: string) => {
   align-items: center;
   justify-content: center;
   height: 44px;
+  border-radius: 999px;
   cursor: pointer;
   position: relative;
   transition: all 0.15s;
 }
 
 .tab-item.active {
-  background-color: var(--color-primary-light, #FFF5E0);
+  background-color: var(--color-primary, #FFF5E0);
 }
 
 .tab-item.active .tab-text {
-  color: var(--color-primary, #F5A623);
+  color: var(--color-text-primary, #333333);
   font-weight: 600;
-}
-
-.tab-item.active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 40px;
-  height: 3px;
-  background-color: var(--color-primary, #F5A623);
-  border-radius: 2px;
 }
 
 .tab-text {
@@ -2488,9 +2638,8 @@ const exportBlueprintImage = (projectName: string) => {
  * 边框色：var(--color-border) - 分隔线
  */
 .tab-panel {
-  background-color: var(--color-bg-panel, #FFFFFF);
+  background-color: transparent;
   flex-shrink: 0;
-  border-top: 1px solid var(--color-border, #F0F0F0);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
@@ -2501,11 +2650,23 @@ const exportBlueprintImage = (projectName: string) => {
 /* 尺寸选项 */
 .size-options {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.size-options::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .size-option {
+  flex: 0 0 auto;
+  min-width: 90px;
   padding: 10px 18px;
   border-radius: 10px;
   background-color: var(--color-bg-page, #F5F5F5);
@@ -2548,8 +2709,9 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .edit-option-icon {
-  font-size: 28px;
-  line-height: 1;
+  width: 28px;
+  height: 28px;
+  display: block;
 }
 
 .edit-option-text {

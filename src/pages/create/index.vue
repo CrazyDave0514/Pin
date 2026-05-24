@@ -8,14 +8,14 @@
         class="function-card"
         @click="handleEntryClick(entry.path)"
       >
-        <text class="function-icon">{{ entry.icon }}</text>
+        <image class="function-icon" :src="entry.icon" mode="aspectFit" />
         <text class="function-name">{{ entry.name }}</text>
       </view>
     </view>
 
     <!-- 项目管理模块 -->
     <view class="project-module" @click="handleEntryClick('/pages/projects/index')">
-      <text class="project-icon">📁</text>
+      <image class="project-icon" src="/static/assets/v015/icons/project-active.png" mode="aspectFit" />
       <view class="project-info">
         <text class="project-title">项目管理</text>
         <text class="project-desc">管理你的创作项目</text>
@@ -27,10 +27,10 @@
 
 <script setup lang="ts">
 const functionEntries = [
-  { icon: '🎨', name: '创建画布', path: '/pages/canvas/index' },
-  { icon: '🖼️', name: '导入图片', path: '/pages/import-image/index' },
-  { icon: '📄', name: '导入图纸', path: '/pages/import-pattern/index' },
-  { icon: '🫘', name: '豆仓管理', path: '/pages/bead-inventory/index' },
+  { icon: '/static/assets/v015/icons/blank-canvas-active.png', name: '创建画布', path: '/pages/canvas/index' },
+  { icon: '/static/assets/v015/icons/image-import-active.png', name: '导入图片', path: '/pages/import-image/index' },
+  { icon: '/static/assets/v015/icons/blueprint-import-active.png', name: '导入图纸', path: '/pages/import-pattern/index' },
+  { icon: '/static/assets/v015/icons/bead-inventory-active.png', name: '豆仓管理', path: '/pages/bead-inventory/index' },
 ]
 
 const handleEntryClick = (path: string) => {
@@ -70,8 +70,10 @@ const handleEntryClick = (path: string) => {
 }
 
 .function-icon {
-  font-size: 40px;
+  width: 40px;
+  height: 40px;
   margin-bottom: 8px;
+  display: block;
 }
 
 .function-name {
@@ -90,8 +92,10 @@ const handleEntryClick = (path: string) => {
 }
 
 .project-icon {
-  font-size: 28px;
+  width: 28px;
+  height: 28px;
   margin-right: 12px;
+  display: block;
 }
 
 .project-info {
