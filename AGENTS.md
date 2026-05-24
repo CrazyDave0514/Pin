@@ -1,11 +1,16 @@
 # Codex Local Instructions
 
-This project follows the rules in `PROJECT_RULES.md`.
+This project follows the rules in `/Users/chengrundong/Documents/Trae/Pin/.trae/project_rules.md`.
 
-Before product/design/development/testing work:
-- Read `PROJECT_RULES.md` first.
+`PROJECT_RULES.md` in this repository is now only a bridge/reminder file. The old local rule content is deprecated.
+
+Before product/design/development/testing/release work:
+- Read `/Users/chengrundong/Documents/Trae/Pin/.trae/project_rules.md` first.
+- Treat that Trae rule document as the canonical execution rule for Codex + SOLO collaboration.
 - Treat Feishu project documents as the source of truth for product, design, requirements, and test materials.
-- Follow the staged process in the rules: requirement alignment, UI/UE confirmation, development and self-test, test cases and execution, acceptance, release, online regression.
+- Follow the staged process and owner split in the rules:
+  - SOLO: requirements, test cases, test execution, online regression, Feishu document maintenance.
+  - Codex: UI/UE design specification, code development, development self-test, bug fixes, release.
 - Keep code changes aligned with the uni-app Vue 3 TypeScript stack and the multi-platform constraints described in the rules.
 - Use Conventional Commits when committing changes.
 
