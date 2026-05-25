@@ -122,7 +122,11 @@
                     width: cellSize + 'px',
                     height: cellSize + 'px',
                     backgroundColor: bead.color,
-                    opacity: !highlightedColor || highlightedColor === bead.color ? 1 : 0.22,
+                    opacity: !highlightedColor || highlightedColor === bead.color ? 1 : 0.12,
+                    filter: highlightedColor && highlightedColor !== bead.color ? 'grayscale(0.65) saturate(0.55)' : 'none',
+                    boxShadow: highlightedColor === bead.color
+                      ? '0 0 0 2px rgba(245,166,35,0.98), 0 0 18px rgba(245,166,35,0.45)'
+                      : '',
                   }"
                 >
                   <!-- 圆豆中心白色圆孔 -->
@@ -224,7 +228,7 @@
             class="stats-item"
             @click="openColorDetail(item)"
           >
-            <view class="stats-chip" :class="{ highlighted: highlightedColor === item.color }" :style="{ backgroundColor: item.color }">
+            <view class="stats-chip" :style="{ backgroundColor: item.color }">
               <text class="stats-chip-code" :style="{ color: getTextColor(item.color) }">{{ item.code }}</text>
               <text class="stats-chip-count" :style="{ color: getTextColor(item.color) }">{{ item.count }}</text>
             </view>
@@ -442,31 +446,45 @@
 
     <view v-if="showColorEditModal && activeColorDetail" class="save-modal-overlay" @tap="closeColorDetail">
       <view class="save-modal color-edit-modal" @tap.stop>
-        <view class="save-modal-header">
-          <text class="save-modal-title">色号调整</text>
-          <text class="save-modal-close" @tap="closeColorDetail">✕</text>
-        </view>
+        <view class="sheet-drag-handle"></view>
         <view class="save-modal-body">
-          <view class="color-detail-card">
-            <view class="color-detail-swatch" :style="{ backgroundColor: activeColorDetail.color }"></view>
-            <view class="color-detail-meta">
-              <text class="color-detail-code">{{ activeColorDetail.code }}</text>
-              <text class="color-detail-count">{{ activeColorDetail.count }} 颗</text>
+          <view class="color-sheet-top">
+            <view class="color-detail-card">
+              <view class="color-detail-swatch" :style="{ backgroundColor: activeColorDetail.color }"></view>
+              <view class="color-detail-meta">
+                <text class="color-detail-code">色号 {{ activeColorDetail.code }}</text>
+                <text class="color-detail-count">{{ activeColorDetail.count }} 颗</text>
+              </view>
+            </view>
+            <view class="quick-action-row">
+              <view class="quick-action-card" @tap="toggleHighlightColor">
+                <view class="quick-action-icon">{{ highlightedColor === activeColorDetail.color ? '✦' : '◌' }}</view>
+                <text class="quick-action-text">{{ highlightedColor === activeColorDetail.color ? '取消高亮' : '高亮显示' }}</text>
+              </view>
+              <view class="quick-action-card" @tap="toggleReplacePanel">
+                <view class="quick-action-icon">↺</view>
+                <text class="quick-action-text">颜色替换</text>
+              </view>
             </view>
           </view>
-          <view class="color-actions">
-            <view class="color-action-btn" @tap="toggleHighlightColor">
-              <text>{{ highlightedColor === activeColorDetail.color ? '取消高亮' : '高亮显示' }}</text>
-            </view>
-            <view class="color-action-btn" @tap="deleteActiveColor">
-              <text>删除当前色号</text>
-            </view>
+
+          <view class="color-actions color-actions-dual">
             <view class="color-action-btn primary" @tap="mergeToNearestColor">
               <text>合并到相近色</text>
             </view>
+            <view class="color-action-btn" @tap="toggleReplacePanel">
+              <text>{{ showReplacePanel ? '收起替换色' : '展开替换色' }}</text>
+            </view>
           </view>
-          <text class="replace-title">替换为</text>
-          <scroll-view class="replace-scroll" scroll-x :show-scrollbar="false">
+
+          <view class="color-actions single">
+            <view class="color-action-btn danger" @tap="deleteActiveColor">
+              <text>删除此色号</text>
+            </view>
+          </view>
+
+          <view v-if="showReplacePanel" class="replace-panel">
+            <text class="replace-title">替换为</text>
             <view class="replace-list">
               <view
                 v-for="item in nearestColorOptions"
@@ -478,7 +496,7 @@
                 <text class="replace-code">{{ item.code }}</text>
               </view>
             </view>
-          </scroll-view>
+          </view>
         </view>
       </view>
     </view>
@@ -712,6 +730,7 @@ const activeTab = ref('size')
 const highlightedColor = ref('')
 const showColorEditModal = ref(false)
 const activeColorDetail = ref<BeadStatItem | null>(null)
+const showReplacePanel = ref(false)
 
 /** PC端空格键按下标记 */
 const spacePressed = ref(false)
@@ -808,8 +827,8 @@ const gridLayerStyle = computed(() => ({
   width: `${canvasWidth.value}px`,
   height: `${canvasHeight.value}px`,
   backgroundImage: `
-    linear-gradient(to right, rgba(35, 31, 26, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(35, 31, 26, 0.08) 1px, transparent 1px)
+    linear-gradient(to right, rgba(35, 31, 26, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(35, 31, 26, 0.12) 1px, transparent 1px)
   `,
   backgroundSize: `${cellSize}px ${cellSize}px`,
 }))
@@ -1839,12 +1858,18 @@ const getTextColor = (hex: string): string => {
 
 const openColorDetail = (item: BeadStatItem) => {
   activeColorDetail.value = item
+  showReplacePanel.value = false
   showColorEditModal.value = true
 }
 
 const closeColorDetail = () => {
   showColorEditModal.value = false
+  showReplacePanel.value = false
   activeColorDetail.value = null
+}
+
+const toggleReplacePanel = () => {
+  showReplacePanel.value = !showReplacePanel.value
 }
 
 const toggleHighlightColor = () => {
@@ -1866,6 +1891,7 @@ const replaceColor = (sourceColor: string, targetColor: string) => {
     }
   }
   highlightedColor.value = targetColor
+  showReplacePanel.value = false
   uni.showToast({ title: '颜色已替换', icon: 'success' })
 }
 
@@ -2058,7 +2084,6 @@ const doSave = (projectName: string, exportAfterSave = false) => {
           console.error('[导出] 导出失败:', e)
           uni.showToast({ title: '导出失败，但已保存', icon: 'none' })
         }
-        navigateToProject()
       }, 300)
     } else {
       navigateToProject()
@@ -2381,23 +2406,23 @@ const exportBlueprintImage = (projectName: string) => {
 .major-grid-line.horizontal {
   left: 0;
   right: 0;
-  height: 1px;
-  border-top: 1px solid rgba(248, 90, 60, 0.78);
+  height: 2px;
+  border-top: 2px solid rgba(248, 90, 60, 0.92);
 }
 
 .major-grid-line.horizontal.dashed {
-  border-top: 1px dashed rgba(248, 90, 60, 0.78);
+  border-top: 2px dashed rgba(248, 90, 60, 0.92);
 }
 
 .major-grid-line.vertical {
   top: 0;
   bottom: 0;
-  width: 1px;
-  border-left: 1px solid rgba(248, 90, 60, 0.82);
+  width: 2px;
+  border-left: 2px solid rgba(248, 90, 60, 0.96);
 }
 
 .major-grid-line.vertical.dashed {
-  border-left: 1px dashed rgba(248, 90, 60, 0.82);
+  border-left: 2px dashed rgba(248, 90, 60, 0.96);
 }
 
 /* 拼豆层 */
@@ -2616,8 +2641,8 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .stats-chip.highlighted {
-  transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 10px 22px rgba(245, 166, 35, 0.26);
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 0 0 4px rgba(245,166,35,.28), 0 12px 24px rgba(245, 166, 35, 0.34);
 }
 
 .stats-chip-code {
@@ -2721,16 +2746,35 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .color-edit-modal {
-  max-height: 78vh;
+  max-height: 82vh;
+  border-radius: 36rpx 36rpx 28rpx 28rpx;
+  width: 92vw;
+  max-width: 720rpx;
+}
+
+.sheet-drag-handle {
+  width: 96rpx;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: rgba(35,31,26,.12);
+  margin: 16rpx auto 4rpx;
+}
+
+.color-sheet-top {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
 }
 
 .color-detail-card {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 14px;
   border-radius: 18px;
   background-color: var(--color-bg-page);
+  flex: 1;
+  min-width: 0;
 }
 
 .color-detail-swatch {
@@ -2747,72 +2791,129 @@ const exportBlueprintImage = (projectName: string) => {
 }
 
 .color-detail-code {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
 .color-detail-count {
-  font-size: 13px;
-  color: var(--color-text-tertiary);
+  font-size: 14px;
+  color: #97A0B1;
+}
+
+.quick-action-row {
+  display: flex;
+  gap: 10rpx;
+  flex-shrink: 0;
+}
+
+.quick-action-card {
+  width: 114rpx;
+  min-height: 132rpx;
+  border-radius: 20rpx;
+  background: #FFFFFF;
+  box-shadow: 0 10rpx 26rpx rgba(35,31,26,.08);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 12rpx;
+  box-sizing: border-box;
+}
+
+.quick-action-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 18rpx;
+  background: #FFF9ED;
+  border: 2rpx solid rgba(245,166,35,.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  color: #231F1A;
+}
+
+.quick-action-text {
+  font-size: 22rpx;
+  color: #231F1A;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.25;
 }
 
 .color-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 14px;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.color-actions-dual {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.color-actions.single {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .color-action-btn {
-  min-height: 44px;
-  border-radius: 16px;
-  border: 2px solid var(--color-border);
-  background-color: var(--color-bg-page);
+  min-height: 56px;
+  border-radius: 20px;
+  border: 2px solid #1F2430;
+  background-color: #FFFFFF;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0 12px;
   text-align: center;
-  font-size: 13px;
-  color: var(--color-text-secondary);
+  font-size: 15px;
+  font-weight: 700;
+  color: #1F2430;
 }
 
 .color-action-btn.primary {
-  background-color: var(--color-primary-light);
-  border-color: var(--color-primary);
-  color: var(--color-text-primary);
-  font-weight: 700;
+  background-color: #FFF9ED;
+  border-color: #1F2430;
+  color: #1F2430;
+}
+
+.color-action-btn.danger {
+  background-color: #FFFFFF;
+}
+
+.replace-panel {
+  margin-top: 16px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--color-bg-page);
 }
 
 .replace-title {
   display: block;
-  margin: 16px 0 10px;
+  margin: 0 0 12px;
   font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
-.replace-scroll {
-  white-space: nowrap;
-}
-
 .replace-list {
-  display: inline-flex;
-  gap: 10px;
-  padding-bottom: 2px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .replace-chip {
-  width: 74px;
-  padding: 10px 8px;
+  min-height: 92px;
+  padding: 12px 8px;
   border-radius: 16px;
   border: 2px solid var(--color-border);
   background-color: var(--color-bg-page);
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 10px;
 }
 
 .replace-swatch {

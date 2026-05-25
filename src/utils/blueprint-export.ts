@@ -23,7 +23,41 @@ const getTextColor = (hex: string) => {
   const r = parseInt(value.slice(0, 2), 16)
   const g = parseInt(value.slice(2, 4), 16)
   const b = parseInt(value.slice(4, 6), 16)
-  return (r * 0.299 + g * 0.587 + b * 0.114) / 255 > 0.58 ? '#2B2114' : '#FFFFFF'
+  return (r * 0.299 + g * 0.587 + b * 0.114) / 255 > 0.62 ? '#2B2114' : '#FFFFFF'
+}
+
+const drawRoundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fillStyle?: string,
+  strokeStyle?: string,
+  lineWidth = 1
+) => {
+  ctx.beginPath()
+  ctx.moveTo(x + radius, y)
+  ctx.lineTo(x + width - radius, y)
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius)
+  ctx.lineTo(x + width, y + height - radius)
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height)
+  ctx.lineTo(x + radius, y + height)
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius)
+  ctx.lineTo(x, y + radius)
+  ctx.quadraticCurveTo(x, y, x + radius, y)
+  ctx.closePath()
+
+  if (fillStyle) {
+    ctx.fillStyle = fillStyle
+    ctx.fill()
+  }
+  if (strokeStyle) {
+    ctx.strokeStyle = strokeStyle
+    ctx.lineWidth = lineWidth
+    ctx.stroke()
+  }
 }
 
 const drawPseudoQr = (ctx: CanvasRenderingContext2D, seed: string, x: number, y: number, size: number) => {
@@ -40,18 +74,20 @@ const drawPseudoQr = (ctx: CanvasRenderingContext2D, seed: string, x: number, y:
 
   for (let row = 0; row < grid; row += 1) {
     for (let col = 0; col < grid; col += 1) {
-      const finder =
-        ((row < 7 && col < 7) || (row < 7 && col >= grid - 7) || (row >= grid - 7 && col < 7))
+      const finder = (
+        (row < 7 && col < 7) ||
+        (row < 7 && col >= grid - 7) ||
+        (row >= grid - 7 && col < 7)
+      )
       if (finder) {
         const inBorder =
-          row === 0 || row === 6 || col === 0 || col === 6 || ((row >= 2 && row <= 4) && (col >= 2 && col <= 4))
+          row === 0 || row === 6 || col === 0 || col === 6 ||
+          ((row >= 2 && row <= 4) && (col >= 2 && col <= 4))
         if (inBorder) ctx.fillRect(x + col * cell, y + row * cell, cell, cell)
         continue
       }
       hash = (hash * 1664525 + 1013904223) >>> 0
-      if ((hash & 1) === 1) {
-        ctx.fillRect(x + col * cell, y + row * cell, cell, cell)
-      }
+      if ((hash & 1) === 1) ctx.fillRect(x + col * cell, y + row * cell, cell, cell)
     }
   }
 }
@@ -70,268 +106,214 @@ const buildLegend = (canvasData: CanvasDataLike) => {
     }))
 }
 
+const drawInfoBadge = (ctx: CanvasRenderingContext2D, x: number, y: number, label: string) => {
+  ctx.font = '500 24px sans-serif'
+  const width = ctx.measureText(label).width + 30
+  drawRoundedRect(ctx, x, y, width, 38, 12, '#F5F7FA', '#DCE3EA', 1)
+  ctx.fillStyle = '#687384'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(label, x + 15, y + 19)
+  return width
+}
+
 export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const width = Number(payload.canvasData.width || 30)
   const height = Number(payload.canvasData.height || 30)
   const totalBeads = getBeadCount(payload.canvasData)
   const colorTypes = getColorTypeCount(payload.canvasData)
   const legend = buildLegend(payload.canvasData)
+  const beadMap = new Map((payload.canvasData.beads || []).map((bead) => [`${bead.x},${bead.y}`, bead.color]))
 
   const canvas = document.createElement('canvas')
-  const targetWidth = 2048
-  const outerPadding = 72
-  const infoHeight = 280
-  const footerHeight = Math.max(260, Math.ceil(legend.length / 4) * 92 + 120)
-  const gridAvailableWidth = targetWidth - outerPadding * 2 - 84
-  const gridAvailableHeight = 2048 - infoHeight - footerHeight - outerPadding * 2
-  const cellPx = Math.max(12, Math.min(Math.floor(gridAvailableWidth / width), Math.floor(gridAvailableHeight / height), 42))
+  const pageWidth = 2480
+  const outerPadding = 40
+  const panelRadius = 22
+  const pageInnerWidth = pageWidth - outerPadding * 2
   const labelBand = 42
+  const gridPanelPadding = 28
+  const gridAvailableWidth = pageInnerWidth - gridPanelPadding * 2 - labelBand * 2
+  const cellPx = Math.max(16, Math.min(32, Math.floor(gridAvailableWidth / width)))
   const gridWidth = width * cellPx
   const gridHeight = height * cellPx
-  const canvasHeight = infoHeight + footerHeight + outerPadding * 2 + gridHeight + labelBand
+  const gridSectionHeight = gridHeight + labelBand * 2 + gridPanelPadding * 2
+  const headerHeight = 168
+  const legendColumns = 10
+  const legendRows = Math.max(1, Math.ceil(legend.length / legendColumns))
+  const legendCellWidth = Math.floor(gridWidth / legendColumns)
+  const legendCellHeight = 68
+  const legendSectionHeight = 90 + legendRows * legendCellHeight + 24
+  const pageHeight = outerPadding * 2 + headerHeight + 24 + gridSectionHeight + 24 + legendSectionHeight + 24
 
-  canvas.width = targetWidth
-  canvas.height = canvasHeight
+  canvas.width = pageWidth
+  canvas.height = pageHeight
+
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('导出画布初始化失败')
 
-  ctx.fillStyle = '#FFFDF9'
-  ctx.fillRect(0, 0, targetWidth, canvasHeight)
+  ctx.fillStyle = '#F3F6FA'
+  ctx.fillRect(0, 0, pageWidth, pageHeight)
 
-  // ========== 信息展示区 - 左右两栏布局 ==========
-  const leftColumnX = outerPadding
-  const rightColumnX = targetWidth - outerPadding - 320 // 右栏宽度 320
-  const infoTopY = 64
+  drawRoundedRect(ctx, outerPadding, outerPadding, pageInnerWidth, pageHeight - outerPadding * 2, panelRadius, '#FFFFFF')
 
-  // ---- 左栏：作品信息 ----
-  // 第一行：作品名称（粗体，大字号）
+  const contentLeft = outerPadding + 24
+  const contentTop = outerPadding + 24
+
   ctx.fillStyle = '#231F1A'
-  ctx.font = '700 54px sans-serif'
+  ctx.font = '700 26px sans-serif'
   ctx.textAlign = 'left'
-  // 作品名称超长截断处理
-  const name = payload.name || '未命名作品'
-  let displayName = name
-  const nameWidth = ctx.measureText(name).width
-  const maxNameWidth = rightColumnX - leftColumnX - 40
-  if (nameWidth > maxNameWidth) {
-    // 二分查找截断位置
-    let low = 0
-    let high = name.length
-    while (low < high) {
-      const mid = Math.floor((low + high) / 2)
-      const testStr = name.slice(0, mid) + '...'
-      if (ctx.measureText(testStr).width <= maxNameWidth) {
-        low = mid + 1
-      } else {
-        high = mid
-      }
-    }
-    displayName = name.slice(0, Math.max(0, low - 1)) + '...'
-  }
-  ctx.fillText(displayName, leftColumnX, infoTopY + 34)
+  ctx.textBaseline = 'top'
+  ctx.fillText(formatDateTime(payload.updatedAt), contentLeft, contentTop)
 
-  // 第二行：作者 + 时间 + 图纸ID
-  ctx.font = '500 22px sans-serif'
-  ctx.fillStyle = '#786B57'
-  const authorText = `作者：${payload.creatorName || 'Pin用户'}`
-  const timeText = `时间：${formatDateTime(payload.updatedAt)}`
-  const idText = `图纸ID：${payload.projectId}`
-  ctx.fillText(authorText, leftColumnX, infoTopY + 80)
-  ctx.fillText(timeText, leftColumnX + 200, infoTopY + 80)
-  ctx.fillText(idText, leftColumnX + 420, infoTopY + 80)
+  ctx.font = '500 20px sans-serif'
+  ctx.fillStyle = '#7B8794'
+  ctx.fillText(`作者：${payload.creatorName || 'Pin用户'}`, contentLeft, contentTop + 42)
+  ctx.fillText(`图纸ID：${payload.projectId}`, contentLeft + 180, contentTop + 42)
 
-  // 第三行：尺寸 + 品牌 + 豆数 + 色号
-  const sizeText = `尺寸：${width}×${height}格`
-  const brandText = `品牌：MARD`
-  const beadsText = `豆数：${totalBeads}颗`
-  const colorsText = `色号：${colorTypes}色`
-  ctx.fillText(sizeText, leftColumnX, infoTopY + 112)
-  ctx.fillText(brandText, leftColumnX + 160, infoTopY + 112)
-  ctx.fillText(beadsText, leftColumnX + 300, infoTopY + 112)
-  ctx.fillText(colorsText, leftColumnX + 440, infoTopY + 112)
+  let badgeX = contentLeft
+  const badgeY = contentTop + 78
+  badgeX += drawInfoBadge(ctx, badgeX, badgeY, `尺寸 ${width}×${height}`) + 10
+  badgeX += drawInfoBadge(ctx, badgeX, badgeY, '品牌 mard') + 10
+  badgeX += drawInfoBadge(ctx, badgeX, badgeY, `${colorTypes} 色`) + 10
+  drawInfoBadge(ctx, badgeX, badgeY, `${totalBeads} 颗`)
 
-  // ---- 右栏：品牌信息 + 二维码 ----
-  // Logo 区域（简化版：圆形色块代表 Logo）
-  const logoCenterX = rightColumnX + 100
-  const logoCenterY = infoTopY + 50
-  const logoRadius = 28
-
-  // 绘制 Logo 背景圆
-  ctx.beginPath()
-  ctx.arc(logoCenterX, logoCenterY, logoRadius, 0, Math.PI * 2)
-  ctx.fillStyle = '#FF6B9D'
-  ctx.fill()
-
-  // 绘制 "Pin" 文字在 Logo 内
+  const brandBoxWidth = 260
+  const brandBoxHeight = 78
+  const brandBoxX = pageWidth - outerPadding - 24 - brandBoxWidth - 128
+  const brandBoxY = contentTop + 8
+  drawRoundedRect(ctx, brandBoxX, brandBoxY, brandBoxWidth, brandBoxHeight, 18, '#F7FAFD', '#DDE4EC')
+  drawRoundedRect(ctx, brandBoxX + 16, brandBoxY + 16, 42, 42, 12, '#1F2937')
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = '700 24px sans-serif'
+  ctx.font = '700 20px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('Pin', logoCenterX, logoCenterY)
-
-  // 软件名 "Pin"
-  ctx.fillStyle = '#231F1A'
-  ctx.font = '700 36px sans-serif'
+  ctx.fillText('Pin', brandBoxX + 37, brandBoxY + 37)
   ctx.textAlign = 'left'
-  ctx.fillText('Pin', logoCenterX + logoRadius + 16, infoTopY + 40)
+  ctx.fillStyle = '#1F2937'
+  ctx.font = '700 20px sans-serif'
+  ctx.fillText('我是个豆', brandBoxX + 72, brandBoxY + 26)
+  ctx.fillStyle = '#7B8794'
+  ctx.font = '500 16px sans-serif'
+  ctx.fillText('每颗拼豆都算数', brandBoxX + 72, brandBoxY + 50)
 
-  // 一句话描述
-  ctx.fillStyle = '#786B57'
-  ctx.font = '500 20px sans-serif'
-  ctx.fillText('指尖轻点拼出治愈像素世界', logoCenterX + logoRadius + 16, infoTopY + 70)
-
-  // 二维码
-  const qrSize = 140
-  const qrX = rightColumnX + 160
-  const qrY = infoTopY + 20
+  const qrSize = 88
+  const qrX = pageWidth - outerPadding - 24 - qrSize
+  const qrY = contentTop + 2
   drawPseudoQr(ctx, payload.projectId, qrX, qrY, qrSize)
 
-  // 扫码提示
-  ctx.fillStyle = '#786B57'
-  ctx.font = '500 18px sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText('扫码回看图纸', qrX + qrSize / 2, qrY + qrSize + 28)
+  const gridPanelX = outerPadding + 24
+  const gridPanelY = outerPadding + headerHeight + 24
+  const gridPanelWidth = pageInnerWidth - 48
+  drawRoundedRect(ctx, gridPanelX, gridPanelY, gridPanelWidth, gridSectionHeight, 20, '#FFFFFF', '#DCE5ED')
 
-  const gridOffsetX = outerPadding + labelBand
-  const gridOffsetY = infoHeight
+  const gridOffsetX = gridPanelX + gridPanelPadding + labelBand
+  const gridOffsetY = gridPanelY + gridPanelPadding + labelBand
 
-  ctx.fillStyle = '#F8EFD9'
+  ctx.fillStyle = '#E8F4FF'
   ctx.fillRect(gridOffsetX, gridOffsetY - labelBand, gridWidth, labelBand)
   ctx.fillRect(gridOffsetX - labelBand, gridOffsetY, labelBand, gridHeight)
+  ctx.fillRect(gridOffsetX + gridWidth, gridOffsetY, labelBand, gridHeight)
+  ctx.fillRect(gridOffsetX, gridOffsetY + gridHeight, gridWidth, labelBand)
 
-  ctx.strokeStyle = '#231F1A'
-  ctx.lineWidth = 2
+  ctx.strokeStyle = '#5F7487'
+  ctx.lineWidth = 1.5
   ctx.strokeRect(gridOffsetX, gridOffsetY, gridWidth, gridHeight)
 
-  ctx.font = `${Math.max(12, Math.floor(cellPx * 0.32))}px sans-serif`
-  ctx.fillStyle = '#6C5438'
+  ctx.font = '600 14px sans-serif'
+  ctx.fillStyle = '#4B5D70'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
   for (let col = 0; col < width; col += 1) {
-    ctx.fillText(String(col + 1), gridOffsetX + col * cellPx + cellPx / 2, gridOffsetY - labelBand / 2)
+    const x = gridOffsetX + col * cellPx + cellPx / 2
+    ctx.fillText(String(col + 1), x, gridOffsetY - labelBand / 2)
+    ctx.fillText(String(col + 1), x, gridOffsetY + gridHeight + labelBand / 2)
   }
   for (let row = 0; row < height; row += 1) {
-    ctx.fillText(String(row + 1), gridOffsetX - labelBand / 2, gridOffsetY + row * cellPx + cellPx / 2)
+    const y = gridOffsetY + row * cellPx + cellPx / 2
+    ctx.fillText(String(row + 1), gridOffsetX - labelBand / 2, y)
+    ctx.fillText(String(row + 1), gridOffsetX + gridWidth + labelBand / 2, y)
   }
 
-  ctx.strokeStyle = 'rgba(35,31,26,0.1)'
+  ctx.strokeStyle = 'rgba(107, 128, 145, 0.25)'
   ctx.lineWidth = 1
+  ctx.setLineDash([])
   for (let col = 0; col <= width; col += 1) {
-    ctx.setLineDash([])
+    const x = gridOffsetX + col * cellPx
     ctx.beginPath()
-    ctx.moveTo(gridOffsetX + col * cellPx, gridOffsetY)
-    ctx.lineTo(gridOffsetX + col * cellPx, gridOffsetY + gridHeight)
+    ctx.moveTo(x, gridOffsetY)
+    ctx.lineTo(x, gridOffsetY + gridHeight)
     ctx.stroke()
   }
   for (let row = 0; row <= height; row += 1) {
+    const y = gridOffsetY + row * cellPx
     ctx.beginPath()
-    ctx.moveTo(gridOffsetX, gridOffsetY + row * cellPx)
-    ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY + row * cellPx)
+    ctx.moveTo(gridOffsetX, y)
+    ctx.lineTo(gridOffsetX + gridWidth, y)
     ctx.stroke()
   }
-  // 5格间隔线 - 虚实交替，最外圈实线
-  // 横向线（第5、10、15...行）
-  for (let row = 5; row < height; row += 5) {
-    // 判断是否为最外圈（第0行或最后一行）
-    const isOuter = row === 0 || row === height
-    // 判断是否为10的倍数（虚线），其他5的倍数（实线）
-    const isDashed = row % 10 === 0 && !isOuter
 
-    ctx.setLineDash(isDashed ? [8, 6] : [])
-    ctx.strokeStyle = 'rgba(248, 90, 60, 0.78)'
-    ctx.lineWidth = 2
+  for (let row = 0; row <= height; row += 5) {
+    const y = gridOffsetY + row * cellPx
+    ctx.strokeStyle = 'rgba(59, 84, 109, 0.82)'
+    ctx.lineWidth = row === 0 || row === height ? 2.2 : 1.5
+    ctx.setLineDash(row !== 0 && row !== height && row % 10 === 0 ? [8, 6] : [])
     ctx.beginPath()
-    ctx.moveTo(gridOffsetX, gridOffsetY + row * cellPx)
-    ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY + row * cellPx)
+    ctx.moveTo(gridOffsetX, y)
+    ctx.lineTo(gridOffsetX + gridWidth, y)
     ctx.stroke()
   }
-  // 竖向线（第5、10、15...列）
-  for (let col = 5; col < width; col += 5) {
-    // 判断是否为最外圈（第0列或最后一列）
-    const isOuter = col === 0 || col === width
-    // 判断是否为10的倍数（虚线），其他5的倍数（实线）
-    const isDashed = col % 10 === 0 && !isOuter
-
-    ctx.setLineDash(isDashed ? [8, 6] : [])
-    ctx.strokeStyle = 'rgba(248, 90, 60, 0.82)'
-    ctx.lineWidth = 2
+  for (let col = 0; col <= width; col += 5) {
+    const x = gridOffsetX + col * cellPx
+    ctx.strokeStyle = 'rgba(59, 84, 109, 0.82)'
+    ctx.lineWidth = col === 0 || col === width ? 2.2 : 1.5
+    ctx.setLineDash(col !== 0 && col !== width && col % 10 === 0 ? [8, 6] : [])
     ctx.beginPath()
-    ctx.moveTo(gridOffsetX + col * cellPx, gridOffsetY)
-    ctx.lineTo(gridOffsetX + col * cellPx, gridOffsetY + gridHeight)
-    ctx.stroke()
-  }
-  // 最外圈实线（确保第0和最后行列是实线）
-  ctx.setLineDash([])
-  ctx.strokeStyle = 'rgba(248, 90, 60, 0.78)'
-  ctx.lineWidth = 2
-  // 第0行
-  if (height > 0) {
-    ctx.beginPath()
-    ctx.moveTo(gridOffsetX, gridOffsetY)
-    ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY)
-    ctx.stroke()
-  }
-  // 最后一行
-  if (height > 0) {
-    ctx.beginPath()
-    ctx.moveTo(gridOffsetX, gridOffsetY + height * cellPx)
-    ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY + height * cellPx)
-    ctx.stroke()
-  }
-  // 第0列
-  if (width > 0) {
-    ctx.beginPath()
-    ctx.moveTo(gridOffsetX, gridOffsetY)
-    ctx.lineTo(gridOffsetX, gridOffsetY + gridHeight)
-    ctx.stroke()
-  }
-  // 最后一列
-  if (width > 0) {
-    ctx.beginPath()
-    ctx.moveTo(gridOffsetX + width * cellPx, gridOffsetY)
-    ctx.lineTo(gridOffsetX + width * cellPx, gridOffsetY + gridHeight)
+    ctx.moveTo(x, gridOffsetY)
+    ctx.lineTo(x, gridOffsetY + gridHeight)
     ctx.stroke()
   }
   ctx.setLineDash([])
 
-  const beadMap = new Map((payload.canvasData.beads || []).map((bead) => [`${bead.x},${bead.y}`, bead.color]))
+  const codeFontSize = Math.max(8, Math.min(14, Math.floor(cellPx * 0.34)))
   for (let row = 0; row < height; row += 1) {
     for (let col = 0; col < width; col += 1) {
-      const color = beadMap.get(`${col},${row}`)
-      if (!color) continue
+      const color = beadMap.get(`${col},${row}`) || '#FFFFFF'
+      const x = gridOffsetX + col * cellPx
+      const y = gridOffsetY + row * cellPx
       ctx.fillStyle = color
-      ctx.fillRect(gridOffsetX + col * cellPx + 1, gridOffsetY + row * cellPx + 1, cellPx - 2, cellPx - 2)
-      if (cellPx >= 20) {
-        ctx.fillStyle = getTextColor(color)
-        ctx.font = `700 ${Math.max(10, Math.floor(cellPx * 0.28))}px sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(getMardCodeByHex(color) || '', gridOffsetX + col * cellPx + cellPx / 2, gridOffsetY + row * cellPx + cellPx / 2)
-      }
+      ctx.fillRect(x + 1, y + 1, cellPx - 2, cellPx - 2)
+      ctx.fillStyle = getTextColor(color)
+      ctx.font = `600 ${codeFontSize}px sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(getMardCodeByHex(color) || '', x + cellPx / 2, y + cellPx / 2)
     }
   }
 
-  const footerY = gridOffsetY + gridHeight + outerPadding
+  const legendSectionX = gridPanelX
+  const legendSectionY = gridPanelY + gridSectionHeight + 24
+  drawRoundedRect(ctx, legendSectionX, legendSectionY, gridPanelWidth, legendSectionHeight, 20, '#FFFFFF', '#DCE5ED')
   ctx.fillStyle = '#231F1A'
-  ctx.font = '700 34px sans-serif'
+  ctx.font = '700 24px sans-serif'
   ctx.textAlign = 'left'
-  ctx.fillText('颜色清单', outerPadding, footerY)
+  ctx.textBaseline = 'top'
+  ctx.fillText('颜色清单', legendSectionX + 24, legendSectionY + 22)
 
+  const legendStartX = gridOffsetX
+  const legendStartY = legendSectionY + 62
   legend.forEach((item, index) => {
-    const col = index % 4
-    const row = Math.floor(index / 4)
-    const x = outerPadding + col * 470
-    const y = footerY + 44 + row * 92
-    ctx.fillStyle = item.color
-    ctx.fillRect(x, y, 48, 48)
-    ctx.strokeStyle = 'rgba(35,31,26,0.12)'
-    ctx.strokeRect(x, y, 48, 48)
-    ctx.fillStyle = '#231F1A'
-    ctx.font = '700 24px sans-serif'
-    ctx.fillText(item.code, x + 68, y + 18)
-    ctx.font = '500 22px sans-serif'
-    ctx.fillStyle = '#786B57'
-    ctx.fillText(`${item.count} 颗`, x + 68, y + 44)
+    const col = index % legendColumns
+    const row = Math.floor(index / legendColumns)
+    const x = legendStartX + col * legendCellWidth
+    const y = legendStartY + row * legendCellHeight
+    const itemWidth = legendCellWidth - 10
+
+    drawRoundedRect(ctx, x, y, itemWidth, 50, 12, item.color)
+    ctx.fillStyle = getTextColor(item.color)
+    ctx.font = '700 14px sans-serif'
+    ctx.textAlign = 'left'
+    ctx.textBaseline = 'middle'
+    ctx.fillText(`${item.code} (${item.count})`, x + 12, y + 25)
   })
 
   return canvas

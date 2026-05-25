@@ -7,7 +7,7 @@
         </view>
         <view class="title-copy">
           <text class="page-title">{{ currentFolder ? currentFolder.name : '我的项目' }}</text>
-          <text class="page-subtitle">{{ currentFolder ? currentFolderPath : '全部作品与文件夹' }}</text>
+          <text class="page-subtitle">{{ currentFolder ? currentFolderSubtitle : '全部作品与文件夹' }}</text>
         </view>
         <view class="header-actions">
           <view class="icon-btn" @click="goToSearch">
@@ -18,7 +18,8 @@
     </view>
 
     <scroll-view class="content-scroll" scroll-y>
-      <view v-if="currentFolderPath" class="breadcrumb">{{ currentFolderPath }}</view>
+      <view class="content-inner">
+      <view v-if="currentFolder?.parentId" class="breadcrumb">{{ currentFolderPath }}</view>
 
       <view v-if="folderEntries.length || projectEntries.length" class="list-section">
         <view
@@ -28,7 +29,11 @@
           @click="openFolder(folder)"
         >
           <view class="entry-cover folder-cover">
-            <image class="folder-cover-icon" src="/static/assets/v015/icons/project.png" mode="aspectFit" />
+            <view class="folder-tab"></view>
+            <view class="folder-pocket">
+              <image class="folder-cover-icon" src="/static/assets/v015/icons/project.png" mode="aspectFit" />
+              <text class="folder-cover-count">{{ getFolderProjectCount(folder.id) }}</text>
+            </view>
           </view>
           <view class="entry-main">
             <view class="entry-name-row">
@@ -81,6 +86,7 @@
         <image class="empty-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
         <text class="empty-title">{{ currentFolder ? '文件夹里还没有作品' : '还没有项目' }}</text>
         <text class="empty-subtitle">{{ currentFolder ? '从右下角继续新建或导入' : '先创建一个拼豆作品试试看' }}</text>
+      </view>
       </view>
     </scroll-view>
 
@@ -342,6 +348,7 @@ const publishTags = ref<{ primary?: string; secondary?: string }>({})
 const currentFolder = computed(() => folders.value.find((item) => item.id === currentFolderId.value) || null)
 
 const currentFolderPath = computed(() => buildFolderPath(currentFolderId.value))
+const currentFolderSubtitle = computed(() => buildFolderPath(currentFolder.value?.parentId || '') || '当前文件夹')
 
 const folderEntries = computed(() => {
   return folders.value
@@ -453,14 +460,14 @@ const formatDateTime = (timestamp: number) => {
 }
 
 const buildFolderPath = (folderId: string) => {
-  if (!folderId) return '根目录'
+  if (!folderId) return ''
   const names: string[] = []
   let cursor = folders.value.find((item) => item.id === folderId)
   while (cursor) {
     names.unshift(cursor.name)
     cursor = folders.value.find((item) => item.id === cursor?.parentId)
   }
-  return ['根目录', ...names].join(' / ')
+  return names.join(' / ')
 }
 
 const openFolder = (folder: FolderRecord) => {
@@ -864,6 +871,12 @@ const getFolderProjects = (folderId: string) => {
   return projects.value.filter((item) => (item.folderId || '') === folderId)
 }
 
+const getFolderProjectCount = (folderId: string) => {
+  const directProjects = projects.value.filter((item) => (item.folderId || '') === folderId).length
+  const childFolders = folders.value.filter((item) => (item.parentId || '') === folderId).length
+  return directProjects + childFolders
+}
+
 const estimateProjectSize = (project: ProjectRecord) => {
   const beadBytes = Array.isArray(project.canvasData?.beads) ? project.canvasData.beads.length * 24 : 0
   return 1024 + beadBytes
@@ -916,7 +929,7 @@ const exportFolder = async () => {
   closeActionSheet()
   if (!folder) return
   // #ifdef H5
-  const jszip = getJsZip()
+  const jszip = await getJsZip()
   if (!jszip) {
     uni.showToast({ title: 'ZIP 库加载失败', icon: 'none' })
     return
@@ -1038,9 +1051,13 @@ const formatProjectTags = formatProjectTagsLocal
 
 .content-scroll {
   height: calc(100vh - 120rpx);
-  padding: 0 24rpx calc(180rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(180rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
+}
+
+.content-inner {
+  padding: 0 24rpx;
 }
 
 .breadcrumb {
@@ -1074,8 +1091,51 @@ const formatProjectTags = formatProjectTagsLocal
 }
 
 .folder-cover {
-  background: linear-gradient(160deg, rgba(245,166,35,.18), rgba(255,253,250,.88));
-  border: 2rpx solid rgba(245,166,35,.24);
+  background: linear-gradient(180deg, #FFF7DA 0%, #FFE5A7 100%);
+  border: 2rpx solid rgba(245,166,35,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 14rpx 14rpx;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.folder-tab {
+  position: absolute;
+  left: 18rpx;
+  top: 12rpx;
+  width: 52rpx;
+  height: 22rpx;
+  border-radius: 14rpx 14rpx 0 0;
+  background: rgba(255, 255, 255, 0.72);
+  border: 2rpx solid rgba(245,166,35,.22);
+  border-bottom: none;
+}
+
+.folder-pocket {
+  width: 100%;
+  height: 86rpx;
+  border-radius: 20rpx;
+  background: rgba(255,255,255,.72);
+  border: 2rpx solid rgba(245,166,35,.16);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16rpx;
+  box-sizing: border-box;
+  margin-top: 18rpx;
+}
+
+.folder-cover-count {
+  min-width: 38rpx;
+  height: 38rpx;
+  padding: 0 10rpx;
+  border-radius: 999rpx;
+  background: rgba(245,166,35,.18);
+  color: #9A641B;
+  font-size: 22rpx;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1172,6 +1232,12 @@ const formatProjectTags = formatProjectTagsLocal
 
 .entry-menu-btn {
   background: rgba(35,31,26,.04);
+}
+
+:deep(.uni-modal__bd) {
+  text-align: left !important;
+  white-space: pre-line;
+  line-height: 1.7;
 }
 
 .empty-state {

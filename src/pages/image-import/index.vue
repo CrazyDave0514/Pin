@@ -28,8 +28,8 @@
     <!-- 对比预览区域（选择图片后显示） -->
     <view v-if="selectedImage" class="compare-section">
       <view class="compare-row">
-        <!-- 左：原图 -->
         <view class="compare-col">
+        <view class="compare-card">
           <text class="compare-label">原图</text>
           <view class="compare-image-wrap" :style="previewBoxStyle">
             <image
@@ -39,9 +39,15 @@
               @longpress="showFullImage"
             ></image>
           </view>
+          <view class="compare-actions">
+            <text class="action-link" @click="chooseImage">更换图片</text>
+            <text class="action-link" @click="removeImage">删除</text>
+          </view>
         </view>
-        <!-- 右：生成结果 -->
+        </view>
+
         <view class="compare-col">
+        <view class="compare-card result-card">
           <text class="compare-label">生成结果</text>
           <view class="compare-image-wrap" :class="{ 'has-result': generatedBlueprint }" :style="previewBoxStyle">
             <image
@@ -54,10 +60,7 @@
             <text v-else class="no-result-text">点击下方按钮生成</text>
           </view>
         </view>
-      </view>
-      <view class="compare-actions">
-        <text class="action-link" @click="chooseImage">更换图片</text>
-        <text class="action-link" @click="removeImage">删除</text>
+        </view>
       </view>
     </view>
 
@@ -149,13 +152,25 @@
         <view class="custom-size-row">
           <view class="input-group">
             <text class="input-label">宽</text>
-            <input type="number" v-model="customOutputWidth" class="size-input" @input="handleCustomSizeInput('width')" />
+            <input
+              type="number"
+              :value="customOutputWidth"
+              class="size-input"
+              @input="handleCustomSizeInput('width', $event)"
+              @blur="syncCustomSizeInput('width')"
+            />
             <text class="input-unit">格</text>
           </view>
           <text class="size-separator">×</text>
           <view class="input-group">
             <text class="input-label">高</text>
-            <input type="number" v-model="customOutputHeight" class="size-input" @input="handleCustomSizeInput('height')" />
+            <input
+              type="number"
+              :value="customOutputHeight"
+              class="size-input"
+              @input="handleCustomSizeInput('height', $event)"
+              @blur="syncCustomSizeInput('height')"
+            />
             <text class="input-unit">格</text>
           </view>
         </view>
@@ -253,8 +268,8 @@ const activePreset = ref('中(30×30)')
 const imageAspectRatio = ref(1)  // 原图宽高比
 const isCustomSize = ref(false)   // 是否自定义尺寸
 const showCustomSizeModal = ref(false)
-const customOutputWidth = ref(30)
-const customOutputHeight = ref(30)
+const customOutputWidth = ref('30')
+const customOutputHeight = ref('30')
 const detectedColors = ref<string[]>([])
 const isProcessing = ref(false)
 const generatedBlueprint = ref<any>(null)
@@ -325,8 +340,8 @@ const applyPreset = (size: { label: string, width: number, height: number }) => 
 }
 
 const openCustomSize = () => {
-  customOutputWidth.value = outputWidth.value
-  customOutputHeight.value = outputHeight.value
+  customOutputWidth.value = String(outputWidth.value)
+  customOutputHeight.value = String(outputHeight.value)
   showCustomSizeModal.value = true
 }
 
@@ -334,11 +349,22 @@ const closeCustomSize = () => {
   showCustomSizeModal.value = false
 }
 
-const handleCustomSizeInput = (changed: 'width' | 'height') => {
-  const rawValue = changed === 'width' ? Number(customOutputWidth.value) : Number(customOutputHeight.value)
-  const nextGrid = syncGridByAspect(changed, rawValue || 30, imageAspectRatio.value)
-  customOutputWidth.value = nextGrid.width
-  customOutputHeight.value = nextGrid.height
+const sanitizeGridValue = (value: string) => value.replace(/[^\d]/g, '').slice(0, 3)
+
+const handleCustomSizeInput = (changed: 'width' | 'height', event: any) => {
+  const value = sanitizeGridValue(event?.detail?.value || '')
+  if (changed === 'width') {
+    customOutputWidth.value = value
+  } else {
+    customOutputHeight.value = value
+  }
+}
+
+const syncCustomSizeInput = (changed: 'width' | 'height') => {
+  const sourceValue = changed === 'width' ? customOutputWidth.value : customOutputHeight.value
+  const nextGrid = syncGridByAspect(changed, clampGridSize(Number(sourceValue) || 30), imageAspectRatio.value)
+  customOutputWidth.value = String(nextGrid.width)
+  customOutputHeight.value = String(nextGrid.height)
 }
 
 const confirmCustomSize = () => {
@@ -924,13 +950,24 @@ const startCreation = () => {
 
 /* 对比区域 */
 .compare-section { padding: 0 32rpx; margin-bottom: 24rpx; }
-.compare-row { display: flex; gap: 16rpx; }
-.compare-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
-.compare-label { font-size: 24rpx; color: var(--color-text-secondary); margin-bottom: 8rpx; }
+.compare-row { display: flex; gap: 16rpx; align-items: stretch; }
+.compare-col { flex: 1; min-width: 0; }
+.compare-card {
+  height: 100%;
+  padding: 24rpx;
+  background-color: var(--color-bg-panel);
+  border: 2rpx solid var(--color-border);
+  border-radius: 24rpx;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+}
+.compare-label { font-size: 24rpx; color: var(--color-text-secondary); margin-bottom: 12rpx; display: block; }
 .compare-image-wrap {
   max-width: 100%;
   background-color: var(--color-bg-panel); border-radius: var(--radius-lg);
   border: 2rpx solid var(--color-border); overflow: hidden; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto;
 }
 .compare-image-wrap.has-result { border-color: var(--color-success); }
 .compare-img,
@@ -941,7 +978,7 @@ const startCreation = () => {
 }
 .bp-preview-img { image-rendering: pixelated; image-rendering: crisp-edges; background-color: var(--color-bg-panel); }
 .no-result-text { font-size: 22rpx; color: var(--color-text-disabled); }
-.compare-actions { display: flex; justify-content: flex-end; gap: 24rpx; margin-top: 12rpx; }
+.compare-actions { display: flex; justify-content: flex-start; gap: 24rpx; margin-top: auto; padding-top: 16rpx; }
 .action-link { font-size: 24rpx; color: var(--color-primary); }
 
 /* 设置 */
