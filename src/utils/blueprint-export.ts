@@ -205,28 +205,31 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   drawInfoBadge(ctx, badgeX, badgeY, `${totalBeads} 颗`)
 
   const brandBoxWidth = 260
-  const brandBoxHeight = 78
+  // 品牌区高度与左侧三行对齐：名称(28px) + 间距(12px) + 作者行(18px) + 间距(20px) + badge行(38px) = 116px
+  const brandBoxHeight = 116
   const qrSize = 88
   const brandGap = 20
   const brandBoxX = gridRightEdge - qrSize - brandGap - brandBoxWidth
-  const brandBoxY = contentTop + 8
+  // 顶部对齐名称行
+  const brandBoxY = contentTop
   drawRoundedRect(ctx, brandBoxX, brandBoxY, brandBoxWidth, brandBoxHeight, 18, '#F7FAFD', '#DDE4EC')
-  drawRoundedRect(ctx, brandBoxX + 16, brandBoxY + 16, 42, 42, 12, '#1F2937')
+  drawRoundedRect(ctx, brandBoxX + 16, brandBoxY + 24, 42, 42, 12, '#1F2937')
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '700 20px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('Pin', brandBoxX + 37, brandBoxY + 37)
+  ctx.fillText('Pin', brandBoxX + 37, brandBoxY + 45)
   ctx.textAlign = 'left'
   ctx.fillStyle = '#1F2937'
   ctx.font = '700 20px sans-serif'
-  ctx.fillText('Pin', brandBoxX + 72, brandBoxY + 26)
+  ctx.fillText('Pin', brandBoxX + 72, brandBoxY + 34)
   ctx.fillStyle = '#7B8794'
   ctx.font = '500 16px sans-serif'
-  ctx.fillText('指尖轻点拼出治愈像素世界', brandBoxX + 72, brandBoxY + 50)
+  ctx.fillText('指尖轻点拼出治愈像素世界', brandBoxX + 72, brandBoxY + 58)
 
   const qrX = gridRightEdge - qrSize
-  const qrY = contentTop + 2
+  // 二维码垂直居中于品牌区
+  const qrY = brandBoxY + (brandBoxHeight - qrSize) / 2
   drawPseudoQr(ctx, payload.projectId, qrX, qrY, qrSize)
   drawRoundedRect(ctx, gridPanelX, gridPanelY, gridPanelWidth, gridSectionHeight, 20, '#FFFFFF', '#DCE5ED')
 
