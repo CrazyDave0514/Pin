@@ -158,6 +158,12 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
 
   const contentLeft = outerPadding + 24
   const contentTop = outerPadding + 24
+  const gridPanelX = outerPadding + 24
+  const gridPanelY = outerPadding + headerHeight + 24
+  const gridPanelWidth = pageInnerWidth - 48
+  const gridOffsetX = gridPanelX + gridPanelPadding + labelBand
+  const gridOffsetY = gridPanelY + gridPanelPadding + labelBand
+  const gridRightEdge = gridOffsetX + gridWidth
 
   ctx.fillStyle = '#231F1A'
   ctx.font = '700 26px sans-serif'
@@ -179,7 +185,9 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
 
   const brandBoxWidth = 260
   const brandBoxHeight = 78
-  const brandBoxX = pageWidth - outerPadding - 24 - brandBoxWidth - 128
+  const qrSize = 88
+  const brandGap = 20
+  const brandBoxX = gridRightEdge - qrSize - brandGap - brandBoxWidth
   const brandBoxY = contentTop + 8
   drawRoundedRect(ctx, brandBoxX, brandBoxY, brandBoxWidth, brandBoxHeight, 18, '#F7FAFD', '#DDE4EC')
   drawRoundedRect(ctx, brandBoxX + 16, brandBoxY + 16, 42, 42, 12, '#1F2937')
@@ -191,23 +199,15 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   ctx.textAlign = 'left'
   ctx.fillStyle = '#1F2937'
   ctx.font = '700 20px sans-serif'
-  ctx.fillText('我是个豆', brandBoxX + 72, brandBoxY + 26)
+  ctx.fillText('Pin', brandBoxX + 72, brandBoxY + 26)
   ctx.fillStyle = '#7B8794'
   ctx.font = '500 16px sans-serif'
-  ctx.fillText('每颗拼豆都算数', brandBoxX + 72, brandBoxY + 50)
+  ctx.fillText('指尖轻点拼出治愈像素世界', brandBoxX + 72, brandBoxY + 50)
 
-  const qrSize = 88
-  const qrX = pageWidth - outerPadding - 24 - qrSize
+  const qrX = gridRightEdge - qrSize
   const qrY = contentTop + 2
   drawPseudoQr(ctx, payload.projectId, qrX, qrY, qrSize)
-
-  const gridPanelX = outerPadding + 24
-  const gridPanelY = outerPadding + headerHeight + 24
-  const gridPanelWidth = pageInnerWidth - 48
   drawRoundedRect(ctx, gridPanelX, gridPanelY, gridPanelWidth, gridSectionHeight, 20, '#FFFFFF', '#DCE5ED')
-
-  const gridOffsetX = gridPanelX + gridPanelPadding + labelBand
-  const gridOffsetY = gridPanelY + gridPanelPadding + labelBand
 
   ctx.fillStyle = '#E8F4FF'
   ctx.fillRect(gridOffsetX, gridOffsetY - labelBand, gridWidth, labelBand)

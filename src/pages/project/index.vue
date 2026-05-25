@@ -29,11 +29,7 @@
           @click="openFolder(folder)"
         >
           <view class="entry-cover folder-cover">
-            <view class="folder-tab"></view>
-            <view class="folder-pocket">
-              <image class="folder-cover-icon" src="/static/assets/v015/icons/project.png" mode="aspectFit" />
-              <text class="folder-cover-count">{{ getFolderProjectCount(folder.id) }}</text>
-            </view>
+            <image class="folder-cover-icon" src="/static/assets/v015/icons/project.png" mode="aspectFit" />
           </view>
           <view class="entry-main">
             <view class="entry-name-row">
@@ -871,12 +867,6 @@ const getFolderProjects = (folderId: string) => {
   return projects.value.filter((item) => (item.folderId || '') === folderId)
 }
 
-const getFolderProjectCount = (folderId: string) => {
-  const directProjects = projects.value.filter((item) => (item.folderId || '') === folderId).length
-  const childFolders = folders.value.filter((item) => (item.parentId || '') === folderId).length
-  return directProjects + childFolders
-}
-
 const estimateProjectSize = (project: ProjectRecord) => {
   const beadBytes = Array.isArray(project.canvasData?.beads) ? project.canvasData.beads.length * 24 : 0
   return 1024 + beadBytes
@@ -1096,49 +1086,7 @@ const formatProjectTags = formatProjectTagsLocal
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16rpx 14rpx 14rpx;
-  box-sizing: border-box;
-  position: relative;
-}
-
-.folder-tab {
-  position: absolute;
-  left: 18rpx;
-  top: 12rpx;
-  width: 52rpx;
-  height: 22rpx;
-  border-radius: 14rpx 14rpx 0 0;
-  background: rgba(255, 255, 255, 0.72);
-  border: 2rpx solid rgba(245,166,35,.22);
-  border-bottom: none;
-}
-
-.folder-pocket {
-  width: 100%;
-  height: 86rpx;
-  border-radius: 20rpx;
-  background: rgba(255,255,255,.72);
-  border: 2rpx solid rgba(245,166,35,.16);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 16rpx;
-  box-sizing: border-box;
-  margin-top: 18rpx;
-}
-
-.folder-cover-count {
-  min-width: 38rpx;
-  height: 38rpx;
-  padding: 0 10rpx;
-  border-radius: 999rpx;
-  background: rgba(245,166,35,.18);
-  color: #9A641B;
-  font-size: 22rpx;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: inset 0 10rpx 24rpx rgba(255,255,255,.32);
 }
 
 .project-cover {

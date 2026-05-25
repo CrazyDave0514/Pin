@@ -470,16 +470,10 @@
 
           <view class="color-actions color-actions-dual">
             <view class="color-action-btn primary" @tap="mergeToNearestColor">
-              <text>合并到相近色</text>
+              <text>合并到相似色</text>
             </view>
-            <view class="color-action-btn" @tap="toggleReplacePanel">
-              <text>{{ showReplacePanel ? '收起替换色' : '展开替换色' }}</text>
-            </view>
-          </view>
-
-          <view class="color-actions single">
             <view class="color-action-btn danger" @tap="deleteActiveColor">
-              <text>删除此色号</text>
+              <text>删除当前色号</text>
             </view>
           </view>
 
