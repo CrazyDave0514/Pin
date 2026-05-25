@@ -117,6 +117,25 @@ const drawInfoBadge = (ctx: CanvasRenderingContext2D, x: number, y: number, labe
   return width
 }
 
+const truncateText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number) => {
+  if (ctx.measureText(text).width <= maxWidth) return text
+  const ellipsis = '...'
+  let low = 0
+  let high = text.length
+
+  while (low < high) {
+    const mid = Math.ceil((low + high) / 2)
+    const candidate = `${text.slice(0, mid)}${ellipsis}`
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      low = mid
+    } else {
+      high = mid - 1
+    }
+  }
+
+  return `${text.slice(0, low)}${ellipsis}`
+}
+
 export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const width = Number(payload.canvasData.width || 30)
   const height = Number(payload.canvasData.height || 30)
@@ -168,43 +187,50 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const gridPanelWidth = layoutWidth
   const gridOffsetY = gridPanelY + gridPanelPadding + labelBand
 
+  const brandBoxWidth = 260
+  const brandBoxHeight = 116
+  const qrSize = 88
+  const brandGap = 20
+  const brandBoxX = gridRightEdge - qrSize - brandGap - brandBoxWidth
+  const brandBoxY = contentTop
+  const metaMaxRight = brandBoxX - 28
+  const metaAvailableWidth = Math.max(280, metaMaxRight - contentLeft)
+
   // 第一行：作品名称
   ctx.fillStyle = '#231F1A'
   ctx.font = '700 28px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
 
-  // 预计算品牌区位置（用于名称截断和列宽计算）
-  const brandBoxWidth = 260
-  const qrSize = 88
-  const brandGap = 20
-  const brandBoxX = gridRightEdge - qrSize - brandGap - brandBoxWidth
-
   const name = payload.name || '未命名作品'
-  // 简单截断，超过宽度加省略号
-  let displayName = name
   const maxNameWidth = brandBoxX - contentLeft - 40
-  if (ctx.measureText(name).width > maxNameWidth) {
-    for (let i = name.length; i > 0; i--) {
-      const test = name.slice(0, i) + '...'
-      if (ctx.measureText(test).width <= maxNameWidth) {
-        displayName = test
-        break
-      }
-    }
-  }
+  const displayName = truncateText(ctx, name, maxNameWidth)
   ctx.fillText(displayName, contentLeft, contentTop)
 
-  // 第二行：作者 / 时间 / 图纸ID（一行紧凑左对齐）
+  // 第二行：作者 / 时间 / 图纸ID，按真实宽度顺排并在可用宽度内截断
   ctx.font = '500 18px sans-serif'
   ctx.fillStyle = '#7B8794'
+  const authorText = `作者：${payload.creatorName || 'Pin用户'}`
+  const timeText = `时间：${formatDateTime(payload.updatedAt)}`
+  const idText = `图纸ID：${payload.projectId}`
+  const minMetaGap = 16
+  const authorMaxWidth = Math.min(170, Math.floor(metaAvailableWidth * 0.24))
+  const timeMaxWidth = Math.min(240, Math.floor(metaAvailableWidth * 0.34))
+  const idMaxWidth = Math.max(160, metaAvailableWidth - authorMaxWidth - timeMaxWidth - minMetaGap * 2)
+  const authorLabel = truncateText(ctx, authorText, authorMaxWidth)
+  const timeLabel = truncateText(ctx, timeText, timeMaxWidth)
+  const idLabel = truncateText(ctx, idText, idMaxWidth)
+  const authorWidth = ctx.measureText(authorLabel).width
+  const timeWidth = ctx.measureText(timeLabel).width
+  const idWidth = ctx.measureText(idLabel).width
+  const distributedGap = Math.max(minMetaGap, Math.floor((metaAvailableWidth - authorWidth - timeWidth - idWidth) / 2))
   const infoY = contentTop + 40
   let infoX = contentLeft
-  ctx.fillText(`作者：${payload.creatorName || 'Pin用户'}`, infoX, infoY)
-  infoX += 140 // 固定小间距
-  ctx.fillText(`时间：${formatDateTime(payload.updatedAt)}`, infoX, infoY)
-  infoX += 200 // 固定小间距
-  ctx.fillText(`图纸ID：${payload.projectId}`, infoX, infoY)
+  ctx.fillText(authorLabel, infoX, infoY)
+  infoX += authorWidth + distributedGap
+  ctx.fillText(timeLabel, infoX, infoY)
+  infoX += timeWidth + distributedGap
+  ctx.fillText(idLabel, infoX, infoY)
 
   let badgeX = contentLeft
   const badgeY = contentTop + 78
@@ -213,24 +239,37 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   badgeX += drawInfoBadge(ctx, badgeX, badgeY, `${colorTypes} 色`) + 10
   drawInfoBadge(ctx, badgeX, badgeY, `${totalBeads} 颗`)
 
-  // 品牌区高度与左侧三行对齐：名称(28px) + 间距(12px) + 作者行(18px) + 间距(20px) + badge行(38px) = 116px
-  const brandBoxHeight = 116
-  // 顶部对齐名称行
-  const brandBoxY = contentTop
   drawRoundedRect(ctx, brandBoxX, brandBoxY, brandBoxWidth, brandBoxHeight, 18, '#F7FAFD', '#DDE4EC')
-  drawRoundedRect(ctx, brandBoxX + 16, brandBoxY + 24, 42, 42, 12, '#1F2937')
+  const brandCardPaddingX = 16
+  const brandIconSize = 42
+  const brandTextGap = 12
+  const brandTitleText = 'Pin'
+  const brandSubtitleText = '指尖轻点拼出治愈像素世界'
+  ctx.font = '700 20px sans-serif'
+  const brandTitleWidth = ctx.measureText(brandTitleText).width
+  ctx.font = '500 16px sans-serif'
+  const brandTextMaxWidth = brandBoxWidth - brandCardPaddingX * 2 - brandIconSize - brandTextGap
+  const brandSubtitleLabel = truncateText(ctx, brandSubtitleText, brandTextMaxWidth)
+  const brandSubtitleWidth = ctx.measureText(brandSubtitleLabel).width
+  const brandTextWidth = Math.max(brandTitleWidth, brandSubtitleWidth)
+  const brandGroupWidth = brandIconSize + brandTextGap + brandTextWidth
+  const brandGroupX = brandBoxX + Math.max(brandCardPaddingX, Math.floor((brandBoxWidth - brandGroupWidth) / 2))
+  const brandIconX = brandGroupX
+  const brandTextX = brandIconX + brandIconSize + brandTextGap
+
+  drawRoundedRect(ctx, brandIconX, brandBoxY + 24, brandIconSize, brandIconSize, 12, '#1F2937')
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '700 20px sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText('Pin', brandBoxX + 37, brandBoxY + 45)
+  ctx.fillText('Pin', brandIconX + brandIconSize / 2, brandBoxY + 45)
   ctx.textAlign = 'left'
   ctx.fillStyle = '#1F2937'
   ctx.font = '700 20px sans-serif'
-  ctx.fillText('Pin', brandBoxX + 72, brandBoxY + 34)
+  ctx.fillText(brandTitleText, brandTextX, brandBoxY + 34)
   ctx.fillStyle = '#7B8794'
   ctx.font = '500 16px sans-serif'
-  ctx.fillText('指尖轻点拼出治愈像素世界', brandBoxX + 72, brandBoxY + 58)
+  ctx.fillText(brandSubtitleLabel, brandTextX, brandBoxY + 58)
 
   const qrX = gridRightEdge - qrSize
   // 二维码垂直居中于品牌区
