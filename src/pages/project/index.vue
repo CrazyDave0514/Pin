@@ -28,7 +28,7 @@
           @click="openFolder(folder)"
         >
           <view class="entry-cover folder-cover">
-            <image class="folder-cover-icon" src="/static/assets/v015/icons/project-muted.png" mode="aspectFit" />
+            <image class="folder-cover-icon" src="/static/assets/v015/icons/project.png" mode="aspectFit" />
           </view>
           <view class="entry-main">
             <view class="entry-name-row">

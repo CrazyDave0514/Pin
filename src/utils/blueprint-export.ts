@@ -15,7 +15,7 @@ const pad = (value: number) => String(value).padStart(2, '0')
 const formatDateTime = (timestamp?: number) => {
   if (!timestamp) return ''
   const date = new Date(timestamp)
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  return `${date.getFullYear()}/${pad(date.getMonth() + 1)}/${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 const getTextColor = (hex: string) => {
@@ -98,29 +98,99 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   ctx.fillStyle = '#FFFDF9'
   ctx.fillRect(0, 0, targetWidth, canvasHeight)
 
+  // ========== 信息展示区 - 左右两栏布局 ==========
+  const leftColumnX = outerPadding
+  const rightColumnX = targetWidth - outerPadding - 320 // 右栏宽度 320
+  const infoTopY = 64
+
+  // ---- 左栏：作品信息 ----
+  // 第一行：作品名称（粗体，大字号）
   ctx.fillStyle = '#231F1A'
   ctx.font = '700 54px sans-serif'
-  ctx.fillText(payload.name || '未命名作品', outerPadding, 98)
+  ctx.textAlign = 'left'
+  // 作品名称超长截断处理
+  const name = payload.name || '未命名作品'
+  let displayName = name
+  const nameWidth = ctx.measureText(name).width
+  const maxNameWidth = rightColumnX - leftColumnX - 40
+  if (nameWidth > maxNameWidth) {
+    // 二分查找截断位置
+    let low = 0
+    let high = name.length
+    while (low < high) {
+      const mid = Math.floor((low + high) / 2)
+      const testStr = name.slice(0, mid) + '...'
+      if (ctx.measureText(testStr).width <= maxNameWidth) {
+        low = mid + 1
+      } else {
+        high = mid
+      }
+    }
+    displayName = name.slice(0, Math.max(0, low - 1)) + '...'
+  }
+  ctx.fillText(displayName, leftColumnX, infoTopY + 34)
 
-  ctx.font = '500 24px sans-serif'
-  ctx.fillStyle = '#786B57'
-  const metaLines = [
-    `图纸 ID：${payload.projectId}`,
-    `作者：${payload.creatorName || 'Pin用户'}`,
-    `时间：${formatDateTime(payload.updatedAt)}`,
-    `规格：${width}×${height}格｜${totalBeads}豆｜${colorTypes}种色号`,
-    `品牌：MARD｜积分：${Number(payload.points || 0) === 0 ? '免费' : `${payload.points} 积分`}`,
-  ]
-  metaLines.forEach((line, index) => {
-    ctx.fillText(line, outerPadding, 148 + index * 32)
-  })
-
-  const qrSize = 180
-  const qrX = targetWidth - outerPadding - qrSize
-  const qrY = 64
-  drawPseudoQr(ctx, payload.projectId, qrX, qrY, qrSize)
+  // 第二行：作者 + 时间 + 图纸ID
   ctx.font = '500 22px sans-serif'
-  ctx.fillText('扫码回看图纸', qrX - 8, qrY + qrSize + 34)
+  ctx.fillStyle = '#786B57'
+  const authorText = `作者：${payload.creatorName || 'Pin用户'}`
+  const timeText = `时间：${formatDateTime(payload.updatedAt)}`
+  const idText = `图纸ID：${payload.projectId}`
+  ctx.fillText(authorText, leftColumnX, infoTopY + 80)
+  ctx.fillText(timeText, leftColumnX + 200, infoTopY + 80)
+  ctx.fillText(idText, leftColumnX + 420, infoTopY + 80)
+
+  // 第三行：尺寸 + 品牌 + 豆数 + 色号
+  const sizeText = `尺寸：${width}×${height}格`
+  const brandText = `品牌：MARD`
+  const beadsText = `豆数：${totalBeads}颗`
+  const colorsText = `色号：${colorTypes}色`
+  ctx.fillText(sizeText, leftColumnX, infoTopY + 112)
+  ctx.fillText(brandText, leftColumnX + 160, infoTopY + 112)
+  ctx.fillText(beadsText, leftColumnX + 300, infoTopY + 112)
+  ctx.fillText(colorsText, leftColumnX + 440, infoTopY + 112)
+
+  // ---- 右栏：品牌信息 + 二维码 ----
+  // Logo 区域（简化版：圆形色块代表 Logo）
+  const logoCenterX = rightColumnX + 100
+  const logoCenterY = infoTopY + 50
+  const logoRadius = 28
+
+  // 绘制 Logo 背景圆
+  ctx.beginPath()
+  ctx.arc(logoCenterX, logoCenterY, logoRadius, 0, Math.PI * 2)
+  ctx.fillStyle = '#FF6B9D'
+  ctx.fill()
+
+  // 绘制 "Pin" 文字在 Logo 内
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '700 24px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText('Pin', logoCenterX, logoCenterY)
+
+  // 软件名 "Pin"
+  ctx.fillStyle = '#231F1A'
+  ctx.font = '700 36px sans-serif'
+  ctx.textAlign = 'left'
+  ctx.fillText('Pin', logoCenterX + logoRadius + 16, infoTopY + 40)
+
+  // 一句话描述
+  ctx.fillStyle = '#786B57'
+  ctx.font = '500 20px sans-serif'
+  ctx.fillText('指尖轻点拼出治愈像素世界', logoCenterX + logoRadius + 16, infoTopY + 70)
+
+  // 二维码
+  const qrSize = 140
+  const qrX = rightColumnX + 160
+  const qrY = infoTopY + 20
+  drawPseudoQr(ctx, payload.projectId, qrX, qrY, qrSize)
+
+  // 扫码提示
+  ctx.fillStyle = '#786B57'
+  ctx.font = '500 18px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('扫码回看图纸', qrX + qrSize / 2, qrY + qrSize + 28)
 
   const gridOffsetX = outerPadding + labelBand
   const gridOffsetY = infoHeight
@@ -159,8 +229,15 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
     ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY + row * cellPx)
     ctx.stroke()
   }
+  // 5格间隔线 - 虚实交替，最外圈实线
+  // 横向线（第5、10、15...行）
   for (let row = 5; row < height; row += 5) {
-    ctx.setLineDash([])
+    // 判断是否为最外圈（第0行或最后一行）
+    const isOuter = row === 0 || row === height
+    // 判断是否为10的倍数（虚线），其他5的倍数（实线）
+    const isDashed = row % 10 === 0 && !isOuter
+
+    ctx.setLineDash(isDashed ? [8, 6] : [])
     ctx.strokeStyle = 'rgba(248, 90, 60, 0.78)'
     ctx.lineWidth = 2
     ctx.beginPath()
@@ -168,13 +245,51 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
     ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY + row * cellPx)
     ctx.stroke()
   }
+  // 竖向线（第5、10、15...列）
   for (let col = 5; col < width; col += 5) {
-    ctx.setLineDash([8, 6])
+    // 判断是否为最外圈（第0列或最后一列）
+    const isOuter = col === 0 || col === width
+    // 判断是否为10的倍数（虚线），其他5的倍数（实线）
+    const isDashed = col % 10 === 0 && !isOuter
+
+    ctx.setLineDash(isDashed ? [8, 6] : [])
     ctx.strokeStyle = 'rgba(248, 90, 60, 0.82)'
     ctx.lineWidth = 2
     ctx.beginPath()
     ctx.moveTo(gridOffsetX + col * cellPx, gridOffsetY)
     ctx.lineTo(gridOffsetX + col * cellPx, gridOffsetY + gridHeight)
+    ctx.stroke()
+  }
+  // 最外圈实线（确保第0和最后行列是实线）
+  ctx.setLineDash([])
+  ctx.strokeStyle = 'rgba(248, 90, 60, 0.78)'
+  ctx.lineWidth = 2
+  // 第0行
+  if (height > 0) {
+    ctx.beginPath()
+    ctx.moveTo(gridOffsetX, gridOffsetY)
+    ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY)
+    ctx.stroke()
+  }
+  // 最后一行
+  if (height > 0) {
+    ctx.beginPath()
+    ctx.moveTo(gridOffsetX, gridOffsetY + height * cellPx)
+    ctx.lineTo(gridOffsetX + gridWidth, gridOffsetY + height * cellPx)
+    ctx.stroke()
+  }
+  // 第0列
+  if (width > 0) {
+    ctx.beginPath()
+    ctx.moveTo(gridOffsetX, gridOffsetY)
+    ctx.lineTo(gridOffsetX, gridOffsetY + gridHeight)
+    ctx.stroke()
+  }
+  // 最后一列
+  if (width > 0) {
+    ctx.beginPath()
+    ctx.moveTo(gridOffsetX + width * cellPx, gridOffsetY)
+    ctx.lineTo(gridOffsetX + width * cellPx, gridOffsetY + gridHeight)
     ctx.stroke()
   }
   ctx.setLineDash([])

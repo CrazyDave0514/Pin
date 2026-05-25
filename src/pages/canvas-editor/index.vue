@@ -96,16 +96,18 @@
               <view
                 v-for="line in majorHorizontalLines"
                 v-if="canvasData.showGrid"
-                :key="'h-' + line"
+                :key="'h-' + line.index"
                 class="major-grid-line horizontal"
-                :style="{ top: line * cellSize + 'px' }"
+                :class="{ 'dashed': line.isDashed }"
+                :style="{ top: line.index * cellSize + 'px' }"
               ></view>
               <view
                 v-for="line in majorVerticalLines"
                 v-if="canvasData.showGrid"
-                :key="'v-' + line"
+                :key="'v-' + line.index"
                 class="major-grid-line vertical"
-                :style="{ left: line * cellSize + 'px' }"
+                :class="{ 'dashed': line.isDashed }"
+                :style="{ left: line.index * cellSize + 'px' }"
               ></view>
 
               <!-- 拼豆层 -->
@@ -812,18 +814,27 @@ const gridLayerStyle = computed(() => ({
   backgroundSize: `${cellSize}px ${cellSize}px`,
 }))
 
-const majorHorizontalLines = computed(() => {
-  const lines: number[] = []
+interface GridLine {
+  index: number
+  isDashed: boolean
+}
+
+const majorHorizontalLines = computed<GridLine[]>(() => {
+  const lines: GridLine[] = []
   for (let row = 5; row < canvasData.height; row += 5) {
-    lines.push(row)
+    // 10的倍数用虚线，其他5的倍数用实线
+    const isDashed = row % 10 === 0
+    lines.push({ index: row, isDashed })
   }
   return lines
 })
 
-const majorVerticalLines = computed(() => {
-  const lines: number[] = []
+const majorVerticalLines = computed<GridLine[]>(() => {
+  const lines: GridLine[] = []
   for (let col = 5; col < canvasData.width; col += 5) {
-    lines.push(col)
+    // 10的倍数用虚线，其他5的倍数用实线
+    const isDashed = col % 10 === 0
+    lines.push({ index: col, isDashed })
   }
   return lines
 })
@@ -2374,10 +2385,18 @@ const exportBlueprintImage = (projectName: string) => {
   border-top: 1px solid rgba(248, 90, 60, 0.78);
 }
 
+.major-grid-line.horizontal.dashed {
+  border-top: 1px dashed rgba(248, 90, 60, 0.78);
+}
+
 .major-grid-line.vertical {
   top: 0;
   bottom: 0;
   width: 1px;
+  border-left: 1px solid rgba(248, 90, 60, 0.82);
+}
+
+.major-grid-line.vertical.dashed {
   border-left: 1px dashed rgba(248, 90, 60, 0.82);
 }
 
