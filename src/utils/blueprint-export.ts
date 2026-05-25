@@ -213,23 +213,21 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const authorText = `作者：${payload.creatorName || 'Pin用户'}`
   const timeText = `时间：${formatDateTime(payload.updatedAt)}`
   const idText = `图纸ID：${payload.projectId}`
-  const minMetaGap = 16
-  const authorMaxWidth = Math.min(170, Math.floor(metaAvailableWidth * 0.24))
-  const timeMaxWidth = Math.min(240, Math.floor(metaAvailableWidth * 0.34))
-  const idMaxWidth = Math.max(160, metaAvailableWidth - authorMaxWidth - timeMaxWidth - minMetaGap * 2)
+  const metaGap = 24
+  const authorMaxWidth = Math.min(150, Math.floor(metaAvailableWidth * 0.22))
+  const timeMaxWidth = Math.min(190, Math.floor(metaAvailableWidth * 0.3))
+  const idMaxWidth = Math.max(160, metaAvailableWidth - authorMaxWidth - timeMaxWidth - metaGap * 2)
   const authorLabel = truncateText(ctx, authorText, authorMaxWidth)
   const timeLabel = truncateText(ctx, timeText, timeMaxWidth)
   const idLabel = truncateText(ctx, idText, idMaxWidth)
   const authorWidth = ctx.measureText(authorLabel).width
   const timeWidth = ctx.measureText(timeLabel).width
-  const idWidth = ctx.measureText(idLabel).width
-  const distributedGap = Math.max(minMetaGap, Math.floor((metaAvailableWidth - authorWidth - timeWidth - idWidth) / 2))
   const infoY = contentTop + 40
   let infoX = contentLeft
   ctx.fillText(authorLabel, infoX, infoY)
-  infoX += authorWidth + distributedGap
+  infoX += authorWidth + metaGap
   ctx.fillText(timeLabel, infoX, infoY)
-  infoX += timeWidth + distributedGap
+  infoX += timeWidth + metaGap
   ctx.fillText(idLabel, infoX, infoY)
 
   let badgeX = contentLeft

@@ -228,7 +228,7 @@
 import { ref, onMounted } from 'vue'
 
 // 应用版本号
-const version = ref('0.1.5')
+const version = ref('0.1.8')
 
 // 缓存大小
 const cacheSize = ref('0 MB')
