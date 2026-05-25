@@ -168,16 +168,34 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const gridPanelWidth = layoutWidth
   const gridOffsetY = gridPanelY + gridPanelPadding + labelBand
 
+  // 第一行：作品名称
   ctx.fillStyle = '#231F1A'
-  ctx.font = '700 26px sans-serif'
+  ctx.font = '700 28px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-  ctx.fillText(formatDateTime(payload.updatedAt), contentLeft, contentTop)
+  const name = payload.name || '未命名作品'
+  // 简单截断，超过宽度加省略号
+  let displayName = name
+  const maxNameWidth = brandBoxX - contentLeft - 40
+  if (ctx.measureText(name).width > maxNameWidth) {
+    for (let i = name.length; i > 0; i--) {
+      const test = name.slice(0, i) + '...'
+      if (ctx.measureText(test).width <= maxNameWidth) {
+        displayName = test
+        break
+      }
+    }
+  }
+  ctx.fillText(displayName, contentLeft, contentTop)
 
-  ctx.font = '500 20px sans-serif'
+  // 第二行：作者 / 时间 / 图纸ID（三列布局）
+  ctx.font = '500 18px sans-serif'
   ctx.fillStyle = '#7B8794'
-  ctx.fillText(`作者：${payload.creatorName || 'Pin用户'}`, contentLeft, contentTop + 42)
-  ctx.fillText(`图纸ID：${payload.projectId}`, contentLeft + 180, contentTop + 42)
+  const infoY = contentTop + 40
+  const colWidth = (brandBoxX - contentLeft - 60) / 3
+  ctx.fillText(`作者：${payload.creatorName || 'Pin用户'}`, contentLeft, infoY)
+  ctx.fillText(`时间：${formatDateTime(payload.updatedAt)}`, contentLeft + colWidth, infoY)
+  ctx.fillText(`图纸ID：${payload.projectId}`, contentLeft + colWidth * 2, infoY)
 
   let badgeX = contentLeft
   const badgeY = contentTop + 78
@@ -293,17 +311,18 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
     }
   }
 
+  // 颜色清单区域 - 增加与上方图纸区的间距，标题和色块间距加大
   const legendSectionX = gridPanelX
-  const legendSectionY = gridPanelY + gridSectionHeight + 24
+  const legendSectionY = gridPanelY + gridSectionHeight + 40
   drawRoundedRect(ctx, legendSectionX, legendSectionY, gridPanelWidth, legendSectionHeight, 20, '#FFFFFF', '#DCE5ED')
   ctx.fillStyle = '#231F1A'
   ctx.font = '700 24px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
-  ctx.fillText('颜色清单', legendSectionX + 24, legendSectionY + 22)
+  ctx.fillText('颜色清单', legendSectionX + 24, legendSectionY + 24)
 
   const legendStartX = gridOffsetX
-  const legendStartY = legendSectionY + 62
+  const legendStartY = legendSectionY + 72
   legend.forEach((item, index) => {
     const col = index % legendColumns
     const row = Math.floor(index / legendColumns)
