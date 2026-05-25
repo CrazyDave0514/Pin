@@ -126,16 +126,16 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const beadMap = new Map((payload.canvasData.beads || []).map((bead) => [`${bead.x},${bead.y}`, bead.color]))
 
   const canvas = document.createElement('canvas')
-  const pageWidth = 2480
   const outerPadding = 40
   const panelRadius = 22
-  const pageInnerWidth = pageWidth - outerPadding * 2
   const labelBand = 42
   const gridPanelPadding = 28
-  const gridAvailableWidth = pageInnerWidth - gridPanelPadding * 2 - labelBand * 2
+  const contentMinWidth = 960
+  const gridAvailableWidth = Math.min(1600, Math.max(960, width * 32))
   const cellPx = Math.max(16, Math.min(32, Math.floor(gridAvailableWidth / width)))
   const gridWidth = width * cellPx
   const gridHeight = height * cellPx
+  const layoutWidth = gridPanelPadding * 2 + labelBand * 2 + gridWidth
   const gridSectionHeight = gridHeight + labelBand * 2 + gridPanelPadding * 2
   const headerHeight = 168
   const legendColumns = 10
@@ -143,6 +143,12 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   const legendCellWidth = Math.floor(gridWidth / legendColumns)
   const legendCellHeight = 68
   const legendSectionHeight = 90 + legendRows * legendCellHeight + 24
+  const pageWidth = Math.max(contentMinWidth, layoutWidth + outerPadding * 2)
+  const layoutLeft = Math.floor((pageWidth - layoutWidth) / 2)
+  const gridPanelX = layoutLeft
+  const gridOffsetX = gridPanelX + gridPanelPadding + labelBand
+  const gridRightEdge = gridOffsetX + gridWidth
+  const pageInnerWidth = pageWidth - outerPadding * 2
   const pageHeight = outerPadding * 2 + headerHeight + 24 + gridSectionHeight + 24 + legendSectionHeight + 24
 
   canvas.width = pageWidth
@@ -156,14 +162,11 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
 
   drawRoundedRect(ctx, outerPadding, outerPadding, pageInnerWidth, pageHeight - outerPadding * 2, panelRadius, '#FFFFFF')
 
-  const contentLeft = outerPadding + 24
+  const contentLeft = layoutLeft + 24
   const contentTop = outerPadding + 24
-  const gridPanelX = outerPadding + 24
   const gridPanelY = outerPadding + headerHeight + 24
-  const gridPanelWidth = pageInnerWidth - 48
-  const gridOffsetX = gridPanelX + gridPanelPadding + labelBand
+  const gridPanelWidth = layoutWidth
   const gridOffsetY = gridPanelY + gridPanelPadding + labelBand
-  const gridRightEdge = gridOffsetX + gridWidth
 
   ctx.fillStyle = '#231F1A'
   ctx.font = '700 26px sans-serif'
