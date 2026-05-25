@@ -195,14 +195,26 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   }
   ctx.fillText(displayName, contentLeft, contentTop)
 
-  // 第二行：作者 / 时间 / 图纸ID（三列布局）
+  // 第二行：作者 / 时间 / 图纸ID（根据内容宽度均匀分布）
   ctx.font = '500 18px sans-serif'
   ctx.fillStyle = '#7B8794'
   const infoY = contentTop + 40
-  const colWidth = (brandBoxX - contentLeft - 60) / 3
-  ctx.fillText(`作者：${payload.creatorName || 'Pin用户'}`, contentLeft, infoY)
-  ctx.fillText(`时间：${formatDateTime(payload.updatedAt)}`, contentLeft + colWidth, infoY)
-  ctx.fillText(`图纸ID：${payload.projectId}`, contentLeft + colWidth * 2, infoY)
+  const authorText = `作者：${payload.creatorName || 'Pin用户'}`
+  const timeText = `时间：${formatDateTime(payload.updatedAt)}`
+  const idText = `图纸ID：${payload.projectId}`
+  const authorWidth = ctx.measureText(authorText).width
+  const timeWidth = ctx.measureText(timeText).width
+  const idWidth = ctx.measureText(idText).width
+  const totalWidth = authorWidth + timeWidth + idWidth
+  const availableWidth = brandBoxX - contentLeft - 60
+  const spacing = (availableWidth - totalWidth) / 4 // 4个间距（首尾各1个，列间2个）
+
+  let x = contentLeft + spacing
+  ctx.fillText(authorText, x, infoY)
+  x += authorWidth + spacing
+  ctx.fillText(timeText, x, infoY)
+  x += timeWidth + spacing
+  ctx.fillText(idText, x, infoY)
 
   let badgeX = contentLeft
   const badgeY = contentTop + 78
