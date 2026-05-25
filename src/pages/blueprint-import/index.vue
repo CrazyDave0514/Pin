@@ -1,12 +1,19 @@
 <template>
   <view class="blueprint-import-page">
-    <!-- 页面标题 -->
-    <view class="page-header">
-      <text class="page-title">导入图纸</text>
-      <text class="page-subtitle">从本地或云端导入拼豆图纸</text>
+    <view class="page-nav">
+      <view class="nav-top-safe"></view>
+      <view class="nav-bar">
+        <view class="nav-back" @click="goBack">‹</view>
+        <text class="nav-title">导入图纸</text>
+        <view class="nav-ghost"></view>
+      </view>
     </view>
 
-    <!-- 导入来源选择 -->
+    <view class="page-header">
+      <text class="page-title">把现有图纸带回编辑器</text>
+      <text class="page-subtitle">支持图片识别导入，也支持从我的项目继续编辑</text>
+    </view>
+
     <view class="source-section">
       <text class="section-title">选择来源</text>
       <view class="source-tabs">
@@ -14,410 +21,431 @@
           v-for="tab in sourceTabs"
           :key="tab.id"
           :class="['source-tab', activeSource === tab.id ? 'active' : '']"
-          @click="activeSource = tab.id"
+          @click="switchSource(tab.id)"
         >
           <image class="tab-icon" :src="tab.icon" mode="aspectFit" />
           <text class="tab-label">{{ tab.label }}</text>
         </view>
       </view>
+      <text class="section-hint">扫码导入延后到下一期，本版先把图片识别和项目导入闭环补完整。</text>
     </view>
 
-    <!-- 本地项目 -->
-    <view v-if="activeSource === 'local'" class="local-section">
+    <view v-if="activeSource === 'local'" class="content-card">
       <text class="section-title">我的项目</text>
-
-      <!-- 搜索 -->
       <view class="search-bar">
         <image class="search-icon" src="/static/assets/v015/icons/search-muted.png" mode="aspectFit" />
         <input
-          type="text"
           v-model="searchKeyword"
           class="search-input"
+          type="text"
           placeholder="搜索项目名称"
-          @input="filterProjects"
         />
       </view>
-
-      <!-- 项目列表 -->
       <scroll-view class="project-list" scroll-y>
         <view
           v-for="project in filteredProjects"
           :key="project.id"
-          class="project-item"
+          :class="['project-item', selectedProject?.id === project.id ? 'active' : '']"
           @click="selectProject(project)"
         >
-          <view class="project-info">
-            <text class="project-name">{{ project.name }}</text>
-            <text class="project-meta">
-              {{ project.canvasData?.width || 0 }}×{{ project.canvasData?.height || 0 }} ·
-              {{ formatDate(project.updatedAt) }}
-            </text>
+          <view class="project-main">
+            <text class="project-name">{{ project.name || '未命名作品' }}</text>
+            <text class="project-meta">{{ getProjectSpec(project) }}</text>
+            <text class="project-time">{{ formatDateTime(project.updatedAt || project.createdAt) }}</text>
           </view>
-          <view class="project-arrow">›</view>
+          <text class="project-arrow">›</text>
         </view>
-
         <view v-if="filteredProjects.length === 0" class="empty-state">
-          <text class="empty-text">{{ searchKeyword ? '未找到匹配的项目' : '暂无项目' }}</text>
+          <text class="empty-text">{{ searchKeyword ? '没有找到相关项目' : '还没有可导入的项目' }}</text>
         </view>
       </scroll-view>
     </view>
 
-    <!-- 文件导入 -->
-    <view v-if="activeSource === 'file'" class="file-section">
-      <text class="section-title">从文件导入</text>
-
-      <!-- 支持的格式说明 -->
-      <view class="format-info">
-        <text class="format-title">支持的文件格式</text>
-        <view class="format-list">
-          <text class="format-item">• JSON 格式 (.json)</text>
-          <text class="format-item">• PNG 图片 (.png)</text>
-          <text class="format-item">• PDF 文档 (.pdf)</text>
-        </view>
-      </view>
-
-      <!-- 上传区域 -->
+    <view v-else class="content-card">
+      <text class="section-title">识别图纸图片</text>
       <view class="upload-area" @click="chooseFile">
         <view class="upload-icon">
           <image class="icon-image" src="/static/assets/v015/icons/blueprint-import-active.png" mode="aspectFit" />
         </view>
-        <text class="upload-text">点击选择文件</text>
-        <text class="upload-hint">或拖拽文件到此处</text>
+        <text class="upload-text">{{ selectedImage ? '重新选择图片' : '点击选择图纸图片' }}</text>
+        <text class="upload-hint">优先支持本应用导出的图纸图片，也支持规则格子图</text>
       </view>
 
-      <!-- 最近导入 -->
+      <view v-if="selectedImage" class="recognize-panel">
+        <view class="recognize-actions">
+          <view class="action-chip" @click="runAutoRecognition(false)">
+            <text>{{ isRecognizing ? '识别中...' : '自动识别' }}</text>
+          </view>
+          <view class="action-chip secondary" @click="openManualSizeModal">
+            <text>手动设置尺寸</text>
+          </view>
+        </view>
+
+        <view class="compare-row">
+          <view class="compare-col">
+            <text class="compare-label">原图</text>
+            <view class="compare-box">
+              <image :src="selectedImage" class="compare-image" mode="aspectFit" />
+            </view>
+          </view>
+          <view class="compare-col">
+            <text class="compare-label">识别结果</text>
+            <view class="compare-box result">
+              <image v-if="recognitionResult?.previewUrl" :src="recognitionResult.previewUrl" class="compare-image" mode="aspectFit" />
+              <text v-else class="empty-result">先点击自动识别</text>
+            </view>
+          </view>
+        </view>
+
+        <view v-if="recognitionResult" class="result-summary">
+          <text class="summary-line">尺寸：{{ recognitionResult.width }} × {{ recognitionResult.height }} 格</text>
+          <text class="summary-line">原图：{{ recognitionResult.sourceWidth }} × {{ recognitionResult.sourceHeight }} px</text>
+          <text class="summary-line">估算单格：{{ recognitionResult.estimatedCellSize }} px</text>
+        </view>
+      </view>
+
       <view v-if="recentImports.length > 0" class="recent-section">
         <text class="section-title">最近导入</text>
-        <view
-          v-for="item in recentImports"
-          :key="item.id"
-          class="recent-item"
-          @click="loadRecentImport(item)"
-        >
+        <view v-for="item in recentImports" :key="item.id" class="recent-item" @click="loadRecentImport(item)">
           <image class="recent-icon" src="/static/assets/v015/icons/blueprint-import-muted.png" mode="aspectFit" />
           <view class="recent-info">
             <text class="recent-name">{{ item.name }}</text>
-            <text class="recent-date">{{ formatDate(item.importedAt) }}</text>
+            <text class="recent-date">{{ formatDateTime(item.importedAt) }}</text>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 二维码扫描 -->
-    <view v-if="activeSource === 'qrcode'" class="qrcode-section">
-      <text class="section-title">扫码导入</text>
-      <text class="section-hint">扫描图纸上的二维码，快速导入拼豆图纸</text>
-
-      <view class="qrcode-scanner" @click="scanQRCode">
-        <view class="scanner-frame">
-          <view class="scanner-corner top-left"></view>
-          <view class="scanner-corner top-right"></view>
-          <view class="scanner-corner bottom-left"></view>
-          <view class="scanner-corner bottom-right"></view>
-        </view>
-        <text class="scanner-hint">点击开始扫描</text>
-      </view>
-    </view>
-
-    <!-- 选中的项目预览 -->
-    <view v-if="selectedProject" class="preview-section">
+    <view v-if="importPreview" class="content-card">
       <view class="preview-header">
-        <text class="preview-title">已选择项目</text>
-        <text class="preview-clear" @click="selectedProject = null">清除</text>
+        <text class="section-title">导入预览</text>
+        <text class="preview-clear" @click="clearSelection">清除</text>
       </view>
       <view class="preview-content">
-        <view class="preview-info">
-          <text class="preview-name">{{ selectedProject.name }}</text>
-          <text class="preview-meta">
-            尺寸：{{ selectedProject.canvasData?.width || 0 }}×{{ selectedProject.canvasData?.height || 0 }} 格
-          </text>
-          <text class="preview-meta">
-            拼豆数：{{ selectedProject.canvasData?.beads?.length || 0 }}
-          </text>
-          <text class="preview-meta">
-            更新于：{{ formatDate(selectedProject.updatedAt) }}
-          </text>
+        <text class="preview-name">{{ importPreview.name }}</text>
+        <text class="preview-meta">{{ importPreview.spec }}</text>
+        <text class="preview-meta">{{ importPreview.desc }}</text>
+      </view>
+    </view>
+
+    <view v-if="showManualModal" class="modal-mask" @click="closeManualSizeModal">
+      <view class="manual-modal" @click.stop>
+        <text class="modal-title">手动设置图纸尺寸</text>
+        <text class="modal-desc">自动识别不稳定时，先输入格子数再重新识别。</text>
+        <view class="manual-row">
+          <view class="manual-input">
+            <text class="manual-label">宽</text>
+            <input v-model="manualWidth" type="number" class="manual-field" />
+            <text class="manual-unit">格</text>
+          </view>
+          <text class="manual-separator">×</text>
+          <view class="manual-input">
+            <text class="manual-label">高</text>
+            <input v-model="manualHeight" type="number" class="manual-field" />
+            <text class="manual-unit">格</text>
+          </view>
+        </view>
+        <view class="modal-actions">
+          <view class="modal-btn secondary" @click="closeManualSizeModal">取消</view>
+          <view class="modal-btn primary" @click="runManualRecognition">重新识别</view>
         </view>
       </view>
     </view>
 
-    <!-- 底部按钮 -->
     <view class="bottom-actions">
-      <button
-        class="btn-import"
-        :disabled="!canImport"
-        @click="importBlueprint"
-      >
-        {{ canImport ? '导入到画布' : '请选择要导入的图纸' }}
-      </button>
-    </view>
-
-    <!-- 导入成功提示 -->
-    <view v-if="showSuccess" class="success-toast">
-      <text class="success-icon">✓</text>
-      <text class="success-text">导入成功</text>
+      <view class="btn-import" :class="{ disabled: !canImport }" @click="canImport ? importBlueprint() : null">
+        <text>{{ importButtonText }}</text>
+      </view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { buildBlueprintTransferFromRecognition, recognizeBlueprintFromImage } from '@/utils/blueprint-recognizer'
+import { createBlueprintTransferData } from '@/utils/blueprint-utils'
+import { setBlueprintData } from '@/utils/blueprint-transfer'
 
-// ==================== 常量定义 ====================
-// 来源选项
 const sourceTabs = [
+  { id: 'file', label: '图片识别', icon: '/static/assets/v015/icons/blueprint-import-muted.png' },
   { id: 'local', label: '我的项目', icon: '/static/assets/v015/icons/project-muted.png' },
-  { id: 'file', label: '本地文件', icon: '/static/assets/v015/icons/blueprint-import-muted.png' },
-  { id: 'qrcode', label: '扫码导入', icon: '/static/assets/v015/icons/image-import-muted.png' },
 ]
 
-// ==================== 状态定义 ====================
-// 当前选中的来源
-const activeSource = ref('local')
-
-// 搜索关键词
+const activeSource = ref<'file' | 'local'>('file')
 const searchKeyword = ref('')
-
-// 项目列表
 const projects = ref<any[]>([])
-
-// 过滤后的项目列表
-const filteredProjects = computed(() => {
-  if (!searchKeyword.value) {
-    return projects.value
-  }
-  return projects.value.filter(p =>
-    p.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
-  )
-})
-
-// 最近导入记录
 const recentImports = ref<any[]>([])
+const selectedProject = ref<any | null>(null)
+const selectedImage = ref('')
+const selectedFileName = ref('')
+const recognitionResult = ref<Awaited<ReturnType<typeof recognizeBlueprintFromImage>> | null>(null)
+const isRecognizing = ref(false)
+const showManualModal = ref(false)
+const manualWidth = ref(30)
+const manualHeight = ref(30)
 
-// 选中的项目
-const selectedProject = ref<any>(null)
-
-// 选中的文件
-const selectedFile = ref<string>('')
-
-// 是否显示成功提示
-const showSuccess = ref(false)
-
-// ==================== 计算属性 ====================
-// 是否可以导入
-const canImport = computed(() => {
-  return selectedProject.value !== null || selectedFile.value !== ''
+const filteredProjects = computed(() => {
+  const keyword = searchKeyword.value.trim().toLowerCase()
+  if (!keyword) return projects.value
+  return projects.value.filter((project) => String(project.name || '').toLowerCase().includes(keyword))
 })
 
-// ==================== 生命周期 ====================
+const importPreview = computed(() => {
+  if (selectedProject.value) {
+    return {
+      name: selectedProject.value.name || '未命名作品',
+      spec: getProjectSpec(selectedProject.value),
+      desc: '将以项目当前画布内容直接导入编辑器',
+    }
+  }
+
+  if (recognitionResult.value) {
+    return {
+      name: selectedFileName.value || '图片识别结果',
+      spec: `${recognitionResult.value.width} × ${recognitionResult.value.height} 格`,
+      desc: '将以识别后的图纸内容导入编辑器，可继续修改颜色和网格',
+    }
+  }
+
+  return null
+})
+
+const canImport = computed(() => {
+  return Boolean(selectedProject.value || recognitionResult.value)
+})
+
+const importButtonText = computed(() => {
+  if (selectedProject.value) return '导入项目到画布'
+  if (recognitionResult.value) return '导入识别结果'
+  return activeSource.value === 'file' ? '请先选择并识别图片' : '请选择要导入的项目'
+})
+
 onMounted(() => {
   loadProjects()
   loadRecentImports()
 })
 
-// ==================== 方法定义 ====================
+const goBack = () => {
+  uni.navigateBack()
+}
 
-/**
- * 加载项目列表
- */
+const switchSource = (source: 'file' | 'local') => {
+  activeSource.value = source
+}
+
 const loadProjects = () => {
-  const savedProjects = uni.getStorageSync('pin_projects') || []
-  projects.value = savedProjects
+  projects.value = uni.getStorageSync('pin_projects') || []
 }
 
-/**
- * 加载最近导入记录
- */
 const loadRecentImports = () => {
-  const saved = uni.getStorageSync('pin_recent_imports') || []
-  recentImports.value = saved.slice(0, 5)
+  recentImports.value = (uni.getStorageSync('pin_recent_imports') || []).slice(0, 5)
 }
 
-/**
- * 搜索项目
- */
-const filterProjects = () => {
-  // 搜索逻辑在 computed 中处理
+const formatDateTime = (timestamp: number) => {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${month}-${day} ${hours}:${minutes}`
 }
 
-/**
- * 选择项目
- * @param project - 选中的项目
- */
+const getProjectSpec = (project: any) => {
+  const width = Number(project?.canvasData?.width || 0)
+  const height = Number(project?.canvasData?.height || 0)
+  const beads = Array.isArray(project?.canvasData?.beads) ? project.canvasData.beads.length : 0
+  return `${width} × ${height} 格 · ${beads} 豆`
+}
+
+const clearSelection = () => {
+  selectedProject.value = null
+  recognitionResult.value = null
+  selectedImage.value = ''
+  selectedFileName.value = ''
+}
+
 const selectProject = (project: any) => {
   selectedProject.value = project
-  selectedFile.value = ''
+  recognitionResult.value = null
+  selectedImage.value = ''
+  selectedFileName.value = ''
 }
 
-/**
- * 选择文件
- */
 const chooseFile = () => {
-  // 根据平台选择文件
   // #ifdef H5
-  // H5 环境使用 file input
   const input = document.createElement('input')
   input.type = 'file'
-  input.accept = '.json,.png,.pdf'
-  input.onchange = (e: any) => {
-    const file = e.target.files[0]
-    if (file) {
-      handleFile(file)
-    }
+  input.accept = '.json,.png,.jpg,.jpeg,.webp'
+  input.onchange = async (event: any) => {
+    const file = event.target?.files?.[0]
+    if (!file) return
+    await handleFile(file)
   }
   input.click()
   // #endif
 
   // #ifndef H5
-  // App/小程序使用 uni.chooseMessageFile
   uni.chooseMessageFile({
     count: 1,
-    type: 'file',
-    extension: ['json', 'png', 'pdf'],
-    success: (res) => {
-      const file = res.tempFiles[0]
-      handleFile(file)
-    }
+    type: 'image',
+    success: async (res) => {
+      const file = res.tempFiles?.[0]
+      if (file) {
+        await handleFile(file)
+      }
+    },
   })
   // #endif
 }
 
-/**
- * 处理选择的文件
- * @param file - 文件对象
- */
-const handleFile = (file: any) => {
-  const fileName = file.name || file.tempFilePath || '未命名文件'
-
-  // 根据文件类型处理
-  if (fileName.endsWith('.json')) {
-    // JSON 文件直接解析
-    if (typeof file === 'string') {
-      // 可能是临时文件路径
-      selectedFile.value = file
-    } else {
-      // 文件对象，需要读取内容
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        try {
-          const data = JSON.parse(e.target?.result as string)
-          // 创建项目
-          selectedProject.value = {
-            id: 'imported_' + Date.now(),
-            name: fileName.replace('.json', ''),
-            canvasData: data,
-            createdAt: Date.now(),
-            updatedAt: Date.now(),
-          }
-        } catch (err) {
-          uni.showToast({ title: '文件格式错误', icon: 'none' })
-        }
-      }
-      reader.readAsText(file)
+const handleJsonImport = async (fileName: string, content: string) => {
+  try {
+    const raw = JSON.parse(content)
+    const canvasData = raw.canvasData || raw
+    selectedProject.value = {
+      id: `imported_${Date.now()}`,
+      name: fileName.replace(/\.json$/i, ''),
+      canvasData,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
     }
-  } else if (fileName.endsWith('.png') || fileName.endsWith('.jpg')) {
-    // 图片文件需要处理为图纸
-    selectedFile.value = file.tempFilePath || URL.createObjectURL(file)
-    uni.showToast({ title: '图片转图纸功能开发中', icon: 'none' })
-  } else {
-    uni.showToast({ title: '不支持的文件格式', icon: 'none' })
+    activeSource.value = 'local'
+  } catch (error) {
+    uni.showToast({ title: 'JSON 格式无法识别', icon: 'none' })
   }
 }
 
-/**
- * 加载最近导入
- * @param item - 导入记录
- */
+const handleFile = async (file: any) => {
+  const fileName = file.name || file.tempFilePath || '未命名文件'
+  selectedFileName.value = fileName
+
+  if (/\.json$/i.test(fileName)) {
+    if (typeof FileReader !== 'undefined' && file instanceof File) {
+      const reader = new FileReader()
+      reader.onload = async (event) => {
+        await handleJsonImport(fileName, String(event.target?.result || ''))
+      }
+      reader.readAsText(file)
+      return
+    }
+    uni.showToast({ title: '当前环境暂不支持读取 JSON', icon: 'none' })
+    return
+  }
+
+  selectedProject.value = null
+  selectedImage.value = file.tempFilePath || URL.createObjectURL(file)
+  await runAutoRecognition(true)
+}
+
+const runAutoRecognition = async (showLoading = true) => {
+  if (!selectedImage.value || isRecognizing.value) return
+  isRecognizing.value = true
+  if (showLoading) uni.showLoading({ title: '识别图纸中...' })
+  try {
+    recognitionResult.value = await recognizeBlueprintFromImage(selectedImage.value)
+    manualWidth.value = recognitionResult.value.width
+    manualHeight.value = recognitionResult.value.height
+    uni.showToast({ title: `识别到 ${recognitionResult.value.width}×${recognitionResult.value.height} 格`, icon: 'success' })
+  } catch (error: any) {
+    console.error(error)
+    recognitionResult.value = null
+    uni.showToast({ title: error?.message || '自动识别失败，请手动设置尺寸', icon: 'none' })
+  } finally {
+    if (showLoading) uni.hideLoading()
+    isRecognizing.value = false
+  }
+}
+
+const openManualSizeModal = () => {
+  if (!selectedImage.value) {
+    uni.showToast({ title: '请先选择图纸图片', icon: 'none' })
+    return
+  }
+  if (recognitionResult.value) {
+    manualWidth.value = recognitionResult.value.width
+    manualHeight.value = recognitionResult.value.height
+  }
+  showManualModal.value = true
+}
+
+const closeManualSizeModal = () => {
+  showManualModal.value = false
+}
+
+const runManualRecognition = async () => {
+  if (!selectedImage.value) return
+  const width = Math.min(200, Math.max(4, Number(manualWidth.value) || 30))
+  const height = Math.min(200, Math.max(4, Number(manualHeight.value) || 30))
+  uni.showLoading({ title: '按手动尺寸识别...' })
+  try {
+    recognitionResult.value = await recognizeBlueprintFromImage(selectedImage.value, { width, height })
+    manualWidth.value = recognitionResult.value.width
+    manualHeight.value = recognitionResult.value.height
+    showManualModal.value = false
+    uni.showToast({ title: '手动识别完成', icon: 'success' })
+  } catch (error: any) {
+    console.error(error)
+    uni.showToast({ title: error?.message || '手动识别失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+  }
+}
+
 const loadRecentImport = (item: any) => {
-  // 从本地存储加载项目数据
-  const savedProjects = uni.getStorageSync('pin_projects') || []
-  const project = savedProjects.find((p: any) => p.id === item.projectId)
+  const project = (uni.getStorageSync('pin_projects') || []).find((entry: any) => entry.id === item.projectId)
   if (project) {
+    activeSource.value = 'local'
     selectProject(project)
   }
 }
 
-/**
- * 扫码导入
- */
-const scanQRCode = () => {
-  // 使用 uni.scanCode
-  uni.scanCode({
-    onlyFromCamera: true,
-    success: (res) => {
-      handleQRCode(res.result)
-    },
-    fail: () => {
-      uni.showToast({ title: '扫描失败，请重试', icon: 'none' })
-    }
-  })
-}
-
-/**
- * 处理二维码内容
- * @param content - 二维码内容
- */
-const handleQRCode = (content: string) => {
-  try {
-    // 尝试解析为 JSON
-    const data = JSON.parse(content)
-    if (data.canvasData) {
-      selectedProject.value = {
-        id: 'qr_' + Date.now(),
-        name: data.name || '扫码导入作品',
-        canvasData: data.canvasData,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      }
-    }
-  } catch {
-    // 不是 JSON，可能是 URL
-    if (content.startsWith('http')) {
-      uni.showToast({ title: '链接导入功能开发中', icon: 'none' })
-    } else {
-      uni.showToast({ title: '无效的二维码内容', icon: 'none' })
-    }
-  }
-}
-
-/**
- * 格式化日期
- * @param timestamp - 时间戳
- */
-const formatDate = (timestamp: number): string => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  const month = date.getMonth() + 1
-  const day = date.getDate()
-  return `${month}月${day}日`
-}
-
-/**
- * 导入图纸
- */
-const importBlueprint = () => {
-  if (!selectedProject.value) return
-
-  // 保存到最近导入
-  const recent = {
-    id: selectedProject.value.id,
-    projectId: selectedProject.value.id,
-    name: selectedProject.value.name,
+const saveRecentImport = (payload: { projectId: string; name: string }) => {
+  const item = {
+    id: payload.projectId,
+    projectId: payload.projectId,
+    name: payload.name,
     importedAt: Date.now(),
   }
   const saved = uni.getStorageSync('pin_recent_imports') || []
-  const updated = [recent, ...saved.filter((r: any) => r.projectId !== recent.projectId)].slice(0, 10)
-  uni.setStorageSync('pin_recent_imports', updated)
+  const nextValue = [item, ...saved.filter((entry: any) => entry.projectId !== item.projectId)].slice(0, 10)
+  uni.setStorageSync('pin_recent_imports', nextValue)
+}
 
-  // 跳转到画布编辑器
-  uni.navigateTo({
-    url: `/pages/canvas-editor/index?mode=import&data=${encodeURIComponent(
-      JSON.stringify({
-        canvasData: selectedProject.value.canvasData,
-        name: selectedProject.value.name,
-      })
-    )}`
-  })
+const importBlueprint = () => {
+  if (selectedProject.value) {
+    const canvasData = selectedProject.value.canvasData || {}
+    const transferData = createBlueprintTransferData({
+      width: canvasData.width || 30,
+      height: canvasData.height || 30,
+      backgroundColor: canvasData.backgroundColor || '#FFFFFF',
+      showGrid: canvasData.showGrid !== false,
+      gridColor: canvasData.gridColor || '#CCCCCC',
+      beads: Array.isArray(canvasData.beads) ? canvasData.beads : [],
+      beadStyle: canvasData.beadStyle === 'round' ? 'round' : 'square',
+      showColorCode: canvasData.showColorCode === true,
+      sourceMeta: {
+        sourceType: 'project-import',
+        sourceName: selectedProject.value.name || '我的项目',
+        recognitionMode: 'manual',
+      },
+    })
+    setBlueprintData(transferData)
+    saveRecentImport({ projectId: selectedProject.value.id, name: selectedProject.value.name || '未命名作品' })
+    uni.navigateTo({ url: '/pages/canvas-editor/index?mode=blueprint' })
+    return
+  }
+
+  if (recognitionResult.value) {
+    const transferData = buildBlueprintTransferFromRecognition(
+      recognitionResult.value,
+      selectedFileName.value || '图片识别',
+      showManualModal.value ? 'manual' : 'auto'
+    )
+    setBlueprintData(transferData)
+    saveRecentImport({ projectId: `recognition_${Date.now()}`, name: selectedFileName.value || '图片识别' })
+    uni.navigateTo({ url: '/pages/canvas-editor/index?mode=blueprint' })
+  }
 }
 </script>
 
@@ -425,13 +453,57 @@ const importBlueprint = () => {
 .blueprint-import-page {
   min-height: 100vh;
   background-color: var(--color-bg-page);
-  padding-bottom: 160rpx;
+  padding-bottom: 170rpx;
 }
 
-/* 页面标题 */
-.page-header {
+.page-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255,253,250,.94);
+  backdrop-filter: blur(16rpx);
+}
+
+.nav-top-safe {
+  height: 0;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 24rpx 16rpx;
+}
+
+.nav-back,
+.nav-ghost {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back {
+  border: 2rpx solid var(--color-border);
+  border-radius: 999rpx;
+  font-size: 48rpx;
+  color: var(--color-text-primary);
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+.page-header,
+.source-section,
+.content-card {
   margin: 24rpx;
-  padding: 34rpx 32rpx;
+  padding: 28rpx;
   background-color: var(--color-bg-panel);
   border: 2rpx solid var(--color-border);
   border-radius: 28rpx;
@@ -439,34 +511,41 @@ const importBlueprint = () => {
 }
 
 .page-title {
+  display: block;
   font-size: 42rpx;
   font-weight: 800;
   color: var(--color-text-primary);
-  display: block;
+}
+
+.page-subtitle,
+.section-hint,
+.preview-meta,
+.project-time,
+.upload-hint,
+.empty-text,
+.manual-unit,
+.modal-desc {
+  color: var(--color-text-tertiary);
 }
 
 .page-subtitle {
-  font-size: 26rpx;
-  color: var(--color-text-tertiary);
+  display: block;
   margin-top: 8rpx;
-}
-
-/* 来源选择 */
-.source-section {
-  margin: 0 24rpx 24rpx;
-  padding: 28rpx;
-  background-color: var(--color-bg-panel);
-  border: 2rpx solid var(--color-border);
-  border-radius: 24rpx;
-  box-shadow: var(--shadow-md);
+  font-size: 26rpx;
 }
 
 .section-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin-bottom: 24rpx;
   display: block;
+  margin-bottom: 20rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.section-hint {
+  display: block;
+  margin-top: 16rpx;
+  font-size: 22rpx;
 }
 
 .source-tabs {
@@ -476,13 +555,13 @@ const importBlueprint = () => {
 
 .source-tab {
   flex: 1;
+  padding: 24rpx 18rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 22rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 24rpx;
-  background-color: var(--color-bg-panel);
-  border-radius: 22rpx;
-  border: 2rpx solid var(--color-border);
+  gap: 10rpx;
 }
 
 .source-tab.active {
@@ -490,11 +569,16 @@ const importBlueprint = () => {
   border-color: var(--color-primary);
 }
 
+.tab-icon,
+.recent-icon,
+.search-icon,
+.icon-image {
+  display: block;
+}
+
 .tab-icon {
   width: 48rpx;
   height: 48rpx;
-  margin-bottom: 8rpx;
-  display: block;
 }
 
 .tab-label {
@@ -504,34 +588,23 @@ const importBlueprint = () => {
 
 .source-tab.active .tab-label {
   color: var(--color-primary);
-  font-weight: 600;
-}
-
-/* 本地项目 */
-.local-section {
-  margin: 0 24rpx 24rpx;
-  padding: 28rpx;
-  background-color: var(--color-bg-panel);
-  border: 2rpx solid var(--color-border);
-  border-radius: 24rpx;
-  box-shadow: var(--shadow-md);
+  font-weight: 700;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
-  background-color: var(--color-bg-panel);
+  gap: 12rpx;
+  padding: 16rpx 20rpx;
   border: 2rpx solid var(--color-border);
   border-radius: 18rpx;
-  padding: 16rpx 24rpx;
-  margin-bottom: 24rpx;
+  background-color: var(--color-bg-page);
+  margin-bottom: 20rpx;
 }
 
 .search-icon {
   width: 28rpx;
   height: 28rpx;
-  margin-right: 12rpx;
-  display: block;
 }
 
 .search-input {
@@ -541,36 +614,58 @@ const importBlueprint = () => {
 }
 
 .project-list {
-  max-height: 500rpx;
+  max-height: 620rpx;
 }
 
 .project-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16rpx;
   padding: 24rpx 0;
   border-bottom: 2rpx solid var(--color-divider);
 }
 
-.project-item:last-child {
+.project-item.active {
+  background: rgba(255,190,92,.08);
+}
+
+.project-item:last-child,
+.recent-item:last-child {
   border-bottom: none;
 }
 
-.project-info {
+.project-main {
   flex: 1;
 }
 
-.project-name {
-  font-size: 28rpx;
-  color: var(--color-text-primary);
-  font-weight: 500;
+.project-name,
+.preview-name,
+.recent-name {
   display: block;
-  margin-bottom: 8rpx;
+  color: var(--color-text-primary);
 }
 
-.project-meta {
+.project-name,
+.preview-name {
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.project-meta,
+.preview-meta,
+.recent-date,
+.summary-line {
+  display: block;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+  margin-top: 8rpx;
+}
+
+.project-time {
+  display: block;
   font-size: 22rpx;
-  color: var(--color-text-tertiary);
+  margin-top: 8rpx;
 }
 
 .project-arrow {
@@ -579,303 +674,290 @@ const importBlueprint = () => {
 }
 
 .empty-state {
-  padding: 64rpx 0;
+  padding: 84rpx 0;
   text-align: center;
 }
 
 .empty-text {
   font-size: 28rpx;
-  color: var(--color-text-disabled);
-}
-
-/* 文件导入 */
-.file-section {
-  margin: 0 24rpx 24rpx;
-  padding: 28rpx;
-  background-color: var(--color-bg-panel);
-  border: 2rpx solid var(--color-border);
-  border-radius: 24rpx;
-  box-shadow: var(--shadow-md);
-}
-
-.format-info {
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-lg);
-  padding: 24rpx;
-  margin-bottom: 24rpx;
-}
-
-.format-title {
-  font-size: 26rpx;
-  color: var(--color-text-secondary);
-  font-weight: 500;
-  display: block;
-  margin-bottom: 12rpx;
-}
-
-.format-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.format-item {
-  font-size: 24rpx;
-  color: var(--color-text-tertiary);
-  line-height: 1.6;
 }
 
 .upload-area {
   height: 300rpx;
-  background-color: var(--color-bg-panel);
-  border-radius: 28rpx;
   border: 4rpx dashed var(--color-border);
+  border-radius: 28rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  background-color: var(--color-bg-page);
 }
 
 .upload-icon {
   width: 100rpx;
   height: 100rpx;
-  background-color: var(--color-primary-light);
+  margin-bottom: 18rpx;
   border-radius: 26rpx;
   border: 2rpx solid var(--color-primary);
+  background-color: var(--color-primary-light);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 20rpx;
 }
 
-.icon-image { width: 56rpx; height: 56rpx; display: block; }
+.icon-image {
+  width: 56rpx;
+  height: 56rpx;
+}
 
 .upload-text {
   font-size: 30rpx;
   color: var(--color-text-primary);
-  margin-bottom: 8rpx;
+  margin-bottom: 6rpx;
 }
 
-.upload-hint {
+.upload-hint,
+.empty-result {
   font-size: 24rpx;
-  color: var(--color-text-tertiary);
 }
 
+.recognize-panel,
 .recent-section {
-  margin-top: 32rpx;
+  margin-top: 24rpx;
+}
+
+.recognize-actions {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.action-chip {
+  padding: 14rpx 24rpx;
+  border-radius: 999rpx;
+  background-color: var(--color-primary);
+  color: var(--color-text-primary);
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.action-chip.secondary {
+  background-color: var(--color-bg-page);
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.compare-row {
+  display: flex;
+  gap: 16rpx;
+}
+
+.compare-col {
+  flex: 1;
+}
+
+.compare-label {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.compare-box {
+  height: 280rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 22rpx;
+  background-color: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.compare-box.result {
+  border-color: var(--color-primary);
+}
+
+.compare-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.empty-result {
+  color: var(--color-text-disabled);
+}
+
+.result-summary {
+  margin-top: 18rpx;
+  padding: 20rpx;
+  border-radius: 18rpx;
+  background-color: var(--color-bg-page);
+}
+
+.summary-line + .summary-line {
+  margin-top: 8rpx;
 }
 
 .recent-item {
   display: flex;
   align-items: center;
-  padding: 20rpx 0;
+  gap: 14rpx;
+  padding: 18rpx 0;
   border-bottom: 2rpx solid var(--color-divider);
-}
-
-.recent-item:last-child {
-  border-bottom: none;
 }
 
 .recent-icon {
   width: 40rpx;
   height: 40rpx;
-  margin-right: 16rpx;
-  display: block;
 }
 
 .recent-info {
   flex: 1;
 }
 
-.recent-name {
-  font-size: 26rpx;
-  color: var(--color-text-primary);
-  display: block;
-  margin-bottom: 4rpx;
-}
-
-.recent-date {
-  font-size: 22rpx;
-  color: var(--color-text-tertiary);
-}
-
-/* 二维码扫描 */
-.qrcode-section {
-  padding: 32rpx;
-  background-color: var(--color-bg-panel);
-  margin-bottom: 24rpx;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-.section-hint {
-  font-size: 26rpx;
-  color: var(--color-text-tertiary);
-  display: block;
-  margin-bottom: 32rpx;
-}
-
-.qrcode-scanner {
-  height: 400rpx;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.scanner-frame {
-  width: 300rpx;
-  height: 300rpx;
-  position: relative;
-}
-
-.scanner-corner {
-  position: absolute;
-  width: 40rpx;
-  height: 40rpx;
-  border-color: var(--color-primary);
-  border-style: solid;
-  border-width: 0;
-}
-
-.scanner-corner.top-left {
-  top: 0;
-  left: 0;
-  border-top-width: 6rpx;
-  border-left-width: 6rpx;
-  border-top-left-radius: 16rpx;
-}
-
-.scanner-corner.top-right {
-  top: 0;
-  right: 0;
-  border-top-width: 6rpx;
-  border-right-width: 6rpx;
-  border-top-right-radius: 16rpx;
-}
-
-.scanner-corner.bottom-left {
-  bottom: 0;
-  left: 0;
-  border-bottom-width: 6rpx;
-  border-left-width: 6rpx;
-  border-bottom-left-radius: 16rpx;
-}
-
-.scanner-corner.bottom-right {
-  bottom: 0;
-  right: 0;
-  border-bottom-width: 6rpx;
-  border-right-width: 6rpx;
-  border-bottom-right-radius: 16rpx;
-}
-
-.scanner-hint {
-  font-size: 26rpx;
-  color: var(--color-text-secondary);
-  margin-top: 24rpx;
-}
-
-/* 预览区域 */
-.preview-section {
-  padding: 32rpx;
-  background-color: var(--color-bg-panel);
-  margin-bottom: 24rpx;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
 .preview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24rpx;
-}
-
-.preview-title {
-  font-size: 30rpx;
-  font-weight: 600;
-  color: var(--color-text-primary);
 }
 
 .preview-clear {
-  font-size: 26rpx;
+  font-size: 24rpx;
   color: var(--color-primary);
 }
 
 .preview-content {
+  margin-top: 16rpx;
+  padding: 22rpx;
+  border-radius: 20rpx;
   background-color: var(--color-bg-page);
-  border-radius: var(--radius-lg);
-  padding: 24rpx;
 }
 
-.preview-name {
-  font-size: 28rpx;
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background-color: var(--color-bg-mask);
+  display: flex;
+  align-items: flex-end;
+}
+
+.manual-modal {
+  width: 100%;
+  padding: 32rpx 32rpx calc(32rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
+  background-color: var(--color-bg-panel);
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.modal-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 800;
   color: var(--color-text-primary);
-  font-weight: 600;
-  display: block;
-  margin-bottom: 12rpx;
 }
 
-.preview-meta {
+.modal-desc {
+  display: block;
+  margin-top: 8rpx;
   font-size: 24rpx;
-  color: var(--color-text-secondary);
-  display: block;
-  margin-bottom: 8rpx;
 }
 
-/* 底部按钮 */
+.manual-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 28rpx 0;
+}
+
+.manual-input {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 18rpx;
+  border: 2rpx solid var(--color-border);
+  border-radius: 18rpx;
+  background-color: var(--color-bg-page);
+}
+
+.manual-label {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  margin-right: 10rpx;
+}
+
+.manual-field {
+  width: 88rpx;
+  text-align: center;
+  font-size: 30rpx;
+  color: var(--color-text-primary);
+}
+
+.manual-unit {
+  font-size: 22rpx;
+  margin-left: 8rpx;
+}
+
+.manual-separator {
+  margin: 0 18rpx;
+  font-size: 34rpx;
+  color: var(--color-text-tertiary);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 84rpx;
+  border-radius: 999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.modal-btn.secondary {
+  background-color: var(--color-bg-page);
+  border: 2rpx solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.modal-btn.primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-primary);
+}
+
 .bottom-actions {
   position: fixed;
-  bottom: 0;
   left: 0;
   right: 0;
+  bottom: 0;
   padding: 24rpx 32rpx;
+  padding-bottom: calc(24rpx + constant(safe-area-inset-bottom));
   padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
-  background-color: var(--color-bg-panel);
-  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+  background-color: rgba(255,253,250,.96);
+  box-shadow: 0 -8rpx 28rpx rgba(56,42,26,.08);
 }
 
 .btn-import {
   width: 100%;
   height: 88rpx;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  color: var(--color-text-inverse);
-  font-size: 32rpx;
-  font-weight: 600;
-  border-radius: 44rpx;
-  border: none;
-}
-
-.btn-import[disabled] {
-  background: var(--color-text-disabled);
-}
-
-/* 成功提示 */
-.success-toast {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: var(--color-bg-mask);
-  padding: 32rpx 64rpx;
-  border-radius: var(--radius-lg);
+  border-radius: 999rpx;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  z-index: 1000;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: var(--color-text-primary);
+  font-size: 32rpx;
+  font-weight: 700;
 }
 
-.success-icon {
-  font-size: 64rpx;
-  color: var(--color-success);
-  margin-bottom: 16rpx;
-}
-
-.success-text {
-  font-size: 28rpx;
+.btn-import.disabled {
+  background: var(--color-text-disabled);
   color: var(--color-text-inverse);
 }
 </style>

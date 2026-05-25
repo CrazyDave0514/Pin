@@ -1,9 +1,17 @@
 <template>
   <view class="image-import-page">
-    <!-- 页面标题 -->
+    <view class="page-nav">
+      <view class="nav-top-safe"></view>
+      <view class="nav-bar">
+        <view class="nav-back" @click="goBack">‹</view>
+        <text class="nav-title">导入图片</text>
+        <view class="nav-ghost"></view>
+      </view>
+    </view>
+
     <view class="page-header">
-      <text class="page-title">导入图片</text>
-      <text class="page-subtitle">选择图片并转换为拼豆图纸</text>
+      <text class="page-title">把图片转成拼豆图纸</text>
+      <text class="page-subtitle">尺寸会按原图比例联动，生成结果可直接进入编辑器继续调整</text>
     </view>
 
     <!-- 图片选择区域 -->
@@ -23,7 +31,7 @@
         <!-- 左：原图 -->
         <view class="compare-col">
           <text class="compare-label">原图</text>
-          <view class="compare-image-wrap">
+          <view class="compare-image-wrap" :style="previewBoxStyle">
             <image
               :src="selectedImage"
               mode="aspectFit"
@@ -35,7 +43,7 @@
         <!-- 右：生成结果 -->
         <view class="compare-col">
           <text class="compare-label">生成结果</text>
-          <view class="compare-image-wrap" :class="{ 'has-result': generatedBlueprint }">
+          <view class="compare-image-wrap" :class="{ 'has-result': generatedBlueprint }" :style="previewBoxStyle">
             <image
               v-if="generatedBlueprint && blueprintPreviewUrl"
               :src="blueprintPreviewUrl"
@@ -60,7 +68,7 @@
       <!-- 输出尺寸 -->
       <view class="setting-item">
         <text class="setting-label">输出尺寸（拼豆格子数）</text>
-        <text class="setting-desc">当前 {{ outputWidth }} × {{ outputHeight }} 格</text>
+        <text class="setting-desc">当前 {{ outputWidth }} × {{ outputHeight }} 格，始终按原图比例联动</text>
         <view class="size-presets">
           <text
             :class="['preset-btn', activePreset === '小(20×20)' ? 'active' : '']"
@@ -141,13 +149,13 @@
         <view class="custom-size-row">
           <view class="input-group">
             <text class="input-label">宽</text>
-            <input type="number" v-model="customOutputWidth" class="size-input" />
+            <input type="number" v-model="customOutputWidth" class="size-input" @input="handleCustomSizeInput('width')" />
             <text class="input-unit">格</text>
           </view>
           <text class="size-separator">×</text>
           <view class="input-group">
             <text class="input-label">高</text>
-            <input type="number" v-model="customOutputHeight" class="size-input" />
+            <input type="number" v-model="customOutputHeight" class="size-input" @input="handleCustomSizeInput('height')" />
             <text class="input-unit">格</text>
           </view>
         </view>
@@ -187,6 +195,18 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { setBlueprintData } from '@/utils/blueprint-transfer'
+import {
+  buildBeadsFromPixelData,
+  clampGridSize,
+  colorDistance,
+  createBlueprintTransferData,
+  getAspectFittedGrid,
+  getPreviewBoxSize,
+  hexToRgb,
+  rgbToHex,
+  shouldTreatAsBackground,
+  syncGridByAspect,
+} from '@/utils/blueprint-utils'
 import { mardFullPalette, getMardCodeByHex } from '@/utils/mard-colors'
 
 // ==================== 品牌色卡（真实色卡数据） ====================
@@ -245,35 +265,39 @@ const blueprintPreviewUrl = ref('')   // 生成结果的 data URL 预览图
 // ==================== 计算属性 ====================
 const totalCells = computed(() => outputWidth.value * outputHeight.value)
 
-const resultCanvasSize = computed(() => {
-  const maxSize = 260
-  const ratio = outputWidth.value / outputHeight.value
-  if (ratio > 1) return { width: maxSize, height: Math.round(maxSize / ratio) }
-  return { width: Math.round(maxSize * ratio), height: maxSize }
-})
+const resultCanvasSize = computed(() => getPreviewBoxSize(outputWidth.value, outputHeight.value, 260))
+const previewBoxStyle = computed(() => ({
+  width: `${resultCanvasSize.value.width}rpx`,
+  height: `${resultCanvasSize.value.height}rpx`,
+}))
 
 // ==================== 图片操作 ====================
+const goBack = () => {
+  uni.navigateBack()
+}
+
+const resetGeneratedResult = () => {
+  generatedBlueprint.value = null
+  detectedColors.value = []
+  blueprintPreviewUrl.value = ''
+}
+
 const chooseImage = () => {
   uni.chooseImage({
     count: 1, sizeType: ['compressed'], sourceType: ['album', 'camera'],
     success: (res) => {
       selectedImage.value = res.tempFilePaths[0]
-      generatedBlueprint.value = null
-      detectedColors.value = []
-      blueprintPreviewUrl.value = ''
+      resetGeneratedResult()
       // 获取图片宽高比，自动适配尺寸
       uni.getImageInfo({
         src: res.tempFilePaths[0],
         success: (info) => {
           imageAspectRatio.value = info.width / info.height
-          // 以短边30为基准自动适配
-          if (imageAspectRatio.value >= 1) {
-            outputWidth.value = 30
-            outputHeight.value = Math.round(30 / imageAspectRatio.value)
-          } else {
-            outputHeight.value = 30
-            outputWidth.value = Math.round(30 * imageAspectRatio.value)
-          }
+          const defaultGrid = getAspectFittedGrid(30, imageAspectRatio.value)
+          outputWidth.value = defaultGrid.width
+          outputHeight.value = defaultGrid.height
+          activePreset.value = '中(30×30)'
+          isCustomSize.value = false
         }
       })
     }
@@ -282,9 +306,7 @@ const chooseImage = () => {
 
 const removeImage = () => {
   selectedImage.value = ''
-  generatedBlueprint.value = null
-  detectedColors.value = []
-  blueprintPreviewUrl.value = ''
+  resetGeneratedResult()
 }
 
 const showFullImage = () => {
@@ -295,8 +317,11 @@ const showFullImage = () => {
 const applyPreset = (size: { label: string, width: number, height: number }) => {
   activePreset.value = size.label
   isCustomSize.value = false
-  outputWidth.value = size.width
-  outputHeight.value = size.height
+  const shortSide = Math.min(size.width, size.height)
+  const nextGrid = getAspectFittedGrid(shortSide, imageAspectRatio.value)
+  outputWidth.value = nextGrid.width
+  outputHeight.value = nextGrid.height
+  resetGeneratedResult()
 }
 
 const openCustomSize = () => {
@@ -309,59 +334,82 @@ const closeCustomSize = () => {
   showCustomSizeModal.value = false
 }
 
+const handleCustomSizeInput = (changed: 'width' | 'height') => {
+  const rawValue = changed === 'width' ? Number(customOutputWidth.value) : Number(customOutputHeight.value)
+  const nextGrid = syncGridByAspect(changed, rawValue || 30, imageAspectRatio.value)
+  customOutputWidth.value = nextGrid.width
+  customOutputHeight.value = nextGrid.height
+}
+
 const confirmCustomSize = () => {
-  const width = Math.min(200, Math.max(4, Number(customOutputWidth.value) || 30))
-  const height = Math.min(200, Math.max(4, Number(customOutputHeight.value) || 30))
+  const width = clampGridSize(Number(customOutputWidth.value) || 30)
+  const height = clampGridSize(Number(customOutputHeight.value) || 30)
   outputWidth.value = width
   outputHeight.value = height
   activePreset.value = ''
   isCustomSize.value = true
   showCustomSizeModal.value = false
+  resetGeneratedResult()
 }
 
 // onSizeChange：窄边变化时自动计算高，反之亦然
 const onSizeChange = (changed: 'w' | 'h') => {
   activePreset.value = ''
   isCustomSize.value = true
-  const ratio = imageAspectRatio.value || 1
-  if (changed === 'w') {
-    if (outputWidth.value < 4) outputWidth.value = 4
-    if (outputWidth.value > 200) outputWidth.value = 200
-    outputHeight.value = Math.round(outputWidth.value / ratio)
-  } else {
-    if (outputHeight.value < 4) outputHeight.value = 4
-    if (outputHeight.value > 200) outputHeight.value = 200
-    outputWidth.value = Math.round(outputHeight.value * ratio)
-  }
+  const nextGrid = syncGridByAspect(changed === 'w' ? 'width' : 'height', changed === 'w' ? outputWidth.value : outputHeight.value, imageAspectRatio.value)
+  outputWidth.value = nextGrid.width
+  outputHeight.value = nextGrid.height
+  resetGeneratedResult()
 }
 
 const switchBrand = (brandId: string) => {
   activeBrand.value = brandId
   // 切换品牌后清除结果，需重新生成
   if (generatedBlueprint.value) {
-    generatedBlueprint.value = null
-    detectedColors.value = []
-    blueprintPreviewUrl.value = ''
+    resetGeneratedResult()
   }
 }
 
 // ==================== 颜色工具函数 ====================
-const rgbToHex = (r: number, g: number, b: number): string =>
-  '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0').toUpperCase()).join('')
-
-const colorDistance = (r1: number, g1: number, b1: number, r2: number, g2: number, b2: number): number =>
-  Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
-
 const findClosestBeadColor = (r: number, g: number, b: number, pool: string[]): string => {
   let minDist = Infinity, closest = pool[0]
   for (const hex of pool) {
-    const pr = parseInt(hex.slice(1, 3), 16)
-    const pg = parseInt(hex.slice(3, 5), 16)
-    const pb = parseInt(hex.slice(5, 7), 16)
-    const d = colorDistance(r, g, b, pr, pg, pb)
+    const d = colorDistance({ r, g, b }, hexToRgb(hex))
     if (d < minDist) { minDist = d; closest = hex }
   }
   return closest
+}
+
+const estimateBackgroundColor = (sourceData: Uint8ClampedArray, width: number, height: number) => {
+  const samplePoints = [
+    [1, 1],
+    [Math.max(1, width - 2), 1],
+    [1, Math.max(1, height - 2)],
+    [Math.max(1, width - 2), Math.max(1, height - 2)],
+    [Math.floor(width / 2), 1],
+    [1, Math.floor(height / 2)],
+  ]
+
+  const colors = samplePoints.map(([x, y]) => {
+    const index = (y * width + x) * 4
+    return rgbToHex(sourceData[index], sourceData[index + 1], sourceData[index + 2])
+  })
+
+  const frequency: Record<string, number> = {}
+  colors.forEach((hex) => {
+    frequency[hex] = (frequency[hex] || 0) + 1
+  })
+
+  let bestColor = '#FFFFFF'
+  let bestCount = 0
+  Object.entries(frequency).forEach(([hex, count]) => {
+    if (count > bestCount) {
+      bestColor = hex
+      bestCount = count
+    }
+  })
+
+  return bestColor
 }
 
 // ==================== 滤镜算法 ====================
@@ -588,7 +636,7 @@ const floydSteinbergDither = (
 const extractColorsFromImage = (
   imagePath: string, targetW: number, targetH: number,
   algo: string
-): Promise<{ colors: string[]; pixelData: string[][] }> => {
+): Promise<{ colors: string[]; pixelData: string[][]; backgroundColor: string }> => {
   return new Promise((resolve, reject) => {
     // #ifdef H5
     const pool = getActiveColorPool()
@@ -604,6 +652,7 @@ const extractColorsFromImage = (
       tempCtx.drawImage(img, 0, 0)
 
       const srcData = tempCtx.getImageData(0, 0, srcW, srcH).data
+      const backgroundColor = estimateBackgroundColor(srcData, srcW, srcH)
 
       // Step 2: 主导色提取 - 对每个目标网格，采样源图中对应区域，取频率最高的RGB
       const dominantPixels: string[][] = []
@@ -629,11 +678,11 @@ const extractColorsFromImage = (
           }
           
           // 找最常见的颜色
-          let best = '#FFFFFF', bestCnt = 0
+          let best = backgroundColor, bestCnt = 0
           for (const [hex, cnt] of Object.entries(freq)) {
             if (cnt > bestCnt) { bestCnt = cnt; best = hex }
           }
-          dominantPixels[gy][gx] = bestCnt > 0 ? best : '#FFFFFF'
+          dominantPixels[gy][gx] = bestCnt > 0 ? best : backgroundColor
         }
       }
 
@@ -646,10 +695,11 @@ const extractColorsFromImage = (
         for (let y = 0; y < targetH; y++) {
           for (let x = 0; x < targetW; x++) {
             const hex = dominantPixels[y][x]
-            const r = parseInt(hex.slice(1, 3), 16)
-            const g = parseInt(hex.slice(3, 5), 16)
-            const b = parseInt(hex.slice(5, 7), 16)
-            if (r > 240 && g > 240 && b > 240) { pixelData[y][x] = '#FFFFFF'; continue }
+            const { r, g, b } = hexToRgb(hex)
+            if (shouldTreatAsBackground(hex, backgroundColor, 18)) {
+              pixelData[y][x] = backgroundColor
+              continue
+            }
             pixelData[y][x] = findClosestBeadColor(r, g, b, pool)
           }
         }
@@ -669,12 +719,12 @@ const extractColorsFromImage = (
         for (let x = 0; x < targetW; x++)
           { const c = final[y][x]; freq[c] = (freq[c] || 0) + 1 }
 
-      const { '#FFFFFF': _, ...nonBg } = freq
-      const colors = Object.entries(nonBg)
+      const colors = Object.entries(freq)
         .sort((a, b) => b[1] - a[1])
         .map(([c]) => c)
+        .filter((hex) => !shouldTreatAsBackground(hex, backgroundColor, 18))
 
-      resolve({ colors, pixelData: final })
+      resolve({ colors, pixelData: final, backgroundColor })
     }
     img.onerror = () => reject(new Error('图片加载失败'))
     // 通过 fetch+blob 读取图片避免跨域
@@ -695,15 +745,6 @@ const extractColorsFromImage = (
   })
 }
 
-const convertPixelDataToBeads = (pixelData: string[][], w: number, h: number) => {
-  const beads: { x: number, y: number, color: string }[] = []
-  for (let y = 0; y < h; y++)
-    for (let x = 0; x < w; x++)
-      if (pixelData[y][x] !== '#FFFFFF')
-        beads.push({ x, y, color: pixelData[y][x] })
-  return beads
-}
-
 // ==================== 生成图纸 ====================
 const generateBlueprint = async () => {
   if (!selectedImage.value) return
@@ -717,11 +758,11 @@ const generateBlueprint = async () => {
       activeAlgo.value
     )
     detectedColors.value = result.colors
-    const beads = convertPixelDataToBeads(result.pixelData, outputWidth.value, outputHeight.value)
+    const beads = buildBeadsFromPixelData(result.pixelData, outputWidth.value, outputHeight.value, result.backgroundColor, 18)
     generatedBlueprint.value = {
       width: outputWidth.value, height: outputHeight.value,
       colors: result.colors, pixelData: result.pixelData,
-      backgroundColor: '#FFFFFF', showGrid: true, gridColor: '#CCCCCC',
+      backgroundColor: result.backgroundColor, showGrid: true, gridColor: '#CCCCCC',
       beads, createdAt: Date.now(), updatedAt: Date.now(),
     }
 
@@ -781,7 +822,7 @@ const onPreviewTouch = (e: any) => {
   const newData: string[][] = JSON.parse(JSON.stringify(generatedBlueprint.value.pixelData))
   newData[py][px] = selectedEditColor.value
   generatedBlueprint.value.pixelData = newData
-  generatedBlueprint.value.beads = convertPixelDataToBeads(newData, w, h)
+  generatedBlueprint.value.beads = buildBeadsFromPixelData(newData, w, h, generatedBlueprint.value.backgroundColor || '#FFFFFF', 18)
   drawResultCanvas(newData)
 }
 
@@ -793,14 +834,19 @@ const startCreation = () => {
   if (!generatedBlueprint.value) return
   try {
     /** 只提取编辑器需要的字段 */
-    const editorData = {
+    const editorData = createBlueprintTransferData({
       width: generatedBlueprint.value.width,
       height: generatedBlueprint.value.height,
       backgroundColor: generatedBlueprint.value.backgroundColor || '#FFFFFF',
       showGrid: generatedBlueprint.value.showGrid !== undefined ? generatedBlueprint.value.showGrid : true,
       gridColor: generatedBlueprint.value.gridColor || '#CCCCCC',
       beads: generatedBlueprint.value.beads || [],
-    }
+      sourceMeta: {
+        sourceType: 'image-import',
+        sourceName: selectedImage.value.split('/').pop() || '图片导入',
+        recognitionMode: 'auto',
+      },
+    })
     console.log('[开始创作] beads数量:', editorData.beads.length)
     /** 通过共享模块传递数据（模块级变量，不走代理，最可靠） */
     setBlueprintData(editorData)
@@ -816,6 +862,50 @@ const startCreation = () => {
 
 <style scoped>
 .image-import-page { min-height: 100vh; background-color: var(--color-bg-page); padding-bottom: 200rpx; }
+
+.page-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: rgba(255,253,250,.94);
+  backdrop-filter: blur(16rpx);
+}
+
+.nav-top-safe {
+  height: 0;
+  padding-top: constant(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 24rpx 16rpx;
+}
+
+.nav-back,
+.nav-ghost {
+  width: 72rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-back {
+  border: 2rpx solid var(--color-border);
+  border-radius: 999rpx;
+  font-size: 48rpx;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.nav-title {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
 
 .page-header { margin: 24rpx; padding: 34rpx 32rpx; background-color: var(--color-bg-panel); border: 2rpx solid var(--color-border); border-radius: 28rpx; box-shadow: var(--shadow-md); }
 .page-title { font-size: 42rpx; font-weight: 800; color: var(--color-text-primary); display: block; }
@@ -838,7 +928,8 @@ const startCreation = () => {
 .compare-col { flex: 1; display: flex; flex-direction: column; align-items: center; }
 .compare-label { font-size: 24rpx; color: var(--color-text-secondary); margin-bottom: 8rpx; }
 .compare-image-wrap {
-  width: 100%; aspect-ratio: 1; background-color: var(--color-bg-panel); border-radius: var(--radius-lg);
+  max-width: 100%;
+  background-color: var(--color-bg-panel); border-radius: var(--radius-lg);
   border: 2rpx solid var(--color-border); overflow: hidden; display: flex; align-items: center; justify-content: center;
 }
 .compare-image-wrap.has-result { border-color: var(--color-success); }
@@ -883,7 +974,8 @@ const startCreation = () => {
 
 .custom-size-modal {
   width: 100%;
-  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  padding: 32rpx 32rpx calc(32rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(32rpx + env(safe-area-inset-bottom));
   background-color: var(--color-bg-panel);
   border-radius: 32rpx 32rpx 0 0;
   box-shadow: 0 -16rpx 48rpx rgba(56,42,26,.14);
@@ -928,7 +1020,12 @@ const startCreation = () => {
 .stat-item { font-size: 24rpx; color: var(--color-text-secondary); }
 
 /* 底部 */
-.bottom-actions { position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 32rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); background-color: rgba(255,253,250,.96); border-top: 2rpx solid var(--color-border); box-shadow: 0 -10rpx 30rpx rgba(56,42,26,.08); }
+.bottom-actions {
+  position: fixed; bottom: 0; left: 0; right: 0; padding: 20rpx 32rpx;
+  padding-bottom: calc(20rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background-color: rgba(255,253,250,.96); border-top: 2rpx solid var(--color-border); box-shadow: 0 -10rpx 30rpx rgba(56,42,26,.08);
+}
 .btn-generate {
   width: 100%; height: 88rpx;
   background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));

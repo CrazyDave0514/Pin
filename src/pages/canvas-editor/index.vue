@@ -120,6 +120,7 @@
                     width: cellSize + 'px',
                     height: cellSize + 'px',
                     backgroundColor: bead.color,
+                    opacity: !highlightedColor || highlightedColor === bead.color ? 1 : 0.22,
                   }"
                 >
                   <!-- 圆豆中心白色圆孔 -->
@@ -219,8 +220,9 @@
             v-for="item in beadStats.colorList"
             :key="item.color"
             class="stats-item"
+            @click="openColorDetail(item)"
           >
-            <view class="stats-chip" :style="{ backgroundColor: item.color }">
+            <view class="stats-chip" :class="{ highlighted: highlightedColor === item.color }" :style="{ backgroundColor: item.color }">
               <text class="stats-chip-code" :style="{ color: getTextColor(item.color) }">{{ item.code }}</text>
               <text class="stats-chip-count" :style="{ color: getTextColor(item.color) }">{{ item.count }}</text>
             </view>
@@ -435,15 +437,59 @@
         </view>
       </view>
     </view>
+
+    <view v-if="showColorEditModal && activeColorDetail" class="save-modal-overlay" @tap="closeColorDetail">
+      <view class="save-modal color-edit-modal" @tap.stop>
+        <view class="save-modal-header">
+          <text class="save-modal-title">色号调整</text>
+          <text class="save-modal-close" @tap="closeColorDetail">✕</text>
+        </view>
+        <view class="save-modal-body">
+          <view class="color-detail-card">
+            <view class="color-detail-swatch" :style="{ backgroundColor: activeColorDetail.color }"></view>
+            <view class="color-detail-meta">
+              <text class="color-detail-code">{{ activeColorDetail.code }}</text>
+              <text class="color-detail-count">{{ activeColorDetail.count }} 颗</text>
+            </view>
+          </view>
+          <view class="color-actions">
+            <view class="color-action-btn" @tap="toggleHighlightColor">
+              <text>{{ highlightedColor === activeColorDetail.color ? '取消高亮' : '高亮显示' }}</text>
+            </view>
+            <view class="color-action-btn" @tap="deleteActiveColor">
+              <text>删除当前色号</text>
+            </view>
+            <view class="color-action-btn primary" @tap="mergeToNearestColor">
+              <text>合并到相近色</text>
+            </view>
+          </view>
+          <text class="replace-title">替换为</text>
+          <scroll-view class="replace-scroll" scroll-x :show-scrollbar="false">
+            <view class="replace-list">
+              <view
+                v-for="item in nearestColorOptions"
+                :key="item.hex"
+                class="replace-chip"
+                @tap="replaceColor(activeColorDetail.color, item.hex)"
+              >
+                <view class="replace-swatch" :style="{ backgroundColor: item.hex }"></view>
+                <text class="replace-code">{{ item.code }}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance, toRaw, onUnmounted } from 'vue'
+import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance, toRaw, onUnmounted, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { consumeBlueprintData } from '@/utils/blueprint-transfer'
 import { getHexByMardCode, getMardCodeByHex, mardColorPalette } from '@/utils/mard-colors'
 import { TAG_OPTIONS, buildProjectThumbnail, normalizeProjectTags, syncProjectArtwork } from '@/utils/community'
+import { downloadBlob, exportBlueprintAsBlob } from '@/utils/blueprint-export'
 
 // ==================== 类型定义 ====================
 
@@ -627,7 +673,8 @@ const editingPublished = ref(false)
 
 /** 画布是否有未保存的修改 */
 const hasUnsavedChanges = ref(false)
-let initialBeadsSnapshot = ''
+let changeRevision = 0
+let savedRevision = 0
 
 /** 保存弹窗状态 */
 const showSaveModal = ref(false)
@@ -660,6 +707,9 @@ const selectedSeries = ref('all')
 
 /** 当前激活的底部Tab */
 const activeTab = ref('size')
+const highlightedColor = ref('')
+const showColorEditModal = ref(false)
+const activeColorDetail = ref<BeadStatItem | null>(null)
 
 /** PC端空格键按下标记 */
 const spacePressed = ref(false)
@@ -725,6 +775,28 @@ const beadStats = computed<BeadStats>(() => {
   }
 })
 
+const nearestColorOptions = computed(() => {
+  if (!activeColorDetail.value) return []
+  const source = activeColorDetail.value.color
+  const sr = parseInt(source.slice(1, 3), 16)
+  const sg = parseInt(source.slice(3, 5), 16)
+  const sb = parseInt(source.slice(5, 7), 16)
+
+  return mardColorPalette
+    .filter((item) => item.hex !== source)
+    .map((item) => {
+      const tr = parseInt(item.hex.slice(1, 3), 16)
+      const tg = parseInt(item.hex.slice(3, 5), 16)
+      const tb = parseInt(item.hex.slice(5, 7), 16)
+      return {
+        ...item,
+        distance: Math.sqrt((sr - tr) ** 2 + (sg - tg) ** 2 + (sb - tb) ** 2),
+      }
+    })
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 12)
+})
+
 const saveSecondaryOptions = computed(() => {
   const group = TAG_OPTIONS.find((item) => item.primary === saveTags.value.primary)
   return group ? [...group.secondary] : []
@@ -754,6 +826,14 @@ const majorVerticalLines = computed(() => {
     lines.push(col)
   }
   return lines
+})
+
+watch([beadStyle, showColorCode], ([nextStyle, nextCode], [prevStyle, prevCode]) => {
+  if (prevStyle === undefined && prevCode === undefined) return
+  if (nextStyle !== prevStyle || nextCode !== prevCode) {
+    changeRevision += 1
+    hasUnsavedChanges.value = changeRevision !== savedRevision
+  }
 })
 
 // ==================== 生命周期 ====================
@@ -802,8 +882,9 @@ const initializeFromRouteOptions = (options: Record<string, any>) => {
         canvasData.createdAt = data.createdAt || Date.now()
         canvasData.updatedAt = Date.now()
         canvasData.beads = data.beads || []
-        initialBeadsSnapshot = JSON.stringify(canvasData.beads)
-        hasUnsavedChanges.value = false
+        changeRevision = 0
+        savedRevision = 0
+        markSavedRevision()
         console.log('[蓝图] 数据加载成功(共享模块), beads数量:', canvasData.beads.length, '尺寸:', canvasData.width, 'x', canvasData.height)
       } else {
         console.warn('[蓝图] 共享模块无数据，尝试 localStorage')
@@ -985,8 +1066,9 @@ const loadProject = (projectId: string) => {
       showColorCode.value = (clonedData as any).showColorCode
     }
 
-    initialBeadsSnapshot = JSON.stringify(canvasData.beads)
-    hasUnsavedChanges.value = false
+    changeRevision = 0
+    savedRevision = 0
+    markSavedRevision()
   } else {
     uni.showToast({ title: '项目不存在', icon: 'none' })
   }
@@ -1457,6 +1539,10 @@ const saveHistory = () => {
     history.value.shift()
     historyIndex.value--
   }
+
+  changeRevision += 1
+  hasUnsavedChanges.value = changeRevision !== savedRevision
+  canvasData.updatedAt = Date.now()
 }
 
 /**
@@ -1467,6 +1553,8 @@ const undo = () => {
     historyIndex.value--
     const beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
     canvasData.beads.splice(0, canvasData.beads.length, ...beads)
+    changeRevision += 1
+    hasUnsavedChanges.value = changeRevision !== savedRevision
   }
 }
 
@@ -1478,7 +1566,14 @@ const redo = () => {
     historyIndex.value++
     const beads = JSON.parse(JSON.stringify(history.value[historyIndex.value])) as Bead[]
     canvasData.beads.splice(0, canvasData.beads.length, ...beads)
+    changeRevision += 1
+    hasUnsavedChanges.value = changeRevision !== savedRevision
   }
+}
+
+const markSavedRevision = () => {
+  savedRevision = changeRevision
+  hasUnsavedChanges.value = false
 }
 
 // ==================== 画布控制 ====================
@@ -1498,7 +1593,8 @@ const clearCanvas = () => {
         history.value = []
         historyIndex.value = -1
         selectedCell.value = null
-        hasUnsavedChanges.value = true
+        changeRevision += 1
+        hasUnsavedChanges.value = changeRevision !== savedRevision
       }
     },
   })
@@ -1536,6 +1632,8 @@ const resetView = () => {
  */
 const toggleGrid = () => {
   canvasData.showGrid = !canvasData.showGrid
+  changeRevision += 1
+  hasUnsavedChanges.value = changeRevision !== savedRevision
 }
 
 // ==================== 编辑操作（翻转/旋转/尺寸） ====================
@@ -1728,6 +1826,55 @@ const getTextColor = (hex: string): string => {
   return luminance > 0.5 ? '#333333' : '#FFFFFF'
 }
 
+const openColorDetail = (item: BeadStatItem) => {
+  activeColorDetail.value = item
+  showColorEditModal.value = true
+}
+
+const closeColorDetail = () => {
+  showColorEditModal.value = false
+  activeColorDetail.value = null
+}
+
+const toggleHighlightColor = () => {
+  if (!activeColorDetail.value) return
+  highlightedColor.value = highlightedColor.value === activeColorDetail.value.color ? '' : activeColorDetail.value.color
+}
+
+const replaceColor = (sourceColor: string, targetColor: string) => {
+  if (!sourceColor || !targetColor || sourceColor === targetColor) return
+  canvasData.beads.forEach((bead) => {
+    if (bead.color === sourceColor) bead.color = targetColor
+  })
+  saveHistory()
+  if (activeColorDetail.value) {
+    activeColorDetail.value = {
+      color: targetColor,
+      code: getMardCodeByHex(targetColor) || activeColorDetail.value.code,
+      count: activeColorDetail.value.count,
+    }
+  }
+  highlightedColor.value = targetColor
+  uni.showToast({ title: '颜色已替换', icon: 'success' })
+}
+
+const mergeToNearestColor = () => {
+  if (!activeColorDetail.value || nearestColorOptions.value.length === 0) return
+  replaceColor(activeColorDetail.value.color, nearestColorOptions.value[0].hex)
+}
+
+const deleteActiveColor = () => {
+  if (!activeColorDetail.value) return
+  const sourceColor = activeColorDetail.value.color
+  canvasData.beads = canvasData.beads.filter((bead) => bead.color !== sourceColor)
+  saveHistory()
+  if (highlightedColor.value === sourceColor) {
+    highlightedColor.value = ''
+  }
+  closeColorDetail()
+  uni.showToast({ title: '当前色号已删除', icon: 'success' })
+}
+
 // ==================== 导航与保存 ====================
 
 /**
@@ -1735,8 +1882,7 @@ const getTextColor = (hex: string): string => {
  * - 如果画布有未保存的修改，提示用户确认
  */
 const goBack = () => {
-  const currentSnapshot = JSON.stringify(canvasData.beads)
-  const hasChanges = hasUnsavedChanges.value || currentSnapshot !== initialBeadsSnapshot
+  const hasChanges = hasUnsavedChanges.value || changeRevision !== savedRevision
 
   if (hasChanges) {
     uni.showModal({
@@ -1874,8 +2020,7 @@ const doSave = (projectName: string, exportAfterSave = false) => {
     if (savedProject?.isPublished) {
       syncProjectArtwork(savedProject as any)
     }
-    hasUnsavedChanges.value = false
-    initialBeadsSnapshot = JSON.stringify(canvasData.beads)
+    markSavedRevision()
     uni.showToast({ title: '保存成功', icon: 'success' })
 
     /** 步骤6：跳转（导出在 try-catch 外部处理） */
@@ -1921,304 +2066,24 @@ const doSave = (projectName: string, exportAfterSave = false) => {
  * @param projectName - 项目名称
  */
 const exportBlueprintImage = (projectName: string) => {
-  console.log('[导出] 开始生成图纸, 尺寸:', canvasData.width, 'x', canvasData.height)
-  const w = canvasData.width
-  const h = canvasData.height
-
-  /** 根据图纸尺寸动态计算每格像素 */
-  const cellPx = w <= 30 ? 28 : w <= 60 ? 20 : 16
-  const padding = 30
-  const headerH = 60
-  const fontSize = Math.max(7, Math.floor(cellPx * 0.45))
-
-  /** 统计每种颜色的使用数量 */
-  const colorCount: Record<string, number> = {}
-  const colorCodeMap: Record<string, string> = {}
-  const beads = canvasData.beads
-  beads.forEach((b: Bead) => {
-    if (b.color) {
-      colorCount[b.color] = (colorCount[b.color] || 0) + 1
-      if (!(b.color in colorCodeMap)) {
-        const mardCode = getMardCodeByHex(b.color)
-        colorCodeMap[b.color] = mardCode || b.color.slice(1, 4).toUpperCase()
-      }
-    }
-  })
-  const colorList = Object.entries(colorCount).sort((a, b) => b[1] - a[1])
-  const totalBeads = beads.length
-  const uniqueColors = colorList.length
-
-  /** 用料清单布局 */
-  const swatchSize = 36
-  const swatchGap = 12
-  const textWidth = 60
-  const itemWidth = swatchSize + swatchGap + textWidth
-  const swatchCols = Math.max(4, Math.min(Math.floor((w * cellPx + padding * 2 - 40) / itemWidth), 8))
-  const materialRows = Math.ceil(colorList.length / swatchCols)
-  const materialHeaderH = 40
-  const materialH = materialHeaderH + materialRows * (swatchSize + 8) + 20
-  const footerH = 50
-
-  const canvasW = w * cellPx + padding * 2
-  const canvasH = headerH + h * cellPx + padding * 2 + materialH + footerH
-
   // #ifdef H5
-  const canvas = document.createElement('canvas')
-  canvas.width = canvasW
-  canvas.height = canvasH
-  const ctx = canvas.getContext('2d')
-  if (!ctx) {
-    uni.showToast({ title: '导出失败', icon: 'none' })
-    return
-  }
-
-  /** 白色背景 */
-  ctx.fillStyle = '#FFFFFF'
-  ctx.fillRect(0, 0, canvasW, canvasH)
-
-  /** ========== 1. 标题区域 ========== */
-  ctx.fillStyle = '#FAFAFA'
-  ctx.fillRect(0, 0, canvasW, headerH)
-  ctx.strokeStyle = '#E8E8E8'
-  ctx.lineWidth = 1
-  ctx.beginPath()
-  ctx.moveTo(0, headerH - 0.5)
-  ctx.lineTo(canvasW, headerH - 0.5)
-  ctx.stroke()
-
-  ctx.fillStyle = '#1A1A1A'
-  ctx.font = 'bold 20px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  ctx.fillText(projectName, padding, headerH / 2 - 8)
-
-  ctx.fillStyle = '#888888'
-  ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  ctx.fillText(`${w} × ${h}  ·  ${totalBeads.toLocaleString()}颗  ·  ${uniqueColors}色`, padding, headerH / 2 + 12)
-
-  /** ========== 2. 拼豆图纸 ========== */
-  const gridOffsetY = headerH + padding
-  const beadMap: Record<string, string> = {}
-  beads.forEach((b: Bead) => {
-    beadMap[`${b.x},${b.y}`] = b.color
-  })
-
-  /** 先绘制背景网格线 */
-  ctx.strokeStyle = '#E0E0E0'
-  ctx.lineWidth = 0.5
-  for (let x = 0; x <= w; x++) {
-    ctx.beginPath()
-    ctx.moveTo(padding + x * cellPx, gridOffsetY)
-    ctx.lineTo(padding + x * cellPx, gridOffsetY + h * cellPx)
-    ctx.stroke()
-  }
-  for (let y = 0; y <= h; y++) {
-    ctx.beginPath()
-    ctx.moveTo(padding, gridOffsetY + y * cellPx)
-    ctx.lineTo(padding + w * cellPx, gridOffsetY + y * cellPx)
-    ctx.stroke()
-  }
-
-  /** 每 5 格分组线：横向实线，竖向虚线 */
-  ctx.lineWidth = 1.2
-  for (let y = 5; y < h; y += 5) {
-    ctx.setLineDash([])
-    ctx.strokeStyle = 'rgba(248, 90, 60, 0.78)'
-    ctx.beginPath()
-    ctx.moveTo(padding, gridOffsetY + y * cellPx)
-    ctx.lineTo(padding + w * cellPx, gridOffsetY + y * cellPx)
-    ctx.stroke()
-  }
-  for (let x = 5; x < w; x += 5) {
-    ctx.setLineDash([6, 4])
-    ctx.strokeStyle = 'rgba(248, 90, 60, 0.82)'
-    ctx.beginPath()
-    ctx.moveTo(padding + x * cellPx, gridOffsetY)
-    ctx.lineTo(padding + x * cellPx, gridOffsetY + h * cellPx)
-    ctx.stroke()
-  }
-  ctx.setLineDash([])
-
-  /** 根据 beadStyle 绘制拼豆 */
-  const isRound = beadStyle.value === 'round'
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const color = beadMap[`${x},${y}`]
-      if (!color) continue
-
-      const cx = padding + x * cellPx + cellPx / 2
-      const cy = gridOffsetY + y * cellPx + cellPx / 2
-      const mardCode = colorCodeMap[color]
-
-      if (isRound) {
-        /** 圆豆样式：圆形 + 中心孔 */
-        const beadRadius = cellPx * 0.42
-        const holeRadius = cellPx * 0.12
-
-        ctx.fillStyle = color
-        ctx.beginPath()
-        ctx.arc(cx, cy, beadRadius, 0, Math.PI * 2)
-        ctx.fill()
-
-        ctx.strokeStyle = 'rgba(0,0,0,0.15)'
-        ctx.lineWidth = 1
-        ctx.stroke()
-
-        /** 中心孔 */
-        ctx.fillStyle = '#FFFFFF'
-        ctx.beginPath()
-        ctx.arc(cx, cy, holeRadius, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)'
-        ctx.lineWidth = 0.5
-        ctx.stroke()
-      } else {
-        /** 方豆样式：圆角矩形 + 内阴影 */
-        const margin = cellPx * 0.08
-        const rx = padding + x * cellPx + margin
-        const ry = gridOffsetY + y * cellPx + margin
-        const rw = cellPx - margin * 2
-        const rh = cellPx - margin * 2
-        const cornerR = Math.max(1, cellPx * 0.08)
-
-        ctx.fillStyle = color
-        ctx.beginPath()
-        ctx.moveTo(rx + cornerR, ry)
-        ctx.lineTo(rx + rw - cornerR, ry)
-        ctx.quadraticCurveTo(rx + rw, ry, rx + rw, ry + cornerR)
-        ctx.lineTo(rx + rw, ry + rh - cornerR)
-        ctx.quadraticCurveTo(rx + rw, ry + rh, rx + rw - cornerR, ry + rh)
-        ctx.lineTo(rx + cornerR, ry + rh)
-        ctx.quadraticCurveTo(rx, ry + rh, rx, ry + rh - cornerR)
-        ctx.lineTo(rx, ry + cornerR)
-        ctx.quadraticCurveTo(rx, ry, rx + cornerR, ry)
-        ctx.closePath()
-        ctx.fill()
-
-        /** 内阴影效果 */
-        ctx.strokeStyle = 'rgba(0,0,0,0.15)'
-        ctx.lineWidth = 1
-        ctx.stroke()
-      }
-
-      /** 色号编号 */
-      if (mardCode && cellPx >= 14) {
-        const r = parseInt(color.slice(1, 3), 16)
-        const g = parseInt(color.slice(3, 5), 16)
-        const b = parseInt(color.slice(5, 7), 16)
-        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-        ctx.fillStyle = luminance > 0.5 ? '#333333' : '#FFFFFF'
-        ctx.font = `bold ${fontSize}px sans-serif`
-        ctx.textAlign = 'center'
-        ctx.textBaseline = 'middle'
-        ctx.fillText(mardCode, cx, cy)
-      }
-    }
-  }
-
-  /** ========== 3. 用料清单 ========== */
-  const materialY = gridOffsetY + h * cellPx + padding
-
-  ctx.fillStyle = '#FAFAFA'
-  ctx.fillRect(0, materialY, canvasW, materialHeaderH)
-  ctx.strokeStyle = '#E8E8E8'
-  ctx.beginPath()
-  ctx.moveTo(0, materialY + materialHeaderH - 0.5)
-  ctx.lineTo(canvasW, materialY + materialHeaderH - 0.5)
-  ctx.stroke()
-
-  ctx.fillStyle = '#1A1A1A'
-  ctx.font = 'bold 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  ctx.textAlign = 'left'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('用料清单', padding, materialY + materialHeaderH / 2)
-
-  ctx.fillStyle = '#888888'
-  ctx.font = '13px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  ctx.textAlign = 'right'
-  ctx.fillText(`共 ${totalBeads.toLocaleString()} 颗`, canvasW - padding, materialY + materialHeaderH / 2)
-
-  /** 色块列表 */
-  const listStartY = materialY + materialHeaderH + 12
-  const listPadding = (canvasW - padding * 2 - swatchCols * itemWidth + swatchGap) / 2
-
-  colorList.forEach(([color, count], index) => {
-    const col = index % swatchCols
-    const row = Math.floor(index / swatchCols)
-    const sx = padding + listPadding + col * itemWidth
-    const sy = listStartY + row * (swatchSize + 8)
-    const mardCode = colorCodeMap[color] || ''
-
-    if (isRound) {
-      /** 圆豆色块样式 */
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.arc(sx + swatchSize / 2, sy + swatchSize / 2, swatchSize / 2 - 2, 0, Math.PI * 2)
-      ctx.fill()
-
-      ctx.fillStyle = '#FFFFFF'
-      ctx.beginPath()
-      ctx.arc(sx + swatchSize / 2, sy + swatchSize / 2, swatchSize * 0.15, 0, Math.PI * 2)
-      ctx.fill()
-    } else {
-      /** 方豆色块样式 */
-      const cornerR = 4
-      ctx.fillStyle = color
-      ctx.beginPath()
-      ctx.moveTo(sx + cornerR, sy + 2)
-      ctx.lineTo(sx + swatchSize - 2 - cornerR, sy + 2)
-      ctx.quadraticCurveTo(sx + swatchSize - 2, sy + 2, sx + swatchSize - 2, sy + 2 + cornerR)
-      ctx.lineTo(sx + swatchSize - 2, sy + swatchSize - 2 - cornerR)
-      ctx.quadraticCurveTo(sx + swatchSize - 2, sy + swatchSize - 2, sx + swatchSize - 2 - cornerR, sy + swatchSize - 2)
-      ctx.lineTo(sx + cornerR, sy + swatchSize - 2)
-      ctx.quadraticCurveTo(sx, sy + swatchSize - 2, sx, sy + swatchSize - 2 - cornerR)
-      ctx.lineTo(sx, sy + 2 + cornerR)
-      ctx.quadraticCurveTo(sx, sy + 2, sx + cornerR, sy + 2)
-      ctx.closePath()
-      ctx.fill()
-    }
-
-    /** 色号 + 数量 */
-    ctx.fillStyle = '#333333'
-    ctx.font = 'bold 12px sans-serif'
-    ctx.textAlign = 'left'
-    ctx.textBaseline = 'middle'
-    ctx.fillText(mardCode, sx + swatchSize + swatchGap, sy + swatchSize / 2 - 6)
-
-    ctx.fillStyle = '#888888'
-    ctx.font = '11px sans-serif'
-    ctx.fillText(`×${count}`, sx + swatchSize + swatchGap, sy + swatchSize / 2 + 8)
-  })
-
-  /** ========== 4. 底部水印 ========== */
-  ctx.fillStyle = '#FAFAFA'
-  ctx.fillRect(0, canvasH - footerH, canvasW, footerH)
-  ctx.strokeStyle = '#E8E8E8'
-  ctx.beginPath()
-  ctx.moveTo(0, canvasH - footerH + 0.5)
-  ctx.lineTo(canvasW, canvasH - footerH + 0.5)
-  ctx.stroke()
-
-  ctx.fillStyle = '#BBBBBB'
-  ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.fillText('pindou.picsync.cn', canvasW / 2, canvasH - footerH / 2)
-
-  /** 下载图片 */
-  try {
-    const dataUrl = canvas.toDataURL('image/png')
-    const link = document.createElement('a')
-    link.download = `${projectName}_拼豆图纸.png`
-    link.href = dataUrl
-    link.click()
-    console.log('[导出] 图片下载成功')
+  exportBlueprintAsBlob({
+    projectId: editingProjectId.value || `draft_${Date.now()}`,
+    name: projectName,
+    creatorName: (uni.getStorageSync('pin_user') || {}).username || 'Pin用户',
+    updatedAt: Date.now(),
+    canvasData: {
+      ...JSON.parse(JSON.stringify(toRaw(canvasData))),
+      beadStyle: beadStyle.value,
+      showColorCode: true,
+    },
+  }).then(({ blob, fileName }) => {
+    downloadBlob(blob, fileName)
     uni.showToast({ title: '导出成功', icon: 'success' })
-  } catch (e) {
-    console.error('[导出] 下载失败:', e)
+  }).catch((error) => {
+    console.error('[导出] 下载失败:', error)
     uni.showToast({ title: '导出失败', icon: 'none' })
-  }
+  })
   // #endif
 
   // #ifndef H5
@@ -2731,6 +2596,11 @@ const exportBlueprintImage = (projectName: string) => {
   justify-content: center;
 }
 
+.stats-chip.highlighted {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 10px 22px rgba(245, 166, 35, 0.26);
+}
+
 .stats-chip-code {
   font-size: 11px;
   line-height: 1;
@@ -2818,6 +2688,7 @@ const exportBlueprintImage = (projectName: string) => {
 .tab-panel {
   background-color: transparent;
   flex-shrink: 0;
+  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom);
   min-height: 88px;
 }
@@ -2828,6 +2699,114 @@ const exportBlueprintImage = (projectName: string) => {
   box-sizing: border-box;
   display: flex;
   align-items: stretch;
+}
+
+.color-edit-modal {
+  max-height: 78vh;
+}
+
+.color-detail-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 18px;
+  background-color: var(--color-bg-page);
+}
+
+.color-detail-swatch {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  border: 2px solid rgba(0, 0, 0, 0.08);
+}
+
+.color-detail-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.color-detail-code {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.color-detail-count {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.color-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.color-action-btn {
+  min-height: 44px;
+  border-radius: 16px;
+  border: 2px solid var(--color-border);
+  background-color: var(--color-bg-page);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.color-action-btn.primary {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-text-primary);
+  font-weight: 700;
+}
+
+.replace-title {
+  display: block;
+  margin: 16px 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.replace-scroll {
+  white-space: nowrap;
+}
+
+.replace-list {
+  display: inline-flex;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.replace-chip {
+  width: 74px;
+  padding: 10px 8px;
+  border-radius: 16px;
+  border: 2px solid var(--color-border);
+  background-color: var(--color-bg-page);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.replace-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.replace-code {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-weight: 600;
 }
 
 /* 尺寸选项 */

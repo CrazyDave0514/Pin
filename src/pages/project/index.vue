@@ -34,6 +34,9 @@
             <view class="entry-name-row">
               <text class="entry-name">{{ folder.name }}</text>
               <view class="folder-badge">文件夹</view>
+              <view class="entry-menu-btn" @click.stop="openFolderActionSheet(folder)">
+                <text>•••</text>
+              </view>
             </view>
             <text class="entry-meta">{{ formatDateTime(folder.updatedAt || folder.createdAt) }}</text>
           </view>
@@ -131,13 +134,39 @@
     <view v-if="showActionSheet" class="modal-mask" @click="closeActionSheet">
       <view class="bottom-sheet action-sheet" @click.stop>
         <view class="sheet-header">
-          <text class="sheet-title">{{ currentProject?.name || '作品操作' }}</text>
+          <text class="sheet-title">{{ currentActionType === 'folder' ? (currentFolderEntry?.name || '文件夹操作') : (currentProject?.name || '作品操作') }}</text>
           <view class="sheet-close" @click="closeActionSheet">
             <text>✕</text>
           </view>
         </view>
         <scroll-view class="sheet-scroll" scroll-y>
-          <view class="action-grid">
+          <view v-if="currentActionType === 'folder'" class="action-grid">
+          <view class="action-tile" @click="renameFolder">
+            <text class="action-emoji">Aa</text>
+            <text class="action-label">重命名</text>
+          </view>
+          <view class="action-tile" @click="copyFolder">
+            <text class="action-emoji">⧉</text>
+            <text class="action-label">复制</text>
+          </view>
+          <view class="action-tile" @click="openFolderPicker('move-folder')">
+            <text class="action-emoji">⇄</text>
+            <text class="action-label">移动</text>
+          </view>
+          <view class="action-tile" @click="showFolderDetails">
+            <text class="action-emoji">ⓘ</text>
+            <text class="action-label">详情</text>
+          </view>
+          <view class="action-tile" @click="exportFolder">
+            <text class="action-emoji">⇩</text>
+            <text class="action-label">导出</text>
+          </view>
+          <view class="action-tile" @click="confirmDeleteFolder">
+            <text class="action-emoji">⌫</text>
+            <text class="action-label danger">删除</text>
+          </view>
+          </view>
+          <view v-else class="action-grid">
           <view class="action-tile" @click="renameProject">
             <text class="action-emoji">Aa</text>
             <text class="action-label">重命名</text>
@@ -229,7 +258,7 @@
     <view v-if="showFolderPicker" class="modal-mask" @click="closeFolderPicker">
       <view class="bottom-sheet folder-sheet" @click.stop>
         <view class="sheet-header">
-          <text class="sheet-title">{{ folderPickerAction === 'move' ? '移动到' : '复制到位置' }}</text>
+          <text class="sheet-title">{{ folderPickerAction === 'move' || folderPickerAction === 'move-folder' ? '移动到' : '复制到位置' }}</text>
           <view class="sheet-close" @click="closeFolderPicker">
             <text>✕</text>
           </view>
@@ -268,6 +297,8 @@ import {
   syncProjectArtwork,
   unpublishProjectArtwork,
 } from '../../utils/community'
+import { downloadBlob, exportBlueprintAsBlob } from '../../utils/blueprint-export'
+import { getJsZip } from '../../utils/jszip'
 
 type FolderRecord = {
   id: string
@@ -300,7 +331,9 @@ const showActionSheet = ref(false)
 const showPublishModal = ref(false)
 const showFolderPicker = ref(false)
 const currentProject = ref<ProjectRecord | null>(null)
-const folderPickerAction = ref<'move' | 'copy'>('move')
+const currentFolderEntry = ref<FolderRecord | null>(null)
+const currentActionType = ref<'project' | 'folder'>('project')
+const folderPickerAction = ref<'move' | 'copy' | 'move-folder'>('move')
 
 const publishName = ref('')
 const publishPoints = ref('0')
@@ -504,6 +537,13 @@ const createFolder = () => {
 const createFolderFromPicker = () => {
   closeFolderPicker()
   askFolderName('新建文件夹', (name) => {
+    const exists = folders.value.some((item) => (
+      item.parentId === currentFolderId.value && item.name.trim() === name
+    ))
+    if (exists) {
+      uni.showToast({ title: '当前目录下已存在同名文件夹', icon: 'none' })
+      return
+    }
     const now = Date.now()
     saveFolders([
       {
@@ -532,7 +572,16 @@ const handleProjectClick = (project: ProjectRecord) => {
 }
 
 const openActionSheet = (project: ProjectRecord) => {
+  currentActionType.value = 'project'
+  currentFolderEntry.value = null
   currentProject.value = project
+  showActionSheet.value = true
+}
+
+const openFolderActionSheet = (folder: FolderRecord) => {
+  currentActionType.value = 'folder'
+  currentProject.value = null
+  currentFolderEntry.value = folder
   showActionSheet.value = true
 }
 
@@ -561,8 +610,8 @@ const renameProject = () => {
   })
 }
 
-const openFolderPicker = (action: 'move' | 'copy') => {
-  if (action === 'move' && !folders.value.length) {
+const openFolderPicker = (action: 'move' | 'copy' | 'move-folder') => {
+  if ((action === 'move' || action === 'move-folder') && !folders.value.length) {
     uni.showToast({ title: '暂无可移动目标文件夹', icon: 'none' })
     return
   }
@@ -575,9 +624,44 @@ const closeFolderPicker = () => {
   showFolderPicker.value = false
 }
 
+const isFolderDescendant = (sourceId: string, targetId: string) => {
+  let currentId = targetId
+  let guard = 0
+
+  while (currentId && guard < 64) {
+    if (currentId === sourceId) return true
+    const folder = folders.value.find((item) => item.id === currentId)
+    if (!folder) break
+    currentId = folder.parentId || ''
+    guard += 1
+  }
+
+  return false
+}
+
 const selectFolderTarget = (folderId: string) => {
-  const project = currentProject.value
   closeFolderPicker()
+  if (folderPickerAction.value === 'move-folder') {
+    const folder = currentFolderEntry.value
+    if (!folder) return
+    if (folder.id === folderId) {
+      uni.showToast({ title: '不能移动到当前文件夹', icon: 'none' })
+      return
+    }
+    if (folderId && isFolderDescendant(folder.id, folderId)) {
+      uni.showToast({ title: '不能移动到子文件夹内', icon: 'none' })
+      return
+    }
+    saveFolders(folders.value.map((item) => (
+      item.id === folder.id
+        ? { ...item, parentId: folderId, updatedAt: Date.now() }
+        : item
+    )))
+    uni.showToast({ title: '移动成功', icon: 'success' })
+    return
+  }
+
+  const project = currentProject.value
   if (!project) return
 
   if (folderPickerAction.value === 'move') {
@@ -705,12 +789,173 @@ const exportProject = () => {
   const project = currentProject.value
   closeActionSheet()
   if (!project) return
+  // #ifdef H5
+  uni.showLoading({ title: '正在导出...' })
+  exportBlueprintAsBlob({
+    projectId: project.id,
+    name: project.name || '未命名作品',
+    creatorName: (uni.getStorageSync('pin_user') || {}).username || 'Pin用户',
+    updatedAt: project.updatedAt,
+    points: project.publishPoints || 0,
+    canvasData: project.canvasData,
+  }).then(({ blob, fileName }) => {
+    downloadBlob(blob, fileName)
+    uni.showToast({ title: '导出完成', icon: 'success' })
+  }).catch((error) => {
+    console.error(error)
+    uni.showToast({ title: '导出失败', icon: 'none' })
+  }).finally(() => {
+    uni.hideLoading()
+  })
+  // #endif
+
+  // #ifndef H5
   uni.navigateTo({ url: `/pages/canvas-editor/index?mode=edit&projectId=${project.id}&autoExport=1` })
+  // #endif
 }
 
 const shareProject = () => {
   closeActionSheet()
   uni.showToast({ title: '功能正在完善中', icon: 'none' })
+}
+
+const renameFolder = () => {
+  const folder = currentFolderEntry.value
+  closeActionSheet()
+  if (!folder) return
+  askFolderName('重命名文件夹', (name) => {
+    saveFolders(folders.value.map((item) => (
+      item.id === folder.id
+        ? { ...item, name, updatedAt: Date.now() }
+        : item
+    )))
+    uni.showToast({ title: '重命名成功', icon: 'success' })
+  })
+}
+
+const copyFolder = () => {
+  const folder = currentFolderEntry.value
+  closeActionSheet()
+  if (!folder) return
+  const now = Date.now()
+  const siblingNames = folders.value
+    .filter((item) => item.parentId === folder.parentId)
+    .map((item) => item.name)
+  let copyName = `${folder.name}副本`
+  let index = 2
+  while (siblingNames.includes(copyName)) {
+    copyName = `${folder.name}副本${index}`
+    index += 1
+  }
+  saveFolders([
+    {
+      ...folder,
+      id: `folder_${now}`,
+      name: copyName,
+      createdAt: now,
+      updatedAt: now,
+    },
+    ...folders.value,
+  ])
+  uni.showToast({ title: '复制成功', icon: 'success' })
+}
+
+const getFolderProjects = (folderId: string) => {
+  return projects.value.filter((item) => (item.folderId || '') === folderId)
+}
+
+const estimateProjectSize = (project: ProjectRecord) => {
+  const beadBytes = Array.isArray(project.canvasData?.beads) ? project.canvasData.beads.length * 24 : 0
+  return 1024 + beadBytes
+}
+
+const formatBytes = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const showFolderDetails = () => {
+  const folder = currentFolderEntry.value
+  closeActionSheet()
+  if (!folder) return
+  const items = getFolderProjects(folder.id)
+  const totalSize = items.reduce((sum, item) => sum + estimateProjectSize(item), 0)
+  uni.showModal({
+    title: folder.name,
+    content: `创建时间：${formatDateTime(folder.createdAt)}\n修改时间：${formatDateTime(folder.updatedAt)}\n文件数量：${items.length}\n估算大小：${formatBytes(totalSize)}`,
+    showCancel: false,
+  })
+}
+
+const confirmDeleteFolder = () => {
+  const folder = currentFolderEntry.value
+  closeActionSheet()
+  if (!folder) return
+  uni.showModal({
+    title: '确认删除该文件夹？',
+    content: '文件夹内作品会移动到根目录，不会被删除。',
+    success: (res) => {
+      if (!res.confirm) return
+      saveFolders(folders.value.filter((item) => item.id !== folder.id))
+      saveProjects(projects.value.map((item) => (
+        item.folderId === folder.id
+          ? { ...item, folderId: '', updatedAt: Date.now() }
+          : item
+      )))
+      if (currentFolderId.value === folder.id) {
+        currentFolderId.value = ''
+      }
+      uni.showToast({ title: '删除成功', icon: 'success' })
+    },
+  })
+}
+
+const exportFolder = async () => {
+  const folder = currentFolderEntry.value
+  closeActionSheet()
+  if (!folder) return
+  // #ifdef H5
+  const jszip = getJsZip()
+  if (!jszip) {
+    uni.showToast({ title: 'ZIP 库加载失败', icon: 'none' })
+    return
+  }
+  const folderProjects = getFolderProjects(folder.id)
+  if (!folderProjects.length) {
+    uni.showToast({ title: '文件夹内暂无作品', icon: 'none' })
+    return
+  }
+  uni.showLoading({ title: '正在打包导出...' })
+  try {
+    const zip = new jszip()
+    for (let index = 0; index < folderProjects.length; index += 1) {
+      const project = folderProjects[index]
+      uni.showLoading({ title: `正在导出 ${index + 1}/${folderProjects.length}` })
+      const { blob, fileName } = await exportBlueprintAsBlob({
+        projectId: project.id,
+        name: project.name || '未命名作品',
+        creatorName: (uni.getStorageSync('pin_user') || {}).username || 'Pin用户',
+        updatedAt: project.updatedAt,
+        points: project.publishPoints || 0,
+        canvasData: project.canvasData,
+      })
+      zip.file(fileName, blob)
+    }
+    const archive = await zip.generateAsync({ type: 'blob' })
+    downloadBlob(archive, `${folder.name || '文件夹'}.zip`)
+    uni.showToast({ title: '导出完成', icon: 'success' })
+  } catch (error) {
+    console.error(error)
+    uni.showToast({ title: '导出失败', icon: 'none' })
+  } finally {
+    uni.hideLoading()
+  }
+  // #endif
+
+  // #ifndef H5
+  uni.showToast({ title: '当前平台暂不支持 ZIP 导出', icon: 'none' })
+  // #endif
 }
 
 // keep template references simple
@@ -793,7 +1038,8 @@ const formatProjectTags = formatProjectTagsLocal
 
 .content-scroll {
   height: calc(100vh - 120rpx);
-  padding: 0 24rpx 180rpx;
+  padding: 0 24rpx calc(180rpx + constant(safe-area-inset-bottom));
+  padding-bottom: calc(180rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -957,6 +1203,7 @@ const formatProjectTags = formatProjectTagsLocal
 .fab {
   position: fixed;
   right: 24rpx;
+  bottom: calc(132rpx + constant(safe-area-inset-bottom));
   bottom: calc(132rpx + env(safe-area-inset-bottom));
   width: 108rpx;
   height: 108rpx;
@@ -990,6 +1237,7 @@ const formatProjectTags = formatProjectTagsLocal
   border-radius: 32rpx 32rpx 0 0;
   box-sizing: border-box;
   max-height: calc(100vh - 160rpx);
+  margin-bottom: calc(constant(safe-area-inset-bottom) + 88rpx);
   margin-bottom: calc(env(safe-area-inset-bottom) + 88rpx);
   padding-bottom: 12rpx;
   display: flex;

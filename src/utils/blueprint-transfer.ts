@@ -1,22 +1,40 @@
-/**
- * 全局蓝图数据传递模块
- * 用于 image-import 页面向 canvas-editor 页面传递大数据
- * - 不走 URL（长度限制）
- * - 不走 localStorage（容量限制）
- * - 不走事件总线（时序问题）
- * - 直接内存引用传递，零拷贝
- */
+export interface BlueprintTransferBead {
+  x: number
+  y: number
+  color: string
+}
 
-/** 蓝图临时数据 */
-let blueprintData: any = null
+export interface BlueprintTransferSourceMeta {
+  sourceType?: 'image-import' | 'blueprint-import' | 'project-import'
+  sourceName?: string
+  originalWidth?: number
+  originalHeight?: number
+  estimatedCellSize?: number
+  recognitionMode?: 'auto' | 'manual'
+  backgroundColor?: string
+}
 
-/** 存储蓝图数据 */
-export function setBlueprintData(data: any) {
+export interface BlueprintTransferData {
+  width: number
+  height: number
+  backgroundColor: string
+  showGrid: boolean
+  gridColor: string
+  beads: BlueprintTransferBead[]
+  createdAt?: number
+  updatedAt?: number
+  sourceMeta?: BlueprintTransferSourceMeta
+  beadStyle?: 'square' | 'round'
+  showColorCode?: boolean
+}
+
+let blueprintData: BlueprintTransferData | null = null
+
+export function setBlueprintData(data: BlueprintTransferData) {
   blueprintData = data
 }
 
-/** 读取并清除蓝图数据（一次性读取） */
-export function consumeBlueprintData(): any {
+export function consumeBlueprintData(): BlueprintTransferData | null {
   const data = blueprintData
   blueprintData = null
   return data
