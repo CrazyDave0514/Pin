@@ -173,6 +173,13 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   ctx.font = '700 28px sans-serif'
   ctx.textAlign = 'left'
   ctx.textBaseline = 'top'
+
+  // 预计算品牌区位置（用于名称截断和列宽计算）
+  const brandBoxWidth = 260
+  const qrSize = 88
+  const brandGap = 20
+  const brandBoxX = gridRightEdge - qrSize - brandGap - brandBoxWidth
+
   const name = payload.name || '未命名作品'
   // 简单截断，超过宽度加省略号
   let displayName = name
@@ -204,12 +211,8 @@ export const renderBlueprintExportCanvas = (payload: ExportPayload) => {
   badgeX += drawInfoBadge(ctx, badgeX, badgeY, `${colorTypes} 色`) + 10
   drawInfoBadge(ctx, badgeX, badgeY, `${totalBeads} 颗`)
 
-  const brandBoxWidth = 260
   // 品牌区高度与左侧三行对齐：名称(28px) + 间距(12px) + 作者行(18px) + 间距(20px) + badge行(38px) = 116px
   const brandBoxHeight = 116
-  const qrSize = 88
-  const brandGap = 20
-  const brandBoxX = gridRightEdge - qrSize - brandGap - brandBoxWidth
   // 顶部对齐名称行
   const brandBoxY = contentTop
   drawRoundedRect(ctx, brandBoxX, brandBoxY, brandBoxWidth, brandBoxHeight, 18, '#F7FAFD', '#DDE4EC')
