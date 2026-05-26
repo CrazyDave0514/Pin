@@ -2,6 +2,7 @@
   "name": "uni-preset-vue",
   "version": "0.1.8",
   "scripts": {
+    "test:services": "node --test tests/pin-services.test.ts",
     "dev:custom": "uni -p",
     "dev:h5": "uni",
     "dev:h5:ssr": "uni --ssr",

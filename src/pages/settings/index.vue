@@ -226,6 +226,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { authService } from '../../services/pin/index'
 
 // 应用版本号
 const version = ref('0.1.8')
@@ -254,18 +255,9 @@ const settings = ref({
 /**
  * 加载设置数据
  */
-const loadSettings = () => {
-  // 加载用户设置
-  const savedSettings = uni.getStorageSync('pin_settings')
-  if (savedSettings) {
-    settings.value = { ...settings.value, ...savedSettings }
-  }
-  
-  // 检查登录状态
-  const user = uni.getStorageSync('pin_user')
-  isLoggedIn.value = !!user
-  
-  // 计算缓存大小（模拟）
+const loadSettings = async () => {
+  settings.value = await authService.getSettings()
+  isLoggedIn.value = await authService.isLoggedIn()
   calculateCacheSize()
 }
 
@@ -282,9 +274,9 @@ const calculateCacheSize = () => {
  * 切换设置项
  * @param key 设置项键名
  */
-const toggleSetting = (key: keyof typeof settings.value) => {
+const toggleSetting = async (key: keyof typeof settings.value) => {
   settings.value[key] = !settings.value[key]
-  uni.setStorageSync('pin_settings', settings.value)
+  await authService.setSettings(settings.value)
 }
 
 /**
@@ -325,15 +317,8 @@ const clearCache = () => {
 /**
  * 确认清除缓存
  */
-const confirmClearCache = () => {
-  // 清除缓存逻辑
-  uni.clearStorageSync()
-  // 保留用户登录信息
-  const user = uni.getStorageSync('pin_user')
-  if (user) {
-    uni.setStorageSync('pin_user', user)
-  }
-  
+const confirmClearCache = async () => {
+  await authService.clearCache()
   showClearCacheModal.value = false
   cacheSize.value = '0 MB'
   uni.showToast({ title: '缓存已清除', icon: 'success' })
@@ -382,11 +367,8 @@ const logout = () => {
 /**
  * 确认退出登录
  */
-const confirmLogout = () => {
-  // 清除用户数据
-  uni.removeStorageSync('pin_user')
-  uni.removeStorageSync('pin_points')
-
+const confirmLogout = async () => {
+  await authService.logout()
   showLogoutModal.value = false
   isLoggedIn.value = false
 
@@ -408,16 +390,8 @@ const showDeleteAccount = () => {
 /**
  * 确认注销账号
  */
-const confirmDeleteAccount = () => {
-  // 清除所有本地数据
-  uni.removeStorageSync('pin_user')
-  uni.removeStorageSync('pin_projects')
-  uni.removeStorageSync('pin_folders')
-  uni.removeStorageSync('pin_search_history')
-  uni.removeStorageSync('pin_favorite_colors')
-  uni.removeStorageSync('pin_recent_imports')
-  uni.removeStorageSync('pin_settings')
-
+const confirmDeleteAccount = async () => {
+  await authService.deleteAccount()
   showDeleteAccountModal.value = false
   isLoggedIn.value = false
 
@@ -430,7 +404,7 @@ const confirmDeleteAccount = () => {
 }
 
 onMounted(() => {
-  loadSettings()
+  void loadSettings()
 })
 
 const goBack = () => {

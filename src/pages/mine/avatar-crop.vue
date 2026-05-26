@@ -44,6 +44,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { DEFAULT_PRESET_AVATAR, PRESET_AVATARS, normalizeAvatarValue } from '../../utils/avatar-presets'
+import { authService } from '../../services/pin/index'
 
 /** 状态栏高度 */
 const statusBarHeight = ref(44)
@@ -59,13 +60,13 @@ const presetAvatars = PRESET_AVATARS
 
 const isPresetAvatar = computed(() => String(avatarUrl.value || '').startsWith('preset:'))
 
-onMounted(() => {
+onMounted(async () => {
   /** 获取系统状态栏高度 */
   const sysInfo = uni.getSystemInfoSync()
   statusBarHeight.value = sysInfo.statusBarHeight || 44
 
   /** 从本地存储加载当前头像 */
-  const userData = uni.getStorageSync('pin_user')
+  const userData = await authService.getCurrentUser()
   if (userData && userData.avatar) {
     avatarUrl.value = normalizeAvatarValue(userData.avatar)
     selectedPreset.value = presetAvatars.findIndex((item) => `preset:${item.key}` === avatarUrl.value)
@@ -109,11 +110,8 @@ const chooseImage = () => {
 /**
  * 保存头像
  */
-const saveAvatar = () => {
-  /** 获取当前用户数据 */
-  const userData = uni.getStorageSync('pin_user') || {}
-  userData.avatar = avatarUrl.value
-  uni.setStorageSync('pin_user', userData)
+const saveAvatar = async () => {
+  await authService.updateCurrentUser({ avatar: avatarUrl.value })
 
   /** 发送全局事件通知头像已更新 */
   uni.$emit('avatarUpdated', { avatar: avatarUrl.value })

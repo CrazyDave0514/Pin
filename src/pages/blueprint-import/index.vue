@@ -165,6 +165,7 @@ import { computed, onMounted, ref } from 'vue'
 import { buildBlueprintTransferFromRecognition, recognizeBlueprintFromImage } from '@/utils/blueprint-recognizer'
 import { createBlueprintTransferData } from '@/utils/blueprint-utils'
 import { setBlueprintData } from '@/utils/blueprint-transfer'
+import { projectService } from '../../services/pin/index'
 
 const sourceTabs = [
   { id: 'file', label: '图片识别', icon: '/static/assets/v015/icons/blueprint-import-muted.png' },
@@ -221,8 +222,8 @@ const importButtonText = computed(() => {
 })
 
 onMounted(() => {
-  loadProjects()
-  loadRecentImports()
+  void loadProjects()
+  void loadRecentImports()
 })
 
 const goBack = () => {
@@ -233,12 +234,12 @@ const switchSource = (source: 'file' | 'local') => {
   activeSource.value = source
 }
 
-const loadProjects = () => {
-  projects.value = uni.getStorageSync('pin_projects') || []
+const loadProjects = async () => {
+  projects.value = await projectService.getProjects()
 }
 
-const loadRecentImports = () => {
-  recentImports.value = (uni.getStorageSync('pin_recent_imports') || []).slice(0, 5)
+const loadRecentImports = async () => {
+  recentImports.value = await projectService.getRecentImports()
 }
 
 const formatDateTime = (timestamp: number) => {
@@ -392,24 +393,16 @@ const runManualRecognition = async () => {
   }
 }
 
-const loadRecentImport = (item: any) => {
-  const project = (uni.getStorageSync('pin_projects') || []).find((entry: any) => entry.id === item.projectId)
+const loadRecentImport = async (item: any) => {
+  const project = await projectService.getProjectById(item.projectId)
   if (project) {
     activeSource.value = 'local'
     selectProject(project)
   }
 }
 
-const saveRecentImport = (payload: { projectId: string; name: string }) => {
-  const item = {
-    id: payload.projectId,
-    projectId: payload.projectId,
-    name: payload.name,
-    importedAt: Date.now(),
-  }
-  const saved = uni.getStorageSync('pin_recent_imports') || []
-  const nextValue = [item, ...saved.filter((entry: any) => entry.projectId !== item.projectId)].slice(0, 10)
-  uni.setStorageSync('pin_recent_imports', nextValue)
+const saveRecentImport = async (payload: { projectId: string; name: string }) => {
+  await projectService.saveRecentImport(payload)
 }
 
 const importBlueprint = () => {

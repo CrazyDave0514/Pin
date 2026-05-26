@@ -502,8 +502,9 @@ import { ref, reactive, computed, onMounted, nextTick, getCurrentInstance, toRaw
 import { onLoad } from '@dcloudio/uni-app'
 import { consumeBlueprintData } from '@/utils/blueprint-transfer'
 import { getHexByMardCode, getMardCodeByHex, mardColorPalette } from '@/utils/mard-colors'
-import { TAG_OPTIONS, buildProjectThumbnail, normalizeProjectTags, syncProjectArtwork } from '@/utils/community'
+import { TAG_OPTIONS, buildProjectThumbnail, normalizeProjectTags } from '@/utils/community'
 import { downloadBlob, exportBlueprintAsBlob } from '@/utils/blueprint-export'
+import { communityService, projectService } from '../../services/pin/index'
 
 // ==================== 类型定义 ====================
 
@@ -879,7 +880,7 @@ const initializeFromRouteOptions = (options: Record<string, any>) => {
   if (options.mode === 'edit' && options.projectId) {
     /** 编辑已有项目：从本地存储加载 */
     console.log('开始加载项目:', options.projectId)
-    loadProject(options.projectId)
+    void loadProject(options.projectId)
     console.log('loadProject 执行完成，beads数量:', canvasData.beads.length)
   } else if (options.mode === 'create' && options.data) {
     /** 新建项目：从 URL 参数解析画布数据 */
@@ -1049,9 +1050,8 @@ const onWheel = (e: WheelEvent) => {
  * 从本地存储加载已有项目
  * @param projectId - 项目 ID
  */
-const loadProject = (projectId: string) => {
-  const projects: ProjectData[] = uni.getStorageSync('pin_projects') || []
-  const project = projects.find((p) => p.id === projectId)
+const loadProject = async (projectId: string) => {
+  const project = await projectService.getProjectById(projectId)
 
   if (project) {
     isEditMode.value = true
@@ -1980,7 +1980,7 @@ const handleExport = () => {
  * @param projectName - 项目名称
  * @param exportAfterSave - 保存后是否导出图纸
  */
-const doSave = (projectName: string, exportAfterSave = false) => {
+const doSave = async (projectName: string, exportAfterSave = false) => {
   console.log('[保存] doSave 开始, projectName:', projectName, 'beads数量:', canvasData.beads.length, '导出:', exportAfterSave)
 
   try {
@@ -1997,7 +1997,7 @@ const doSave = (projectName: string, exportAfterSave = false) => {
     console.log('[保存] 深拷贝完成, beads数量:', clonedCanvasData.beads.length)
 
     /** 步骤3：读取已有项目列表 */
-    const projects: ProjectData[] = uni.getStorageSync('pin_projects') || []
+    const projects: ProjectData[] = await projectService.getProjects()
     console.log('[保存] 已有项目数量:', projects.length)
 
     /** 步骤4：更新或创建项目 */
@@ -2045,11 +2045,11 @@ const doSave = (projectName: string, exportAfterSave = false) => {
 
     /** 步骤5：写入 localStorage */
     console.log('[保存] 准备写入 localStorage...')
-    uni.setStorageSync('pin_projects', projects)
+    await projectService.saveProjects(projects)
     console.log('[保存] localStorage 写入成功')
     const savedProject = projects.find((item) => item.id === editingProjectId.value)
     if (savedProject?.isPublished) {
-      syncProjectArtwork(savedProject as any)
+      await communityService.syncProjectArtwork(savedProject as any)
     }
     markSavedRevision()
     uni.showToast({ title: '保存成功', icon: 'success' })
@@ -2095,12 +2095,13 @@ const doSave = (projectName: string, exportAfterSave = false) => {
  * 根据 beadStyle 调整拼豆绘制样式
  * @param projectName - 项目名称
  */
-const exportBlueprintImage = (projectName: string) => {
+const exportBlueprintImage = async (projectName: string) => {
   // #ifdef H5
+  const creatorName = await projectService.getProjectOwnerName()
   exportBlueprintAsBlob({
     projectId: editingProjectId.value || `draft_${Date.now()}`,
     name: projectName,
-    creatorName: (uni.getStorageSync('pin_user') || {}).username || 'Pin用户',
+    creatorName,
     updatedAt: Date.now(),
     canvasData: {
       ...JSON.parse(JSON.stringify(toRaw(canvasData))),

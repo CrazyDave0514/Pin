@@ -1,0 +1,10 @@
+{
+  "name": "pin-aliyun-function",
+  "private": true,
+  "version": "0.0.1",
+  "description": "PIN Alibaba Cloud Function Compute skeleton",
+  "main": "index.js",
+  "dependencies": {
+    "tablestore": "5.6.2"
+  }
+}

@@ -65,6 +65,7 @@
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
+import { authService } from '../../services/pin/index'
 
 /** 表单数据 */
 const formData = reactive({
@@ -96,7 +97,7 @@ onUnmounted(() => {
 
 /** 页面显示时刷新数据 */
 onShow(() => {
-  loadUserData()
+  void loadUserData()
 })
 
 /**
@@ -112,8 +113,8 @@ const handleAvatarUpdate = (data: { avatar: string }) => {
 /**
  * 加载用户数据到表单
  */
-const loadUserData = () => {
-  const userData = uni.getStorageSync('pin_user')
+const loadUserData = async () => {
+  const userData = await authService.getCurrentUser()
   if (userData) {
     formData.username = userData.username || ''
     formData.avatar = normalizeAvatarValue(userData.avatar || DEFAULT_PRESET_AVATAR)
@@ -148,7 +149,7 @@ const changeAvatar = () => {
 /**
  * 保存用户资料
  */
-const saveProfile = () => {
+const saveProfile = async () => {
   /** 校验昵称 */
   const username = formData.username.trim()
   if (username.length < 2) {
@@ -161,15 +162,13 @@ const saveProfile = () => {
   }
 
   /** 读取现有用户数据并合并更新 */
-  const userData = uni.getStorageSync('pin_user') || {}
   const updatedUser = {
-    ...userData,
     username: formData.username.trim(),
     avatar: formData.avatar,
   }
 
   /** 写入本地存储 */
-  uni.setStorageSync('pin_user', updatedUser)
+  await authService.updateCurrentUser(updatedUser)
 
   uni.showToast({ title: '保存成功', icon: 'success' })
 
