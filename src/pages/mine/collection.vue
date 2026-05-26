@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { onLoad, onShow } from '@dcloudio/uni-app'
-import { ensureCommunityArtworks, getIdList, type CommunityArtwork } from '../../utils/community'
+import { communityService, type CommunityArtwork } from '../../services/pin/index'
 
 const type = ref<'favorites' | 'likes'>('favorites')
 const items = ref<CommunityArtwork[]>([])
@@ -64,13 +64,8 @@ onShow(() => {
   loadItems()
 })
 
-const loadItems = () => {
-  const key = type.value === 'likes' ? 'pin_liked_artworks' : 'pin_favorited_artworks'
-  const ids = getIdList(key)
-  const all = ensureCommunityArtworks()
-  items.value = ids
-    .map((id) => all.find((item) => item.id === id && item.isPublic !== false))
-    .filter(Boolean) as CommunityArtwork[]
+const loadItems = async () => {
+  items.value = await communityService.getCollection(type.value)
 }
 
 const buildDots = (item: CommunityArtwork) => {

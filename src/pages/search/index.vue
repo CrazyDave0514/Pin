@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { ensureCommunityArtworks } from '../../utils/community'
+import { communityService, projectService } from '../../services/pin/index'
 
 /** 搜索关键词 */
 const keyword = ref('')
@@ -93,9 +93,8 @@ onLoad((options) => {
   pageMode.value = options?.mode === 'project' ? 'project' : 'community'
 })
 
-onMounted(() => {
-  const history = uni.getStorageSync('pin_search_history') || []
-  searchHistory.value = history
+onMounted(async () => {
+  searchHistory.value = await projectService.getSearchHistory()
 })
 
 watch(keyword, (value) => {
@@ -103,53 +102,26 @@ watch(keyword, (value) => {
     results.value = []
     return
   }
-  handleSearch(false)
+  void handleSearch(false)
 })
 
 /**
  * 执行搜索操作
  * 保存搜索关键词到历史记录，并从本地存储中过滤匹配的作品
  */
-const handleSearch = (saveHistory = true) => {
+const handleSearch = async (saveHistory = true) => {
   if (!keyword.value.trim()) return
 
   if (saveHistory) {
     const newHistory = [keyword.value, ...searchHistory.value.filter(h => h !== keyword.value)].slice(0, 10)
     searchHistory.value = newHistory
-    uni.setStorageSync('pin_search_history', newHistory)
+    await projectService.saveSearchHistory(newHistory)
   }
 
   // 执行搜索
   const normalizedKeyword = keyword.value.toLowerCase()
   if (pageMode.value === 'project') {
-    const projects = (uni.getStorageSync('pin_projects') || []).map((item: any) => {
-      const tags = [item.tags?.primary, item.tags?.secondary].filter(Boolean).join(' / ')
-      return {
-        id: item.id,
-        type: 'project',
-        name: item.name || '未命名作品',
-        subtitle: tags || '项目作品',
-        folderId: item.folderId || '',
-        extra: [tags, item.canvasData?.width, item.canvasData?.height].join(' '),
-      }
-    })
-    const folders = (uni.getStorageSync('pin_folders') || []).map((item: any) => ({
-      id: item.id,
-      type: 'folder',
-      name: item.name || '未命名文件夹',
-      subtitle: '文件夹',
-      extra: '',
-    }))
-    const artworks = ensureCommunityArtworks().map((item: any) => ({
-      id: item.projectId || item.id,
-      type: 'project',
-      name: item.name || '未命名作品',
-      subtitle: [item.creatorName, ...(item.tags || [])].filter(Boolean).join(' / ') || '社区作品',
-      folderId: '',
-      extra: [item.creatorName, ...(item.tags || [])].join(' '),
-    }))
-    const merged = [...projects, ...folders, ...artworks]
-      .filter((item, index, array) => array.findIndex((target) => target.type === item.type && target.id === item.id) === index)
+    const merged = await projectService.getProjectSearchEntries()
     results.value = merged.filter((item: any) => {
       const haystack = [item.name, item.subtitle, item.extra].join(' ').toLowerCase()
       return haystack.includes(normalizedKeyword)
@@ -157,7 +129,7 @@ const handleSearch = (saveHistory = true) => {
     return
   }
 
-  const artworks = ensureCommunityArtworks()
+  const artworks = await communityService.ensureArtworks()
   results.value = artworks
     .filter((a: any) =>
       a.isPublic !== false &&
@@ -175,25 +147,25 @@ const handleSearch = (saveHistory = true) => {
  */
 const handleHistoryClick = (item: string) => {
   keyword.value = item
-  handleSearch()
+  void handleSearch()
 }
 
 /**
  * 清空全部搜索历史记录
  */
-const clearHistory = () => {
+const clearHistory = async () => {
   searchHistory.value = []
-  uni.removeStorageSync('pin_search_history')
+  await projectService.clearSearchHistory()
 }
 
 /**
  * 删除单条搜索历史记录
  * @param item 要删除的历史搜索关键词
  */
-const deleteHistoryItem = (item: string) => {
+const deleteHistoryItem = async (item: string) => {
   const newHistory = searchHistory.value.filter(h => h !== item)
   searchHistory.value = newHistory
-  uni.setStorageSync('pin_search_history', newHistory)
+  await projectService.saveSearchHistory(newHistory)
 }
 
 /**

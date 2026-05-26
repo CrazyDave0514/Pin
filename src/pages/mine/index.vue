@@ -115,6 +115,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
+import { authService, communityService } from '../../services/pin/index'
 
 const user = ref<any>(null)
 const defaultAvatar = DEFAULT_PRESET_AVATAR
@@ -141,34 +142,35 @@ const functionList = [
 ]
 
 onMounted(() => {
-  loadUser()
-  loadStats()
+  void loadUser()
+  void loadStats()
 })
 
 onShow(() => {
-  loadUser()
-  loadStats()
+  void loadUser()
+  void loadStats()
 })
 
 /**
  * 加载用户数据
  */
-const loadUser = () => {
-  const userData = uni.getStorageSync('pin_user')
-  if (userData?.avatar) {
-    userData.avatar = normalizeAvatarValue(userData.avatar)
-    uni.setStorageSync('pin_user', userData)
-  }
+const loadUser = async () => {
+  const userData = await authService.getCurrentUser()
   user.value = userData
 }
 
 /**
  * 加载统计数据
  */
-const loadStats = () => {
-  stats.value.purchases = (uni.getStorageSync('pin_purchased_artworks') || []).length
-  stats.value.favorites = (uni.getStorageSync('pin_favorited_artworks') || []).length
-  stats.value.likes = (uni.getStorageSync('pin_liked_artworks') || []).length
+const loadStats = async () => {
+  const [purchases, favorites, likes] = await Promise.all([
+    communityService.getPurchasedArtworkIds(),
+    communityService.getFavoritedArtworkIds(),
+    communityService.getLikedArtworkIds(),
+  ])
+  stats.value.purchases = purchases.length
+  stats.value.favorites = favorites.length
+  stats.value.likes = likes.length
 }
 
 /**
@@ -259,13 +261,13 @@ const cancelCrop = () => {
 /**
  * 确认裁剪并保存头像
  */
-const confirmCrop = () => {
+const confirmCrop = async () => {
   if (!tempAvatar.value) return
 
   // 保存头像到本地存储
   if (user.value) {
     user.value.avatar = tempAvatar.value
-    uni.setStorageSync('pin_user', user.value)
+    await authService.updateCurrentUser({ avatar: user.value.avatar })
     uni.showToast({ title: '头像更新成功', icon: 'success' })
   }
 

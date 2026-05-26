@@ -1,53 +1,10 @@
 import { defaultArtworks } from './artworks.js'
-import { normalizeAvatarValue } from './avatar-presets'
+import { normalizeAvatarValue } from './avatar-normalize.ts'
+import { getStorageAdapter } from '../services/pin/storage-adapter.ts'
+import { PIN_STORAGE_KEYS } from '../services/pin/storage-keys.ts'
+import type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectRecord, ProjectTags, UserProfile } from '../services/pin/types.ts'
 
-export interface ProjectTags {
-  primary?: string
-  secondary?: string
-}
-
-export interface CanvasBead {
-  x: number
-  y: number
-  color: string
-}
-
-export interface CanvasDataLike {
-  width: number
-  height: number
-  backgroundColor?: string
-  beads?: CanvasBead[]
-  beadStyle?: 'square' | 'round'
-  showColorCode?: boolean
-}
-
-export interface CommunityArtwork {
-  id: string
-  name: string
-  creatorName: string
-  creatorAvatar: string
-  likes: number
-  favorites: number
-  points: number
-  createdAt: number
-  updatedAt: number
-  tags: string[]
-  tagMeta?: ProjectTags
-  viewCount: number
-  useCount: number
-  isPublic: boolean
-  description: string
-  beadCount: number
-  colorTypeCount: number
-  cover?: {
-    palette: string[]
-    pattern: string
-    seed: number
-  }
-  canvasData?: CanvasDataLike
-  projectId?: string
-  thumbnail?: string
-}
+export type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectTags } from '../services/pin/types.ts'
 
 export const ARTWORKS_VERSION = 'v017-local-100'
 
@@ -65,24 +22,32 @@ export const TAG_OPTIONS = [
 ] as const
 
 const safeArray = <T>(value: T[] | unknown): T[] => Array.isArray(value) ? (value as T[]) : []
+const storageAdapter = () => getStorageAdapter()
 
-const safeCanvasData = (value: any): CanvasDataLike => ({
-  width: Number(value?.width || 29),
-  height: Number(value?.height || 29),
-  backgroundColor: value?.backgroundColor || '#FFFFFF',
-  beads: safeArray<CanvasBead>(value?.beads).map((bead: any) => ({
-    x: Number(bead.x || 0),
-    y: Number(bead.y || 0),
-    color: String(bead.color || '#FFFFFF'),
-  })),
-  beadStyle: value?.beadStyle === 'round' ? 'round' : 'square',
-  showColorCode: value?.showColorCode === true,
-})
+const safeCanvasData = (value: unknown): CanvasDataLike => {
+  const source = value && typeof value === 'object'
+    ? (value as Partial<CanvasDataLike>)
+    : {}
 
-export const normalizeProjectTags = (value: any): ProjectTags => {
+  return {
+    width: Number(source.width || 29),
+    height: Number(source.height || 29),
+    backgroundColor: source.backgroundColor || '#FFFFFF',
+    beads: safeArray<CanvasBead>(source.beads).map((bead: Partial<CanvasBead> = {}) => ({
+      x: Number(bead.x || 0),
+      y: Number(bead.y || 0),
+      color: String(bead.color || '#FFFFFF'),
+    })),
+    beadStyle: source.beadStyle === 'round' ? 'round' : 'square',
+    showColorCode: source.showColorCode === true,
+  }
+}
+
+export const normalizeProjectTags = (value: unknown): ProjectTags => {
   if (!value || typeof value !== 'object') return {}
-  const primary = typeof value.primary === 'string' ? value.primary.trim() : ''
-  const secondary = typeof value.secondary === 'string' ? value.secondary.trim() : ''
+  const source = value as Partial<ProjectTags>
+  const primary = typeof source.primary === 'string' ? source.primary.trim() : ''
+  const secondary = typeof source.secondary === 'string' ? source.secondary.trim() : ''
   return {
     primary: primary || undefined,
     secondary: secondary || undefined,
@@ -124,7 +89,7 @@ export const buildProjectThumbnail = (canvasData?: CanvasDataLike) => {
   return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
 }
 
-export const normalizeArtwork = (item: any, index = 0): CommunityArtwork => {
+export const normalizeArtwork = (item: Partial<CommunityArtwork> & Record<string, unknown>, index = 0): CommunityArtwork => {
   const canvasData = safeCanvasData(item.canvasData)
   const tagMeta = normalizeProjectTags(item.tagMeta)
   const tags = safeArray<string>(item.tags)
@@ -158,7 +123,7 @@ export const normalizeArtwork = (item: any, index = 0): CommunityArtwork => {
 }
 
 const buildDefaultArtworks = (): CommunityArtwork[] => {
-  return defaultArtworks.slice(0, 100).map((item: any, index: number) => {
+  return defaultArtworks.slice(0, 100).map((item: Partial<CommunityArtwork> & Record<string, unknown>, index: number) => {
     const normalized = normalizeArtwork(item, index)
     const width = 18 + (index % 8) * 2
     const height = 18 + (index % 6) * 3
@@ -178,20 +143,20 @@ const buildDefaultArtworks = (): CommunityArtwork[] => {
   })
 }
 
-const getStoredProjects = () => safeArray<any>(uni.getStorageSync('pin_projects'))
+const getStoredProjects = () => safeArray<ProjectRecord>(storageAdapter().getSync(PIN_STORAGE_KEYS.projects))
 
-const getPublishedProjectArtworkId = (project: any) => {
+const getPublishedProjectArtworkId = (project: Partial<ProjectRecord>) => {
   return String(project?.publishedArtworkId || '')
 }
 
 export const createArtworkFromProject = (
-  project: any,
+  project: ProjectRecord,
   options: {
     existing?: CommunityArtwork
     forcePublic?: boolean
   } = {}
 ): CommunityArtwork => {
-  const user = uni.getStorageSync('pin_user') || {}
+  const user = storageAdapter().getSync<UserProfile>(PIN_STORAGE_KEYS.user)
   const existing = options.existing
   const canvasData = safeCanvasData(project.canvasData)
   const tagMeta = normalizeProjectTags(project.tags)
@@ -202,8 +167,8 @@ export const createArtworkFromProject = (
   return normalizeArtwork({
     id: existing?.id || getPublishedProjectArtworkId(project) || `local_${project.id}`,
     name: project.name || '未命名作品',
-    creatorName: user.username || existing?.creatorName || 'Pin用户',
-    creatorAvatar: normalizeAvatarValue(user.avatar || existing?.creatorAvatar || ''),
+    creatorName: user?.username || existing?.creatorName || 'Pin用户',
+    creatorAvatar: normalizeAvatarValue(user?.avatar || existing?.creatorAvatar || ''),
     likes: existing?.likes || 0,
     favorites: existing?.favorites || 0,
     points: Number(project.publishPoints ?? existing?.points ?? 0),
@@ -216,7 +181,7 @@ export const createArtworkFromProject = (
     isPublic: options.forcePublic !== false,
     description: existing?.description || '',
     canvasData,
-    projectId: project.id,
+    projectId: String(project.id),
     thumbnail,
     beadCount: getBeadCount(canvasData),
     colorTypeCount: getColorTypeCount(canvasData),
@@ -224,8 +189,8 @@ export const createArtworkFromProject = (
 }
 
 export const saveCommunityArtworks = (artworks: CommunityArtwork[]) => {
-  uni.setStorageSync('pin_artworks', artworks)
-  uni.setStorageSync('pin_artworks_version', ARTWORKS_VERSION)
+  storageAdapter().setSync(PIN_STORAGE_KEYS.artworks, artworks)
+  storageAdapter().setSync(PIN_STORAGE_KEYS.artworksVersion, ARTWORKS_VERSION)
 }
 
 export const syncPublishedProjectsWithArtworks = (artworksInput?: CommunityArtwork[]) => {
@@ -251,12 +216,12 @@ export const syncPublishedProjectsWithArtworks = (artworksInput?: CommunityArtwo
 }
 
 export const ensureCommunityArtworks = (): CommunityArtwork[] => {
-  const cached = uni.getStorageSync('pin_artworks')
-  const cachedVersion = uni.getStorageSync('pin_artworks_version')
+  const cached = storageAdapter().getSync(PIN_STORAGE_KEYS.artworks)
+  const cachedVersion = storageAdapter().getSync(PIN_STORAGE_KEYS.artworksVersion)
 
   let artworks = !Array.isArray(cached) || cached.length === 0 || cachedVersion !== ARTWORKS_VERSION
     ? buildDefaultArtworks()
-    : cached.map((item: any, index: number) => normalizeArtwork(item, index))
+    : cached.map((item: Partial<CommunityArtwork> & Record<string, unknown>, index: number) => normalizeArtwork(item, index))
 
   artworks = syncPublishedProjectsWithArtworks(artworks)
   saveCommunityArtworks(artworks)
@@ -276,10 +241,10 @@ export const updateArtwork = (id: string, updater: (artwork: CommunityArtwork) =
   return artworks[index]
 }
 
-export const publishProjectAsArtwork = (project: any, points: number) => {
+export const publishProjectAsArtwork = (project: ProjectRecord, points: number): CommunityArtwork => {
   const artworks = ensureCommunityArtworks()
   const existing = artworks.find((item) => item.id === getPublishedProjectArtworkId(project) || item.projectId === project.id)
-  const normalizedProject = {
+  const normalizedProject: ProjectRecord = {
     ...project,
     publishPoints: points,
     thumbnail: project.thumbnail || buildProjectThumbnail(project.canvasData),
@@ -295,22 +260,26 @@ export const publishProjectAsArtwork = (project: any, points: number) => {
   return artwork
 }
 
-export const syncProjectArtwork = (project: any) => {
+export const syncProjectArtwork = (project: ProjectRecord): CommunityArtwork | undefined => {
   if (!project?.isPublished) return undefined
   return publishProjectAsArtwork(project, Number(project.publishPoints || 0))
 }
 
-export const unpublishProjectArtwork = (projectId: string) => {
-  const artworks = ensureCommunityArtworks().map((item) => (
-    item.projectId === projectId ? normalizeArtwork({ ...item, isPublic: false, updatedAt: Date.now() }) : item
-  ))
+export const unpublishProjectArtwork = (projectId: string): CommunityArtwork | undefined => {
+  let updatedArtwork: CommunityArtwork | undefined
+  const artworks = ensureCommunityArtworks().map((item) => {
+    if (item.projectId !== projectId) return item
+    updatedArtwork = normalizeArtwork({ ...item, isPublic: false, updatedAt: Date.now() })
+    return updatedArtwork
+  })
   saveCommunityArtworks(artworks)
+  return updatedArtwork
 }
 
-export const getIdList = (key: string): string[] => safeArray<string>(uni.getStorageSync(key))
+export const getIdList = (key: string): string[] => safeArray<string>(storageAdapter().getSync(key))
 
 export const setIdList = (key: string, ids: string[]) => {
-  uni.setStorageSync(key, Array.from(new Set(ids)))
+  storageAdapter().setSync(key, Array.from(new Set(ids)))
 }
 
 export const toggleId = (key: string, id: string) => {
@@ -322,12 +291,14 @@ export const toggleId = (key: string, id: string) => {
 }
 
 export const addPointsRecord = (title: string, amount: number) => {
-  const records = safeArray<any>(uni.getStorageSync('pin_points_records'))
+  const records = safeArray<{ id: string; title: string; amount: number; time: number }>(
+    storageAdapter().getSync(PIN_STORAGE_KEYS.pointsRecords)
+  )
   records.unshift({
     id: `record_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     title,
     amount,
     time: Date.now(),
   })
-  uni.setStorageSync('pin_points_records', records)
+  storageAdapter().setSync(PIN_STORAGE_KEYS.pointsRecords, records)
 }

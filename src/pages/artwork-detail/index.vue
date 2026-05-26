@@ -109,15 +109,7 @@ import { computed, getCurrentInstance, nextTick, ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '@/utils/avatar-presets'
 import { getMardCodeByHex } from '@/utils/mard-colors'
-import {
-  addPointsRecord,
-  getArtworkById,
-  getIdList,
-  setIdList,
-  toggleId,
-  updateArtwork,
-  type CommunityArtwork,
-} from '../../utils/community'
+import { communityService, purchaseService, type CommunityArtwork } from '../../services/pin/index'
 
 const instance = getCurrentInstance()
 const artwork = ref<CommunityArtwork | null>(null)
@@ -165,18 +157,19 @@ const costText = computed(() => {
 
 onLoad((options: any) => {
   artworkId.value = options?.id || ''
-  loadArtwork()
+  void loadArtwork()
 })
 
-const loadArtwork = () => {
-  const found = getArtworkById(artworkId.value)
+const loadArtwork = async () => {
+  const found = await communityService.getArtworkById(artworkId.value)
   artwork.value = found && found.isPublic !== false ? found : null
   if (!artwork.value) return
 
-  isLiked.value = getIdList('pin_liked_artworks').includes(artwork.value.id)
-  isFavorited.value = getIdList('pin_favorited_artworks').includes(artwork.value.id)
-  isPurchased.value = getIdList('pin_purchased_artworks').includes(artwork.value.id)
-  isFollowing.value = getIdList('pin_followed_creators').includes(artwork.value.creatorName)
+  const state = await communityService.getInteractionState(artwork.value.id, artwork.value.creatorName)
+  isLiked.value = state.isLiked
+  isFavorited.value = state.isFavorited
+  isPurchased.value = state.isPurchased
+  isFollowing.value = state.isFollowing
   nextTick(() => setTimeout(renderPreview, 120))
 }
 
@@ -185,54 +178,37 @@ const switchPreview = (key: 'ironed' | 'blueprint') => {
   nextTick(() => setTimeout(renderPreview, 80))
 }
 
-const toggleLike = () => {
+const toggleLike = async () => {
   if (!artwork.value) return
-  const added = toggleId('pin_liked_artworks', artwork.value.id)
-  const updated = updateArtwork(artwork.value.id, (item) => ({
-    ...item,
-    likes: Math.max(0, item.likes + (added ? 1 : -1)),
-  }))
+  const { added, artwork: updated } = await communityService.toggleLike(artwork.value.id)
   if (updated) artwork.value = updated
   isLiked.value = added
 }
 
-const toggleFavorite = () => {
+const toggleFavorite = async () => {
   if (!artwork.value) return
-  const added = toggleId('pin_favorited_artworks', artwork.value.id)
-  const updated = updateArtwork(artwork.value.id, (item) => ({
-    ...item,
-    favorites: Math.max(0, item.favorites + (added ? 1 : -1)),
-  }))
+  const { added, artwork: updated } = await communityService.toggleFavorite(artwork.value.id)
   if (updated) artwork.value = updated
   isFavorited.value = added
 }
 
-const toggleFollow = () => {
+const toggleFollow = async () => {
   if (!artwork.value) return
-  isFollowing.value = toggleId('pin_followed_creators', artwork.value.creatorName)
+  isFollowing.value = await communityService.toggleFollow(artwork.value.creatorName)
   uni.showToast({ title: isFollowing.value ? '已关注' : '已取消关注', icon: 'none' })
 }
 
-const purchaseArtwork = () => {
+const purchaseArtwork = async () => {
   if (!artwork.value || isPurchased.value) return
-  const points = artwork.value.points || 0
-  const currentPoints = Number(uni.getStorageSync('pin_points') || 0)
-  if (points > currentPoints) {
-    uni.showToast({ title: '积分不足', icon: 'none' })
+  const result = await purchaseService.purchaseArtwork(artwork.value.id)
+  if (!result.success) {
+    if (result.reason === 'INSUFFICIENT_POINTS') {
+      uni.showToast({ title: '积分不足', icon: 'none' })
+    }
     return
   }
 
-  if (points > 0) {
-    uni.setStorageSync('pin_points', currentPoints - points)
-    addPointsRecord(`购买${artwork.value.name}`, -points)
-  }
-  const purchased = getIdList('pin_purchased_artworks')
-  setIdList('pin_purchased_artworks', [...purchased, artwork.value.id])
-  const updated = updateArtwork(artwork.value.id, (item) => ({
-    ...item,
-    useCount: item.useCount + 1,
-  }))
-  if (updated) artwork.value = updated
+  if (result.artwork) artwork.value = result.artwork
   isPurchased.value = true
   uni.showToast({ title: '购买成功', icon: 'success' })
 }

@@ -295,12 +295,10 @@ import {
   buildProjectThumbnail,
   normalizeProjectTags,
   projectTagsToList,
-  publishProjectAsArtwork,
-  syncProjectArtwork,
-  unpublishProjectArtwork,
 } from '../../utils/community'
 import { downloadBlob, exportBlueprintAsBlob } from '../../utils/blueprint-export'
 import { getJsZip } from '../../utils/jszip'
+import { communityService, projectService } from '../../services/pin/index'
 
 type FolderRecord = {
   id: string
@@ -368,7 +366,7 @@ onLoad((options) => {
 })
 
 onShow(() => {
-  loadData()
+  void loadData()
 })
 
 onMounted(() => {
@@ -381,32 +379,19 @@ onUnmounted(() => {
 
 const formatProjectTagsLocal = (tags: any) => projectTagsToList(normalizeProjectTags(tags))
 
-const loadData = () => {
-  projects.value = (uni.getStorageSync('pin_projects') || []).map((item: any) => ({
-    ...item,
-    folderId: item.folderId || '',
-    tags: normalizeProjectTags(item.tags),
-    thumbnail: safeProjectThumbnail(item),
-    updatedAt: item.updatedAt || item.createdAt || Date.now(),
-    isOffShelf: !!item.isOffShelf,
-  }))
-  folders.value = (uni.getStorageSync('pin_folders') || []).map((item: any) => ({
-    id: item.id,
-    name: item.name || '未命名文件夹',
-    parentId: item.parentId || '',
-    createdAt: item.createdAt || Date.now(),
-    updatedAt: item.updatedAt || item.createdAt || Date.now(),
-  }))
+const loadData = async () => {
+  projects.value = await projectService.getProjects()
+  folders.value = await projectService.getFolders()
 }
 
-const saveProjects = (next: ProjectRecord[]) => {
+const saveProjects = async (next: ProjectRecord[]) => {
   projects.value = next
-  uni.setStorageSync('pin_projects', next)
+  await projectService.saveProjects(next)
 }
 
-const saveFolders = (next: FolderRecord[]) => {
+const saveFolders = async (next: FolderRecord[]) => {
   folders.value = next
-  uni.setStorageSync('pin_folders', next)
+  await projectService.saveFolders(next)
 }
 
 const formatDimensions = (project: ProjectRecord) => {
@@ -715,7 +700,7 @@ const selectPrimaryTag = (primary: string) => {
   }
 }
 
-const confirmPublish = () => {
+const confirmPublish = async () => {
   const project = currentProject.value
   if (!project) return
   const points = Number(publishPoints.value)
@@ -740,9 +725,9 @@ const confirmPublish = () => {
     thumbnail: safeProjectThumbnail(project),
     updatedAt: Date.now(),
   }
-  const artwork = publishProjectAsArtwork(updatedProject, updatedProject.publishPoints)
+  const artwork = await communityService.publishProjectAsArtwork(updatedProject, updatedProject.publishPoints)
   updatedProject.publishedArtworkId = artwork.id
-  saveProjects(projects.value.map((item) => (item.id === project.id ? updatedProject : item)))
+  await saveProjects(projects.value.map((item) => (item.id === project.id ? updatedProject : item)))
   currentProject.value = updatedProject
   closePublishModal()
   uni.showToast({ title: '发布成功', icon: 'success' })
@@ -757,13 +742,13 @@ const unpublishProject = () => {
     content: '下架后作品将不在首页社区展示，已购买用户不受影响。',
     success: (res) => {
       if (!res.confirm) return
-      unpublishProjectArtwork(project.id)
+      void communityService.unpublishProjectArtwork(project.id)
       const nextProjects = projects.value.map((item) => (
         item.id === project.id
           ? { ...item, isPublished: false, isOffShelf: true, updatedAt: Date.now() }
           : item
       ))
-      saveProjects(nextProjects)
+      void saveProjects(nextProjects)
       currentProject.value = nextProjects.find((item) => item.id === project.id) || null
       uni.showToast({ title: '已下架', icon: 'success' })
     },
@@ -777,27 +762,28 @@ const confirmDeleteProject = () => {
   uni.showModal({
     title: '确认删除该作品？',
     content: '删除后不可恢复',
-    success: (res) => {
+    success: async (res) => {
       if (!res.confirm) return
       if (project.isPublished) {
-        unpublishProjectArtwork(project.id)
+        await communityService.unpublishProjectArtwork(project.id)
       }
-      saveProjects(projects.value.filter((item) => item.id !== project.id))
+      await saveProjects(projects.value.filter((item) => item.id !== project.id))
       uni.showToast({ title: '删除成功', icon: 'success' })
     },
   })
 }
 
-const exportProject = () => {
+const exportProject = async () => {
   const project = currentProject.value
   closeActionSheet()
   if (!project) return
+  const creatorName = await projectService.getProjectOwnerName()
   // #ifdef H5
   uni.showLoading({ title: '正在导出...' })
   exportBlueprintAsBlob({
     projectId: project.id,
     name: project.name || '未命名作品',
-    creatorName: (uni.getStorageSync('pin_user') || {}).username || 'Pin用户',
+    creatorName,
     updatedAt: project.updatedAt,
     points: project.publishPoints || 0,
     canvasData: project.canvasData,
@@ -938,7 +924,7 @@ const exportFolder = async () => {
       const { blob, fileName } = await exportBlueprintAsBlob({
         projectId: project.id,
         name: project.name || '未命名作品',
-        creatorName: (uni.getStorageSync('pin_user') || {}).username || 'Pin用户',
+        creatorName: await projectService.getProjectOwnerName(),
         updatedAt: project.updatedAt,
         points: project.publishPoints || 0,
         canvasData: project.canvasData,

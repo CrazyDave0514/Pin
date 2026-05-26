@@ -97,7 +97,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { getPresetAvatarImage as resolvePresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '../../utils/avatar-presets'
-import { ensureCommunityArtworks } from '../../utils/community'
+import { communityService } from '../../services/pin/index'
 
 /** 当前激活的标签 */
 const activeTab = ref('recommend')
@@ -154,20 +154,20 @@ const tabs = [
 ]
 
 onMounted(() => {
-  loadArtworks()
+  void loadArtworks()
 })
 
 onShow(() => {
-  loadArtworks()
+  void loadArtworks()
 })
 
 /**
  * 加载作品数据
  * 优先从本地存储读取，版本不匹配或无数据时使用预生成的 100 条假数据
  */
-const loadArtworks = () => {
-  followedCreators.value = uni.getStorageSync('pin_followed_creators') || []
-  artworks.value = ensureCommunityArtworks().filter((item: any) => item.isPublic !== false)
+const loadArtworks = async () => {
+  followedCreators.value = await communityService.getFollowedCreators()
+  artworks.value = (await communityService.ensureArtworks()).filter((item: any) => item.isPublic !== false)
 }
 
 const getPresetAvatarGlyph = (value?: string) => {

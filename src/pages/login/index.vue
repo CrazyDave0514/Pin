@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { authService } from '../../services/pin/index'
 
 // 用户名输入
 const username = ref('')
@@ -73,8 +74,8 @@ const lastUser = ref<any>(null)
 /**
  * 页面加载时检查是否有上次登录的用户
  */
-onMounted(() => {
-  const userList = uni.getStorageSync('pin_user_list') || []
+onMounted(async () => {
+  const userList = await authService.getUserList()
   if (userList.length > 0) {
     // 获取最后一个登录的用户
     lastUser.value = userList[userList.length - 1]
@@ -102,17 +103,10 @@ const validateUsername = (name: string): boolean => {
 /**
  * 快速登录（使用上次登录的账号）
  */
-const quickLogin = () => {
+const quickLogin = async () => {
   if (!lastUser.value) return
   
-  // 设置当前用户
-  uni.setStorageSync('pin_user', lastUser.value)
-  
-  // 获取或初始化积分
-  const pointsData = uni.getStorageSync('pin_points') || 0
-  if (!pointsData) {
-    uni.setStorageSync('pin_points', 100)
-  }
+  await authService.quickLogin(lastUser.value)
   
   uni.showToast({ title: '登录成功', icon: 'success' })
   setTimeout(() => {
@@ -123,36 +117,19 @@ const quickLogin = () => {
 /**
  * 创建新账号
  */
-const handleCreate = () => {
+const handleCreate = async () => {
   error.value = ''
   
   if (!validateUsername(username.value)) return
   
   // 检查用户名是否已存在
-  const userList = uni.getStorageSync('pin_user_list') || []
+  const userList = await authService.getUserList()
   if (userList.some((u: any) => u.username === username.value)) {
     error.value = '用户名已被使用'
     return
   }
-  
-  // 创建新用户
-  const newUser = {
-    uid: 'U' + Date.now().toString(36).toUpperCase(),
-    username: username.value,
-    avatar: '',
-    createdAt: Date.now(),
-    following: [],
-  }
-  
-  // 保存用户列表
-  userList.push(newUser)
-  uni.setStorageSync('pin_user_list', userList)
-  
-  // 设置当前用户
-  uni.setStorageSync('pin_user', newUser)
-  
-  // 初始化积分
-  uni.setStorageSync('pin_points', 100)
+
+  await authService.register(username.value)
   
   uni.showToast({ title: '创建成功', icon: 'success' })
   setTimeout(() => {

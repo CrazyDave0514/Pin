@@ -116,6 +116,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { pointsService } from '../../services/pin/index'
 
 /** 用户当前积分 */
 const userPoints = ref(0)
@@ -160,23 +161,9 @@ const filteredRecords = computed(() => {
 /**
  * 加载积分数据
  */
-const loadPointsData = () => {
-  // 加载用户积分
-  userPoints.value = uni.getStorageSync('pin_points') || 0
-  
-  // 加载积分记录
-  const savedRecords = uni.getStorageSync('pin_points_records') || []
-  if (savedRecords.length > 0) {
-    records.value = savedRecords
-  } else {
-    // 默认示例数据
-    records.value = [
-      { id: '1', title: '注册奖励', amount: 100, time: Date.now() - 86400000 * 2 },
-      { id: '2', title: '每日签到', amount: 5, time: Date.now() - 86400000 },
-      { id: '3', title: '发布作品', amount: 10, time: Date.now() - 3600000 }
-    ]
-    uni.setStorageSync('pin_points_records', records.value)
-  }
+const loadPointsData = async () => {
+  userPoints.value = await pointsService.getPointsBalance()
+  records.value = await pointsService.getDisplayRecords()
 }
 
 /**
@@ -207,7 +194,7 @@ const formatTime = (timestamp: number): string => {
 }
 
 onMounted(() => {
-  loadPointsData()
+  void loadPointsData()
 })
 
 const goBack = () => {
