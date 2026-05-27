@@ -299,29 +299,7 @@ import {
 import { downloadBlob, exportBlueprintAsBlob } from '../../utils/blueprint-export'
 import { getJsZip } from '../../utils/jszip'
 import { communityService, projectService } from '../../services/pin/index'
-
-type FolderRecord = {
-  id: string
-  name: string
-  parentId?: string
-  createdAt: number
-  updatedAt: number
-}
-
-type ProjectRecord = {
-  id: string
-  name: string
-  canvasData: any
-  createdAt: number
-  updatedAt: number
-  thumbnail?: string
-  folderId?: string
-  tags?: { primary?: string; secondary?: string }
-  isPublished?: boolean
-  isOffShelf?: boolean
-  publishedArtworkId?: string
-  publishPoints?: number
-}
+import type { FolderRecord, ProjectRecord } from '../../services/pin/types'
 
 const projects = ref<ProjectRecord[]>([])
 const folders = ref<FolderRecord[]>([])

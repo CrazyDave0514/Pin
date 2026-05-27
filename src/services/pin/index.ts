@@ -16,6 +16,7 @@ import {
 import { DELETE_ACCOUNT_KEYS, LOGOUT_KEYS } from './storage-keys.ts'
 import { getAliyunPinApiConfig, setAliyunPinApiConfig, type AliyunPinApiConfig } from './aliyun-config.ts'
 import { PIN_STORAGE_KEYS } from './provider.ts'
+import { safeArray } from '../../utils/array-utils.ts'
 import { LocalPinDataProvider } from './local-provider.ts'
 import { AliyunPinDataProvider } from './aliyun-provider.ts'
 import type { PinDataProvider } from './provider.ts'
@@ -54,8 +55,6 @@ const DEFAULT_POINTS_RECORDS = (): PointsRecord[] => ([
   { id: '2', title: '每日签到', amount: 5, time: Date.now() - 86400000 },
   { id: '3', title: '发布作品', amount: 10, time: Date.now() - 3600000 },
 ])
-
-const safeArray = <T>(value: unknown): T[] => Array.isArray(value) ? (value as T[]) : []
 
 const normalizeUser = (user: UserProfile | null) => {
   if (!user) return null

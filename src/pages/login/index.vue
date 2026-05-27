@@ -225,9 +225,6 @@ const handleLogin = async () => {
     
     uni.showToast({ title: '登录成功', icon: 'success' })
     
-    // 保存用户信息到本地
-    uni.setStorageSync('pin_current_user', JSON.stringify(result.user))
-    
     // 检查是否需要数据迁移
     setTimeout(() => {
       checkDataMigration()
@@ -255,9 +252,6 @@ const handleRegister = async () => {
     )
     
     uni.showToast({ title: '注册成功', icon: 'success' })
-    
-    // 保存用户信息到本地
-    uni.setStorageSync('pin_current_user', JSON.stringify(result.user))
     
     setTimeout(() => {
       uni.switchTab({ url: '/pages/mine/index' })

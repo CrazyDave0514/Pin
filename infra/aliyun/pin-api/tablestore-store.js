@@ -1,11 +1,20 @@
 'use strict'
 
-const { safeJsonParse, safeArray } = require('./utils')
-
 const SESSION_ROW_UID = '__meta__session'
 const ARTWORKS_VERSION_UID = '__meta__artworks_version'
 
+const safeArray = (value) => Array.isArray(value) ? value : []
 const firstNonEmpty = (...values) => values.find((value) => value !== undefined && value !== null && value !== '') || ''
+
+const safeJsonParse = (value, fallback) => {
+  if (typeof value !== 'string' || !value) return fallback
+
+  try {
+    return JSON.parse(value)
+  } catch (error) {
+    return fallback
+  }
+}
 
 const requireTablestore = () => {
   try {
@@ -67,7 +76,7 @@ class PinTablestoreStore {
 
   attributeColumnsFromObject(source) {
     return Object.entries(source)
-      .filter(([, value]) => value !== undefined && value !== null)
+      .filter(([, value]) => value !== undefined)
       .map(([key, value]) => ({ [key]: value }))
   }
 
@@ -179,7 +188,6 @@ class PinTablestoreStore {
       inclusiveStartPrimaryKey: this.primaryKeyFromObject(inclusiveStartPrimaryKey),
       exclusiveEndPrimaryKey: this.primaryKeyFromObject(exclusiveEndPrimaryKey),
       maxVersions: 1,
-      // TODO: 当前 limit 500，超过时需要实现 nextToken 分页
       limit: 500,
     }
 
@@ -374,24 +382,6 @@ class PinTablestoreStore {
         await this.deleteRow('pin_users', { uid: user.uid })
       }
     }
-  }
-
-  /**
-   * 添加单个用户（单行写入，不读取全量列表）
-   */
-  async addUser(user) {
-    await this.putRow('pin_users', { uid: user.uid }, {
-      username: user.username,
-      email: user.email || '',
-      nickname: user.nickname || user.username,
-      avatar: user.avatar || '',
-      password: user.password || '',
-      createdAt: Number(user.createdAt || Date.now()),
-      followingJson: JSON.stringify(safeArray(user.following)),
-      bio: user.bio || '',
-      extensionsJson: user.extensions ? JSON.stringify(user.extensions) : '',
-      updatedAt: Date.now(),
-    })
   }
 
   async getPoints() {
@@ -1043,12 +1033,12 @@ class PinTablestoreStore {
     // 删除设置
     await safeDelete('设置', () => this.deleteRow('pin_settings', { uid }))
 
-    // 删除关系（使用双键表精确查询当前用户的所有关系）
+    // 删除关系
     await safeDelete('关系', async () => {
-      const relations = await this.listDoubleKeyTable('pin_relations', 'uid', uid, 'relationKey')
+      const relations = await this.listSingleKeyTable('pin_relations', 'uid')
       for (const relation of relations) {
-        if (relation.relationKey) {
-          await this.deleteRow('pin_relations', { uid, relationKey: relation.relationKey })
+        if (relation.uid === uid) {
+          await this.deleteRow('pin_relations', { uid })
         }
       }
     })

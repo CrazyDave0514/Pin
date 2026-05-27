@@ -2,8 +2,8 @@ import { PIN_STORAGE_KEYS } from './storage-keys.ts'
 import type { PinDataProvider } from './provider.ts'
 import type { CommunityArtwork, FolderRecord, PointsRecord, ProjectRecord, RecentImportRecord, SettingsRecord, UserProfile } from './types.ts'
 import type { StorageAdapter } from './storage-adapter.ts'
+import { safeArray } from '../../utils/array-utils.ts'
 
-const safeArray = <T>(value: unknown): T[] => Array.isArray(value) ? (value as T[]) : []
 const safeObject = <T extends object>(value: unknown): T | undefined => value && typeof value === 'object' ? (value as T) : undefined
 
 export class LocalPinDataProvider implements PinDataProvider {

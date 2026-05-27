@@ -122,11 +122,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
-import { authService, communityService } from '../../services/pin/index'
-import { AliyunPinDataProvider } from '../../services/pin/aliyun-provider'
-
-// Provider 实例
-const provider = new AliyunPinDataProvider()
+import { authService, communityService, pinDataProvider } from '../../services/pin/index'
 
 const user = ref<any>(null)
 const defaultAvatar = DEFAULT_PRESET_AVATAR
@@ -335,11 +331,8 @@ const handleLogout = () => {
     cancelText: '取消',
     success: async (res) => {
       if (res.confirm) {
-        // 清除 Token
-        provider.logout()
-        // 清除本地用户数据
-        uni.removeStorageSync('pin_current_user')
-        uni.removeStorageSync('pin_auth_token')
+        // 清除 Token + 本地用户数据
+        pinDataProvider.logout()
         // 刷新页面状态
         user.value = null
         uni.showToast({ title: '已退出登录', icon: 'success' })

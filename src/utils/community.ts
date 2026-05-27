@@ -2,6 +2,7 @@ import { defaultArtworks } from './artworks.js'
 import { normalizeAvatarValue } from './avatar-normalize.ts'
 import { getStorageAdapter } from '../services/pin/storage-adapter.ts'
 import { PIN_STORAGE_KEYS } from '../services/pin/storage-keys.ts'
+import { safeArray } from './array-utils'
 import type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectRecord, ProjectTags, UserProfile } from '../services/pin/types.ts'
 
 export type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectTags } from '../services/pin/types.ts'
@@ -21,7 +22,6 @@ export const TAG_OPTIONS = [
   { primary: '抽象', secondary: ['几何图形', '像素艺术', '棋盘格', '其他'] },
 ] as const
 
-const safeArray = <T>(value: T[] | unknown): T[] => Array.isArray(value) ? (value as T[]) : []
 const storageAdapter = () => getStorageAdapter()
 
 const safeCanvasData = (value: unknown): CanvasDataLike => {

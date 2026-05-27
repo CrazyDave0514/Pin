@@ -910,7 +910,6 @@ const initializeFromRouteOptions = (options: Record<string, any>) => {
         changeRevision = 0
         savedRevision = 0
         markSavedRevision()
-        console.log('[蓝图] 数据加载成功(共享模块), beads数量:', canvasData.beads.length, '尺寸:', canvasData.width, 'x', canvasData.height)
       } else {
         console.warn('[蓝图] 共享模块无数据，尝试 localStorage')
         if (options.key) {
@@ -926,7 +925,6 @@ const initializeFromRouteOptions = (options: Record<string, any>) => {
             canvasData.beads = data2.beads || []
             canvasData.createdAt = data2.createdAt || Date.now()
             canvasData.updatedAt = Date.now()
-            console.log('[蓝图] 数据加载成功(localStorage), beads数量:', canvasData.beads.length)
           }
         }
       }
@@ -1935,7 +1933,6 @@ const goBack = () => {
  * 打开保存弹窗
  */
 const saveCanvas = () => {
-  console.log('[保存] saveCanvas 被调用, isEditMode:', isEditMode.value)
   const fallbackName = editingProjectName.value || saveName.value.trim()
   if (isEditMode.value && fallbackName) {
     doSave(fallbackName)
@@ -1952,7 +1949,6 @@ const saveCanvas = () => {
  * 确认保存
  */
 const confirmSave = () => {
-  console.log('[保存] confirmSave 被调用, saveName:', saveName.value)
   const name = saveName.value.trim() || '未命名作品'
   editingProjectTags.value = normalizeProjectTags(saveTags.value)
   showSaveModal.value = false
@@ -1981,24 +1977,20 @@ const handleExport = () => {
  * @param exportAfterSave - 保存后是否导出图纸
  */
 const doSave = async (projectName: string, exportAfterSave = false) => {
-  console.log('[保存] doSave 开始, projectName:', projectName, 'beads数量:', canvasData.beads.length, '导出:', exportAfterSave)
 
   try {
     /** 步骤1：生成缩略图 */
     const normalizedTags = normalizeProjectTags(editingProjectTags.value)
 
     /** 步骤2：深拷贝画布数据 */
-    console.log('[保存] 开始深拷贝画布数据...')
     const clonedCanvasData = JSON.parse(JSON.stringify(toRaw(canvasData))) as CanvasData
     /** 附加新字段到克隆数据 */
     ;(clonedCanvasData as any).beadStyle = beadStyle.value
     ;(clonedCanvasData as any).showColorCode = showColorCode.value
     clonedCanvasData.updatedAt = Date.now()
-    console.log('[保存] 深拷贝完成, beads数量:', clonedCanvasData.beads.length)
 
     /** 步骤3：读取已有项目列表 */
     const projects: ProjectData[] = await projectService.getProjects()
-    console.log('[保存] 已有项目数量:', projects.length)
 
     /** 步骤4：更新或创建项目 */
     if (isEditMode.value && editingProjectId.value) {
@@ -2044,9 +2036,7 @@ const doSave = async (projectName: string, exportAfterSave = false) => {
     saveName.value = projectName
 
     /** 步骤5：写入 localStorage */
-    console.log('[保存] 准备写入 localStorage...')
     await projectService.saveProjects(projects)
-    console.log('[保存] localStorage 写入成功')
     const savedProject = projects.find((item) => item.id === editingProjectId.value)
     if (savedProject?.isPublished) {
       await communityService.syncProjectArtwork(savedProject as any)

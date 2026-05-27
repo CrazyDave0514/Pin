@@ -14,34 +14,34 @@ const cloneValue = <T>(value: T): T => {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-const getUni = () => {
-  const uniInstance = (globalThis as any).uni
-  if (!uniInstance) {
-    throw new Error('uni storage is not available in the current runtime')
-  }
-  return uniInstance
+declare const uni: {
+  getStorageSync: (key: string) => unknown
+  setStorageSync: (key: string, value: unknown) => void
+  removeStorageSync: (key: string) => void
+  clearStorageSync: () => void
+  getStorageInfoSync?: () => { keys: string[] }
 }
 
 export class UniStorageAdapter implements StorageAdapter {
   getSync<T>(key: string): T | undefined {
-    const value = getUni().getStorageSync(key)
+    const value = uni.getStorageSync(key)
     return value === '' || value === undefined ? undefined : (value as T)
   }
 
   setSync<T>(key: string, value: T): void {
-    getUni().setStorageSync(key, value)
+    uni.setStorageSync(key, value)
   }
 
   removeSync(key: string): void {
-    getUni().removeStorageSync(key)
+    uni.removeStorageSync(key)
   }
 
   clearSync(): void {
-    getUni().clearStorageSync()
+    uni.clearStorageSync()
   }
 
   keysSync(): string[] {
-    const info = getUni().getStorageInfoSync?.()
+    const info = uni.getStorageInfoSync?.()
     return Array.isArray(info?.keys) ? info.keys : []
   }
 }
