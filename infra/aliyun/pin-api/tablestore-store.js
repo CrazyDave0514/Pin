@@ -998,36 +998,50 @@ class PinTablestoreStore {
   async unregisterCurrentUser() {
     const uid = await this.requireCurrentUserUid()
 
-    // 删除用户信息
-    await this.deleteRow('pin_users', { uid })
+    // 逐步骤删除，每个步骤独立容错
+    const safeDelete = async (label, fn) => {
+      try {
+        await fn()
+      } catch (error) {
+        console.warn(`unregister: ${label} 删除失败（已跳过）:`, error.message)
+      }
+    }
 
-    // 删除积分余额
-    await this.deleteRow('pin_points', { uid })
+    // 删除用户信息（积分余额也在 pin_users 表中）
+    await safeDelete('用户信息', () => this.deleteRow('pin_users', { uid }))
 
     // 删除积分记录
-    const pointRecords = await this.listDoubleKeyTable('pin_points_records', 'uid', uid, 'recordId')
-    for (const record of pointRecords) {
-      await this.deleteRow('pin_points_records', { uid, recordId: record.recordId })
-    }
+    await safeDelete('积分记录', async () => {
+      const pointRecords = await this.listDoubleKeyTable('pin_points_records', 'uid', uid, 'recordId')
+      for (const record of pointRecords) {
+        if (record.recordId) {
+          await this.deleteRow('pin_points_records', { uid, recordId: String(record.recordId) })
+        }
+      }
+    })
 
     // 删除项目
-    const projects = await this.listSingleKeyTable('pin_projects', 'projectId')
-    for (const project of projects) {
-      if (project.ownerUid === uid) {
-        await this.deleteRow('pin_projects', { projectId: project.projectId })
+    await safeDelete('项目', async () => {
+      const projects = await this.listSingleKeyTable('pin_projects', 'projectId')
+      for (const project of projects) {
+        if (project.ownerUid === uid && project.projectId) {
+          await this.deleteRow('pin_projects', { projectId: project.projectId })
+        }
       }
-    }
+    })
 
     // 删除设置
-    await this.deleteRow('pin_settings', { uid })
+    await safeDelete('设置', () => this.deleteRow('pin_settings', { uid }))
 
-    // 删除关系（点赞/收藏/关注/购买/搜索）
-    const relations = await this.listSingleKeyTable('pin_relations', 'uid')
-    for (const relation of relations) {
-      if (relation.uid === uid) {
-        await this.deleteRow('pin_relations', { uid })
+    // 删除关系
+    await safeDelete('关系', async () => {
+      const relations = await this.listSingleKeyTable('pin_relations', 'uid')
+      for (const relation of relations) {
+        if (relation.uid === uid) {
+          await this.deleteRow('pin_relations', { uid })
+        }
       }
-    }
+    })
   }
 
   async getSearchHistory() {

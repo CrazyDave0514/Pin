@@ -279,6 +279,14 @@ const authController = {
     if (username.length < 3) {
       throw createError(400, '用户名长度至少为 3 个字符', 'VALIDATION_ERROR')
     }
+    if (username.length > 16) {
+      throw createError(400, '用户名最多 16 个字符', 'VALIDATION_ERROR')
+    }
+    // 用户名格式：只允许字母、数字、中文、下划线
+    const usernameRegex = /^[a-zA-Z0-9_\u4e00-\u9fa5]+$/
+    if (!usernameRegex.test(username)) {
+      throw createError(400, '用户名只能包含字母、数字、中文和下划线', 'VALIDATION_ERROR')
+    }
     if (password.length < 6) {
       throw createError(400, '密码长度至少为 6 个字符', 'VALIDATION_ERROR')
     }
@@ -418,7 +426,8 @@ const extractUidFromToken = (token) => {
 }
 
 const route = async (request) => {
-  const { method, path, body, token } = request
+  try {
+    const { method, path, body, token } = request
 
   // 健康检查
   if (path === '/health' && method === 'GET') {
@@ -756,6 +765,15 @@ const route = async (request) => {
   }
 
   return fail(404, `Route not found: ${method} ${path}`)
+  } catch (error) {
+    console.error('Route error:', error)
+    const statusCode = error.statusCode || error.status || 500
+    return buildResponse(statusCode, {
+      success: false,
+      message: error.message || 'Internal server error',
+      code: error.code || 'INTERNAL_ERROR',
+    })
+  }
 }
 
 // ============================================
@@ -782,10 +800,17 @@ exports.handler = async (event, context) => {
     const request = normalizeRequest(eventObj)
 
     const response = await route(request)
-    // 直接返回 JSON 字符串，让 FC 运行时自动包装
+    // FC 3.0 HTTP Trigger: 返回 JSON 字符串，runtime 将其作为 response body(HTTP 200)
+    // HTTP 状态码由 API Gateway 统一管理
     return JSON.stringify(response)
   } catch (error) {
-    console.error('Handler error:', error)
-    return JSON.stringify({ statusCode: 500, body: JSON.stringify({ success: false, message: error.message }) })
+    // 仅在 route 也崩溃时才会到这里（真正的意外错误）
+    console.error('Unexpected handler error:', error)
+    const fatalResponse = buildResponse(500, {
+        success: false,
+        message: 'Internal server error',
+        code: 'FATAL',
+      })
+      return JSON.stringify(fatalResponse)
   }
 }
