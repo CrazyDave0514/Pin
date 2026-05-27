@@ -21,18 +21,14 @@ interface AuthResponse {
 }
 
 /**
- * 获取 uni 对象
+ * uni-app 全局对象引用
+ * 注意：uni-app 生产构建中 uni 是全局变量，不挂载在 globalThis 上
  */
-const getUni = () => {
-  const uniInstance = (globalThis as { uni?: {
-    request: (options: Record<string, unknown>) => void
-  } }).uni
-
-  if (!uniInstance?.request) {
-    throw new Error('uni.request is not available in the current runtime')
-  }
-
-  return uniInstance
+declare const uni: {
+  request: (options: Record<string, unknown>) => void
+  getStorageSync: (key: string) => string | null
+  setStorageSync: (key: string, value: string) => void
+  removeStorageSync: (key: string) => void
 }
 
 /**
@@ -146,7 +142,6 @@ export class AliyunPinDataProvider implements PinDataProvider {
     }
 
     const url = `${this.baseUrl}${path}`
-    const uni = getUni()
 
     return await new Promise<T>((resolve, reject) => {
       uni.request({
