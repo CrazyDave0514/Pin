@@ -218,6 +218,30 @@ export const createPinServices = (options: {
       await provider.removeKeys([...LOGOUT_KEYS])
     },
     async deleteAccount() {
+      // 调用后端注销 API（如果是云端模式）
+      try {
+        const token = uni.getStorageSync('pin_auth_token')
+        if (token) {
+          const config = getAliyunPinApiConfig()
+          const baseUrl = config.baseUrl
+          if (baseUrl) {
+            await new Promise<void>((resolve, reject) => {
+              uni.request({
+                url: `${baseUrl}/auth/unregister?token=${encodeURIComponent(token)}`,
+                method: 'POST',
+                timeout: 15000,
+                success: () => resolve(),
+                fail: (err: any) => reject(new Error(err?.errMsg || '注销请求失败')),
+              })
+            })
+          }
+        }
+      } catch (e) {
+        // 后端注销失败时仍清除本地数据
+        console.error('Backend unregister failed:', e)
+      }
+
+      // 清除本地数据
       await provider.removeKeys([...DELETE_ACCOUNT_KEYS])
     },
   }

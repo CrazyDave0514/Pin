@@ -65,6 +65,13 @@
       </view>
     </view>
 
+    <!-- 退出登录（已登录时显示） -->
+    <view v-if="user" class="logout-section">
+      <button class="logout-btn" @click="handleLogout">
+        <text class="logout-text">退出登录</text>
+      </button>
+    </view>
+
     <!-- 头像操作菜单 -->
     <view v-if="showAvatarAction" class="modal-overlay" @click="closeAvatarMenu">
       <view class="action-sheet" @click.stop>
@@ -116,6 +123,10 @@ import { computed, ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
 import { authService, communityService } from '../../services/pin/index'
+import { AliyunPinDataProvider } from '../../services/pin/aliyun-provider'
+
+// Provider 实例
+const provider = new AliyunPinDataProvider()
 
 const user = ref<any>(null)
 const defaultAvatar = DEFAULT_PRESET_AVATAR
@@ -310,6 +321,34 @@ const handleStatClick = (type: 'purchases' | 'favorites' | 'likes') => {
     return
   }
   uni.navigateTo({ url: `/pages/mine/collection?type=${type}` })
+}
+
+/**
+ * 退出登录 - 清除 Token 和本地用户数据
+ */
+const handleLogout = () => {
+  uni.showModal({
+    title: '确认退出',
+    content: '退出登录后，本地数据将被清除，云端数据不受影响。',
+    confirmText: '确认退出',
+    confirmColor: '#CF5C4D',
+    cancelText: '取消',
+    success: async (res) => {
+      if (res.confirm) {
+        // 清除 Token
+        provider.logout()
+        // 清除本地用户数据
+        uni.removeStorageSync('pin_current_user')
+        uni.removeStorageSync('pin_auth_token')
+        // 刷新页面状态
+        user.value = null
+        uni.showToast({ title: '已退出登录', icon: 'success' })
+        setTimeout(() => {
+          uni.navigateTo({ url: '/pages/login/index' })
+        }, 1000)
+      }
+    }
+  })
 }
 </script>
 
@@ -601,6 +640,27 @@ const handleStatClick = (type: 'purchases' | 'favorites' | 'likes') => {
 .function-arrow {
   font-size: 36rpx;
   color: var(--color-text-disabled);
+}
+
+/* ==================== 退出登录 ==================== */
+.logout-section {
+  margin-top: 32rpx;
+}
+
+.logout-btn {
+  width: 100%;
+  height: 88rpx;
+  background-color: var(--color-bg-panel);
+  border: 2rpx solid var(--color-error);
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logout-text {
+  font-size: 28rpx;
+  color: var(--color-error);
 }
 
 /* ==================== 弹窗遮罩 ==================== */

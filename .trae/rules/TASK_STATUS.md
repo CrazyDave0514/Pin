@@ -70,13 +70,17 @@
 | Bug修复 | AI后端 | ✅ 已完成 | GitHub commit | 根因：setPoints 用 putRow 覆盖整行导致 password/email/nickname 丢失；修复：新增 updateRow 方法只更新指定列；代码已推送 GitHub |
 | 回归测试 | AI测试 | ✅ 已完成 | [飞书文档](https://www.feishu.cn/docx/EaSXdNB65os048x8HhHcXs2KnHL) | 后端API已修复，但前端未接入云端API，仍使用本地存储模式 |
 
-### 阶段 6 待解决：前端接入云端 API
+### 阶段 6 已完成：前端接入云端 API
 
 | 任务 | 负责角色 | 状态 | 备注 |
 |------|----------|------|------|
-| 前端配置使用 AliyunPinDataProvider | AI前端 | 待开始 | createPinServices 未传递 target: 'aliyun' |
-| authService.register 调用云端 API | AI前端 | 待开始 | 当前只做本地存储 |
-| 完整登录流程测试 | AI测试 | 待开始 | 前端接入后重新测试 |
+| 前端配置使用 AliyunPinDataProvider | AI前端 | ✅ 已完成 | createPinServices({ target: 'aliyun' }) |
+| authService.register 调用云端 API | AI前端 | ✅ 已完成 | 登录页重写，支持完整注册流程 |
+| 完整登录流程测试 | AI测试 | ✅ 已完成 | [测试报告](https://www.feishu.cn/docx/Eeh7dRW9BoBzSlxP2lMcfm8wnGc) |
+
+**测试结论**：✅ 通过 - 注册/登录/Token机制功能正常
+
+**完整测试报告**：[飞书文档](https://www.feishu.cn/docx/URoIdGJlao2ho5xKlGbcDCm2nIe) - 共27用例，20通过 5失败 2阻塞，发现 6 个 Bug(1 个 P0 + 4 个 P1 + 1 个 P2)
 
 ### 阶段 7：验收
 
