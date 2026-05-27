@@ -162,6 +162,25 @@ class PinTablestoreStore {
     await this.callbackToPromise((callback) => this.client.deleteRow(params, callback))
   }
 
+  /**
+   * 更新行中指定列（不覆盖其他列）
+   * 使用 PUT 模式的 updateRow，只更新传入的 attribute 列
+   */
+  async updateRow(tableName, primaryKey, attributes) {
+    const columns = this.attributeColumnsFromObject(attributes)
+    const params = {
+      tableName,
+      condition: new this.TableStore.Condition(this.TableStore.RowExistenceExpectation.IGNORE, null),
+      primaryKey: this.primaryKeyFromObject(primaryKey),
+      updateOfAttributeColumns: [
+        { 'PUT': columns },
+      ],
+      returnContent: { returnType: this.TableStore.ReturnType.Primarykey },
+    }
+
+    await this.callbackToPromise((callback) => this.client.updateRow(params, callback))
+  }
+
   async getRange(tableName, inclusiveStartPrimaryKey, exclusiveEndPrimaryKey) {
     const params = {
       tableName,
@@ -321,6 +340,19 @@ class PinTablestoreStore {
     await this.deleteRow('pin_settings', { uid: SESSION_ROW_UID })
   }
 
+  /**
+   * P2: 更新当前用户资料（昵称、头像、简介）
+   * 使用 updateRow 只更新指定字段，避免覆盖其他字段
+   */
+  async updateCurrentUserProfile(profile) {
+    const uid = await this.requireCurrentUserUid()
+    const updateFields = { updatedAt: Date.now() }
+    if (profile.nickname !== undefined) updateFields.nickname = profile.nickname
+    if (profile.avatar !== undefined) updateFields.avatar = profile.avatar
+    if (profile.bio !== undefined) updateFields.bio = profile.bio
+    await this.updateRow('pin_users', { uid }, updateFields)
+  }
+
   async getUserList() {
     const rows = await this.listSingleKeyTable('pin_users', 'uid')
     return rows.map((row) => this.normalizeUserRow(row)).filter(Boolean)
@@ -358,18 +390,43 @@ class PinTablestoreStore {
     return Number(user?.pointsBalance || 0)
   }
 
-  async setPoints(points) {
-    const uid = await this.requireCurrentUserUid()
-    const user = await this.getRow('pin_users', { uid })
-    await this.putRow('pin_users', { uid }, {
-      username: user?.username || '',
-      avatar: user?.avatar || '',
-      createdAt: Number(user?.createdAt || Date.now()),
-      followingJson: user?.followingJson || '[]',
-      bio: user?.bio || '',
-      extensionsJson: user?.extensionsJson || '',
+  /**
+   * 设置积分余额（P0: 积分业务逻辑）
+   * 使用 updateRow 只更新 pointsBalance 列，避免覆盖其他字段
+   * @param points 积分值
+   * @param targetUid 可选，指定用户ID（用于注册等场景）
+   */
+  async setPoints(points, targetUid) {
+    const uid = targetUid || await this.requireCurrentUserUid()
+    await this.updateRow('pin_users', { uid }, {
       pointsBalance: Number(points || 0),
       updatedAt: Date.now(),
+    })
+  }
+
+  /**
+   * 增加积分（P1: 积分业务逻辑）
+   */
+  async addPoints(amount) {
+    const current = await this.getPoints()
+    await this.setPoints(current + amount)
+  }
+
+  /**
+   * 扣减积分（P1: 积分业务逻辑）
+   */
+  async deductPoints(amount, reason) {
+    const current = await this.getPoints()
+    if (current < amount) {
+      throw new Error('积分不足')
+    }
+    await this.setPoints(current - amount)
+    await this.addPointsRecord({
+      id: `R${Date.now()}`,
+      type: 'spend',
+      amount: -amount,
+      reason,
+      createdAt: Date.now(),
     })
   }
 
@@ -404,12 +461,108 @@ class PinTablestoreStore {
     }
   }
 
+  /**
+   * 添加单条积分记录（P0: 积分业务逻辑）
+   * @param record 积分记录
+   * @param targetUid 可选，指定用户ID（用于注册等场景）
+   */
+  async addPointsRecord(record, targetUid) {
+    const uid = targetUid || await this.requireCurrentUserUid()
+    await this.putRow('pin_points_records', {
+      uid,
+      recordId: record.id,
+    }, {
+      title: record.reason || record.title,
+      amount: Number(record.amount || 0),
+      time: Number(record.createdAt || Date.now()),
+    })
+  }
+
   async getProjects() {
     const uid = await this.requireCurrentUserUid()
     const rows = await this.listSingleKeyTable('pin_projects', 'projectId')
     return rows
       .filter((row) => !row.ownerUid || row.ownerUid === uid)
       .map((row) => this.normalizeProjectRow(row))
+  }
+
+  /**
+   * 根据ID获取项目（P1: 作品发布）
+   */
+  async getProjectById(projectId) {
+    const uid = await this.requireCurrentUserUid()
+    const row = await this.getRow('pin_projects', { projectId })
+    if (!row || (row.ownerUid && row.ownerUid !== uid)) {
+      return null
+    }
+    return this.normalizeProjectRow(row)
+  }
+
+  /**
+   * 发布项目为社区作品（P1: 作品发布）
+   */
+  async publishProjectAsArtwork(projectId, options = {}) {
+    const uid = await this.requireCurrentUserUid()
+    const project = await this.getProjectById(projectId)
+    if (!project) {
+      throw new Error('项目不存在')
+    }
+
+    const artworkId = `A${Date.now().toString(36).toUpperCase()}`
+    const artwork = {
+      id: artworkId,
+      title: options.title || project.name,
+      description: options.description || '',
+      authorUid: uid,
+      grid: project.canvasData?.grid || [],
+      colors: project.canvasData?.colors || [],
+      likes: 0,
+      favorites: 0,
+      price: Number(options.price || 0),
+      isForSale: !!options.isForSale,
+      createdAt: Date.now(),
+    }
+
+    // 保存作品
+    const artworks = await this.getArtworks()
+    artworks.push(artwork)
+    await this.setArtworks(artworks)
+
+    // 更新项目状态
+    await this.putRow('pin_projects', { projectId }, {
+      ...project,
+      isPublished: true,
+      publishedArtworkId: artworkId,
+      publishPoints: Number(options.price || 0),
+      updatedAt: Date.now(),
+    })
+
+    return artwork
+  }
+
+  /**
+   * 下架作品（P1: 作品发布）
+   */
+  async unpublishArtwork(projectId) {
+    const uid = await this.requireCurrentUserUid()
+    const project = await this.getProjectById(projectId)
+    if (!project) {
+      throw new Error('项目不存在')
+    }
+
+    // 从作品列表中移除
+    const artworks = await this.getArtworks()
+    const filtered = artworks.filter(a => a.id !== project.publishedArtworkId)
+    await this.setArtworks(filtered)
+
+    // 更新项目状态
+    await this.putRow('pin_projects', { projectId }, {
+      ...project,
+      isPublished: false,
+      publishedArtworkId: '',
+      isOffShelf: true,
+      updatedAt: Date.now(),
+    })
   }
 
   async setProjects(projects) {
@@ -645,6 +798,236 @@ class PinTablestoreStore {
       targetName: name,
       createdAt: Date.now(),
     })))
+  }
+
+  /**
+   * P1: 增量操作 - 点赞作品
+   */
+  async likeArtwork(artworkId) {
+    const likedIds = await this.getLikedArtworkIds()
+    if (likedIds.includes(artworkId)) {
+      return { liked: true, message: '已点赞' }
+    }
+    likedIds.push(artworkId)
+    await this.setLikedArtworkIds(likedIds)
+
+    // 增加作品点赞数
+    const artworks = await this.getArtworks()
+    const artwork = artworks.find(a => a.id === artworkId)
+    if (artwork) {
+      artwork.likes = (artwork.likes || 0) + 1
+      await this.setArtworks(artworks)
+    }
+
+    return { liked: true, likes: artwork?.likes || 1 }
+  }
+
+  /**
+   * P1: 增量操作 - 取消点赞
+   */
+  async unlikeArtwork(artworkId) {
+    const likedIds = await this.getLikedArtworkIds()
+    const index = likedIds.indexOf(artworkId)
+    if (index === -1) {
+      return { liked: false, message: '未点赞' }
+    }
+    likedIds.splice(index, 1)
+    await this.setLikedArtworkIds(likedIds)
+
+    // 减少作品点赞数
+    const artworks = await this.getArtworks()
+    const artwork = artworks.find(a => a.id === artworkId)
+    if (artwork && artwork.likes > 0) {
+      artwork.likes = artwork.likes - 1
+      await this.setArtworks(artworks)
+    }
+
+    return { liked: false, likes: artwork?.likes || 0 }
+  }
+
+  /**
+   * P1: 增量操作 - 收藏作品
+   */
+  async favoriteArtwork(artworkId) {
+    const favoritedIds = await this.getFavoritedArtworkIds()
+    if (favoritedIds.includes(artworkId)) {
+      return { favorited: true, message: '已收藏' }
+    }
+    favoritedIds.push(artworkId)
+    await this.setFavoritedArtworkIds(favoritedIds)
+
+    // 增加作品收藏数
+    const artworks = await this.getArtworks()
+    const artwork = artworks.find(a => a.id === artworkId)
+    if (artwork) {
+      artwork.favorites = (artwork.favorites || 0) + 1
+      await this.setArtworks(artworks)
+    }
+
+    return { favorited: true, favorites: artwork?.favorites || 1 }
+  }
+
+  /**
+   * P1: 增量操作 - 取消收藏
+   */
+  async unfavoriteArtwork(artworkId) {
+    const favoritedIds = await this.getFavoritedArtworkIds()
+    const index = favoritedIds.indexOf(artworkId)
+    if (index === -1) {
+      return { favorited: false, message: '未收藏' }
+    }
+    favoritedIds.splice(index, 1)
+    await this.setFavoritedArtworkIds(favoritedIds)
+
+    // 减少作品收藏数
+    const artworks = await this.getArtworks()
+    const artwork = artworks.find(a => a.id === artworkId)
+    if (artwork && artwork.favorites > 0) {
+      artwork.favorites = artwork.favorites - 1
+      await this.setArtworks(artworks)
+    }
+
+    return { favorited: false, favorites: artwork?.favorites || 0 }
+  }
+
+  /**
+   * P1: 增量操作 - 关注用户
+   */
+  async followUser(targetUid) {
+    const followedCreators = await this.getFollowedCreators()
+    if (followedCreators.includes(targetUid)) {
+      return { following: true, message: '已关注' }
+    }
+    followedCreators.push(targetUid)
+    await this.setFollowedCreators(followedCreators)
+    return { following: true }
+  }
+
+  /**
+   * P1: 增量操作 - 取消关注
+   */
+  async unfollowUser(targetUid) {
+    const followedCreators = await this.getFollowedCreators()
+    const index = followedCreators.indexOf(targetUid)
+    if (index === -1) {
+      return { following: false, message: '未关注' }
+    }
+    followedCreators.splice(index, 1)
+    await this.setFollowedCreators(followedCreators)
+    return { following: false }
+  }
+
+  /**
+   * P0: 购买作品（积分校验 + 扣减 + 记录购买）
+   */
+  async purchaseArtwork(artworkId) {
+    const uid = await this.requireCurrentUserUid()
+
+    // 获取作品信息
+    const artworks = await this.getArtworks()
+    const artwork = artworks.find(a => a.id === artworkId)
+    if (!artwork) {
+      throw new Error('作品不存在')
+    }
+    if (!artwork.isForSale || !artwork.price || artwork.price <= 0) {
+      throw new Error('该作品不可购买')
+    }
+    if (artwork.authorUid === uid) {
+      throw new Error('不能购买自己的作品')
+    }
+
+    // 检查是否已购买
+    const purchasedIds = await this.getPurchasedArtworkIds()
+    if (purchasedIds.includes(artworkId)) {
+      throw new Error('已购买过该作品')
+    }
+
+    // 校验积分余额
+    const currentPoints = await this.getPoints()
+    if (currentPoints < artwork.price) {
+      throw new Error(`积分不足，需要 ${artwork.price} 积分，当前余额 ${currentPoints}`)
+    }
+
+    // 扣减积分
+    await this.deductPoints(artwork.price, `购买作品: ${artwork.title || artworkId}`)
+
+    // 记录购买
+    purchasedIds.push(artworkId)
+    await this.setPurchasedArtworkIds(purchasedIds)
+
+    // 增加作品 useCount
+    artwork.useCount = (artwork.useCount || 0) + 1
+    await this.setArtworks(artworks)
+
+    return {
+      purchased: true,
+      pointsDeducted: artwork.price,
+      remainingPoints: currentPoints - artwork.price,
+      artwork: {
+        id: artwork.id,
+        title: artwork.title,
+        grid: artwork.grid,
+        colors: artwork.colors,
+      },
+    }
+  }
+
+  /**
+   * P1: 获取单个作品详情
+   */
+  async getArtworkById(artworkId) {
+    const artworks = await this.getArtworks()
+    return artworks.find(a => a.id === artworkId) || null
+  }
+
+  /**
+   * P1: 更新作品浏览量
+   */
+  async updateArtworkViewCount(artworkId, viewCount) {
+    const artworks = await this.getArtworks()
+    const artwork = artworks.find(a => a.id === artworkId)
+    if (artwork) {
+      artwork.viewCount = viewCount
+      await this.setArtworks(artworks)
+    }
+  }
+
+  /**
+   * P1: 注销账号（清除所有关联数据）
+   */
+  async unregisterCurrentUser() {
+    const uid = await this.requireCurrentUserUid()
+
+    // 删除用户信息
+    await this.deleteRow('pin_users', { uid })
+
+    // 删除积分余额
+    await this.deleteRow('pin_points', { uid })
+
+    // 删除积分记录
+    const pointRecords = await this.listDoubleKeyTable('pin_points_records', 'uid', uid, 'recordId')
+    for (const record of pointRecords) {
+      await this.deleteRow('pin_points_records', { uid, recordId: record.recordId })
+    }
+
+    // 删除项目
+    const projects = await this.listSingleKeyTable('pin_projects', 'projectId')
+    for (const project of projects) {
+      if (project.ownerUid === uid) {
+        await this.deleteRow('pin_projects', { projectId: project.projectId })
+      }
+    }
+
+    // 删除设置
+    await this.deleteRow('pin_settings', { uid })
+
+    // 删除关系（点赞/收藏/关注/购买/搜索）
+    const relations = await this.listSingleKeyTable('pin_relations', 'uid')
+    for (const relation of relations) {
+      if (relation.uid === uid) {
+        await this.deleteRow('pin_relations', { uid })
+      }
+    }
   }
 
   async getSearchHistory() {

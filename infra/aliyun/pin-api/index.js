@@ -267,19 +267,25 @@ const createError = (statusCode, message, code) => {
 const authController = {
   /**
    * 用户注册
+   * P0: 邮箱必填验证 + 注册赠送100积分
    */
   async register(request) {
     const { username, password, email, nickname } = request.body || {}
 
     // 输入验证
-    if (!username || !password) {
-      throw createError(400, '用户名和密码不能为空', 'VALIDATION_ERROR')
+    if (!username || !password || !email) {
+      throw createError(400, '用户名、密码和邮箱不能为空', 'VALIDATION_ERROR')
     }
     if (username.length < 3) {
       throw createError(400, '用户名长度至少为 3 个字符', 'VALIDATION_ERROR')
     }
     if (password.length < 6) {
       throw createError(400, '密码长度至少为 6 个字符', 'VALIDATION_ERROR')
+    }
+    // 邮箱格式验证
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      throw createError(400, '邮箱格式不正确', 'VALIDATION_ERROR')
     }
 
     const store = new PinTablestoreStore()
@@ -289,13 +295,17 @@ const authController = {
     if (userList.some(u => u.username === username)) {
       throw createError(409, '用户名已存在', 'USERNAME_EXISTS')
     }
+    // 检查邮箱是否已存在
+    if (userList.some(u => u.email === email)) {
+      throw createError(409, '邮箱已被注册', 'EMAIL_EXISTS')
+    }
 
     // 创建用户（密码使用 bcrypt 加密）
     const hashedPassword = await bcrypt.hash(password, 10)
     const newUser = {
       uid: `U${Date.now().toString(36).toUpperCase()}`,
       username,
-      email: email || '',
+      email,
       nickname: nickname || username,
       avatar: '',
       password: hashedPassword,
@@ -305,6 +315,16 @@ const authController = {
 
     userList.push(newUser)
     await store.setUserList(userList)
+
+    // 注册赠送 100 积分（传入新用户 uid）
+    await store.setPoints(100, newUser.uid)
+    await store.addPointsRecord({
+      id: `R${Date.now()}`,
+      type: 'earn',
+      amount: 100,
+      reason: '注册赠送',
+      createdAt: Date.now(),
+    }, newUser.uid)
 
     // 生成 Token
     const token = generateToken({ uid: newUser.uid, username: newUser.username })
@@ -384,6 +404,19 @@ const authController = {
 // 路由处理
 // ============================================
 
+/**
+ * 验证 token 并返回 uid
+ */
+const extractUidFromToken = (token) => {
+  if (!token) return null
+  try {
+    const decoded = verifyToken(token)
+    return decoded.uid
+  } catch (error) {
+    return null
+  }
+}
+
 const route = async (request) => {
   const { method, path, body, token } = request
 
@@ -398,7 +431,21 @@ const route = async (request) => {
     })
   }
 
-  // 认证路由
+  // 临时 debug：查看用户原始数据
+  if (path === '/debug/user-raw' && method === 'GET') {
+    const store = new PinTablestoreStore()
+    const rawRows = await store.listSingleKeyTable('pin_users', 'uid')
+    const target = rawRows.find(r => r.uid === 'UMPNO9CBH')
+    return success({
+      found: !!target,
+      rawKeys: target ? Object.keys(target) : [],
+      rawData: target ? JSON.stringify(target).substring(0, 1000) : null,
+      password: target ? target.password : 'NOT_FOUND',
+      username: target ? target.username : 'NOT_FOUND',
+    })
+  }
+
+  // 认证路由（无需 token 或自行处理 token）
   if (path === '/auth/register' && method === 'POST') {
     return success(await authController.register(request))
   }
@@ -411,15 +458,29 @@ const route = async (request) => {
     return success(await authController.getCurrentUser(request))
   }
 
-  // 业务路由
+  // 业务路由 - 需要验证 token 并设置 session
+  const uid = extractUidFromToken(token)
+  if (!uid) {
+    throw createError(401, '未提供认证令牌或令牌无效', 'UNAUTHORIZED')
+  }
+
   const store = new PinTablestoreStore()
+  // 设置当前用户 session（让 store 方法能获取到 uid）
+  await store.setCurrentUser({ uid })
 
   if (path === '/users/current' && method === 'GET') {
     return success(await store.getCurrentUser())
   }
 
   if (path === '/users/current' && method === 'PUT') {
-    await store.setCurrentUser(body.user || null)
+    // P2: 支持更新用户资料（nickname, avatar, bio）
+    if (body.profile) {
+      await store.updateCurrentUserProfile(body.profile)
+    }
+    // 同时支持设置当前用户
+    if (body.user) {
+      await store.setCurrentUser(body.user)
+    }
     return success(null)
   }
 
@@ -461,6 +522,37 @@ const route = async (request) => {
 
   if (path === '/projects' && method === 'PUT') {
     await store.setProjects(body.projects || [])
+    return success(null)
+  }
+
+  // P1: 作品发布到社区（发布项目为作品）
+  if (path.startsWith('/projects/') && path.endsWith('/publish') && method === 'POST') {
+    const projectId = path.split('/')[2]
+    const project = await store.getProjectById(projectId)
+    if (!project) {
+      throw createError(404, '项目不存在', 'NOT_FOUND')
+    }
+
+    // 发布为作品
+    const artwork = await store.publishProjectAsArtwork(projectId, body)
+
+    // 发布作品奖励 10 积分
+    await store.addPoints(10)
+    await store.addPointsRecord({
+      id: `R${Date.now()}`,
+      type: 'earn',
+      amount: 10,
+      reason: '发布作品奖励',
+      createdAt: Date.now(),
+    })
+
+    return success({ artworkId: artwork.id })
+  }
+
+  // P1: 下架作品
+  if (path.startsWith('/projects/') && path.endsWith('/publish') && method === 'DELETE') {
+    const projectId = path.split('/')[2]
+    await store.unpublishArtwork(projectId)
     return success(null)
   }
 
@@ -536,12 +628,79 @@ const route = async (request) => {
     return success(null)
   }
 
+  // P1: 增量操作接口 - 点赞/取消点赞
+  if (path.startsWith('/artworks/') && path.endsWith('/like') && method === 'POST') {
+    const artworkId = path.split('/')[2]
+    const result = await store.likeArtwork(artworkId)
+    return success(result)
+  }
+
+  if (path.startsWith('/artworks/') && path.endsWith('/like') && method === 'DELETE') {
+    const artworkId = path.split('/')[2]
+    const result = await store.unlikeArtwork(artworkId)
+    return success(result)
+  }
+
+  // P1: 增量操作接口 - 收藏/取消收藏
+  if (path.startsWith('/artworks/') && path.endsWith('/favorite') && method === 'POST') {
+    const artworkId = path.split('/')[2]
+    const result = await store.favoriteArtwork(artworkId)
+    return success(result)
+  }
+
+  if (path.startsWith('/artworks/') && path.endsWith('/favorite') && method === 'DELETE') {
+    const artworkId = path.split('/')[2]
+    const result = await store.unfavoriteArtwork(artworkId)
+    return success(result)
+  }
+
+  // P1: 增量操作接口 - 关注/取消关注
+  if (path.startsWith('/users/') && path.endsWith('/follow') && method === 'POST') {
+    const targetUid = path.split('/')[2]
+    const result = await store.followUser(targetUid)
+    return success(result)
+  }
+
+  if (path.startsWith('/users/') && path.endsWith('/follow') && method === 'DELETE') {
+    const targetUid = path.split('/')[2]
+    const result = await store.unfollowUser(targetUid)
+    return success(result)
+  }
+
+  // P0: 购买作品接口（积分校验 + 扣减 + 记录购买）
+  if (path.startsWith('/artworks/') && path.endsWith('/purchase') && method === 'POST') {
+    const artworkId = path.split('/')[2]
+    const result = await store.purchaseArtwork(artworkId)
+    return success(result)
+  }
+
+  // P1: 获取单个作品详情
+  if (path.match(/^\/artworks\/[^\/]+$/) && method === 'GET' && !path.endsWith('/like') && !path.endsWith('/favorite') && !path.endsWith('/purchase')) {
+    const artworkId = path.split('/')[2]
+    const artwork = await store.getArtworkById(artworkId)
+    if (!artwork) {
+      throw createError(404, '作品不存在', 'NOT_FOUND')
+    }
+    // 增加浏览量
+    artwork.viewCount = (artwork.viewCount || 0) + 1
+    await store.updateArtworkViewCount(artworkId, artwork.viewCount)
+    return success(artwork)
+  }
+
+  // P1: 注销账号（清除所有关联数据）
+  if (path === '/auth/unregister' && method === 'POST') {
+    await store.unregisterCurrentUser()
+    return success({ message: '账号已注销' })
+  }
+
   if (path === '/search-history' && method === 'GET') {
     return success(await store.getSearchHistory())
   }
 
   if (path === '/search-history' && method === 'PUT') {
-    await store.setSearchHistory(body.history || [])
+    // P2: 搜索历史最多保存 10 条
+    const history = (body.history || []).slice(0, 10)
+    await store.setSearchHistory(history)
     return success(null)
   }
 
@@ -562,6 +721,38 @@ const route = async (request) => {
   if (path === '/storage/clear-all' && method === 'POST') {
     await store.clearAll()
     return success(null)
+  }
+
+  // P1: 批量导入接口（数据迁移用）
+  if (path === '/import' && method === 'POST') {
+    const { projects = [], folders = [], settings = {} } = body
+
+    // 批量导入项目
+    if (projects.length > 0) {
+      const existingProjects = await store.getProjects()
+      const newProjects = [...existingProjects, ...projects]
+      await store.setProjects(newProjects)
+    }
+
+    // 批量导入文件夹
+    if (folders.length > 0) {
+      const existingFolders = await store.getFolders()
+      const newFolders = [...existingFolders, ...folders]
+      await store.setFolders(newFolders)
+    }
+
+    // 导入设置
+    if (Object.keys(settings).length > 0) {
+      await store.setSettings(settings)
+    }
+
+    return success({
+      imported: {
+        projects: projects.length,
+        folders: folders.length,
+        settings: Object.keys(settings).length > 0,
+      },
+    })
   }
 
   return fail(404, `Route not found: ${method} ${path}`)
