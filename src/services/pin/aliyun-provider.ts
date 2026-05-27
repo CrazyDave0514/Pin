@@ -200,13 +200,15 @@ export class AliyunPinDataProvider implements PinDataProvider {
    * 用户注册
    * @param username 用户名
    * @param password 密码
-   * @param email 邮箱（可选）
+   * @param email 邮箱
+   * @param nickname 昵称（可选）
    */
-  async register(username: string, password: string, email?: string): Promise<UserProfile> {
+  async register(username: string, password: string, email: string, nickname?: string): Promise<UserProfile> {
     const response = await this.request<AuthResponse>('POST', '/auth/register', {
       username,
       password,
       email,
+      nickname,
     })
 
     // 保存 Token

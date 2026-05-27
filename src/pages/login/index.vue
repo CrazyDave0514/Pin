@@ -250,8 +250,8 @@ const handleRegister = async () => {
     const result = await pinDataProvider.register(
       username.value, 
       password.value, 
-      nickname.value || username.value,
-      email.value
+      email.value,
+      nickname.value || username.value
     )
     
     uni.showToast({ title: '注册成功', icon: 'success' })
