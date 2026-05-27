@@ -1,85 +1,167 @@
 <template>
-  <!-- 登录/创建账号页面 -->
+  <!-- 登录/注册页面 V0.2.0 -->
   <view class="login-page">
-    <!-- 顶部标题区 -->
-    <view class="header-section">
-      <text class="title">创建账号</text>
-      <text class="subtitle">开启你的拼豆创作之旅</text>
+    <!-- 品牌区域 -->
+    <view class="brand-section">
+      <view class="brand-icon">
+        <text class="brand-emoji">🎨</text>
+      </view>
+      <text class="brand-title">Pin 拼豆</text>
+      <text class="brand-subtitle">拼豆创作，释放创意</text>
     </view>
 
-    <!-- 上次登录账号（如果存在） -->
-    <view v-if="lastUser" class="last-user-section">
-      <text class="section-label">上次登录</text>
-      <view class="last-user-card" @click="quickLogin">
-        <view class="user-avatar">
-          <text class="avatar-text">{{ lastUser.username.charAt(0) }}</text>
-        </view>
-        <view class="user-info">
-          <text class="user-name">{{ lastUser.username }}</text>
-          <text class="user-id">{{ lastUser.uid }}</text>
-        </view>
-        <text class="login-arrow">→</text>
-      </view>
-      <view class="divider">
-        <view class="divider-line"></view>
-        <text class="divider-text">或</text>
-        <view class="divider-line"></view>
-      </view>
-    </view>
-
-    <!-- 创建新账号表单 -->
+    <!-- 表单区域 -->
     <view class="form-section">
-      <text class="section-label">创建新账号</text>
+      <!-- 模式切换标签 -->
+      <view class="mode-tabs">
+        <view 
+          class="mode-tab" 
+          :class="{ active: isLoginMode }" 
+          @click="switchMode(true)"
+        >
+          <text class="tab-text">登录</text>
+        </view>
+        <view 
+          class="mode-tab" 
+          :class="{ active: !isLoginMode }" 
+          @click="switchMode(false)"
+        >
+          <text class="tab-text">注册</text>
+        </view>
+      </view>
       
+      <!-- 用户名 -->
       <view class="input-group">
         <text class="input-label">用户名</text>
         <input
           class="input-field"
           v-model="username"
-          placeholder="请输入用户名（2-16个字符）"
+          placeholder="请输入用户名"
+          placeholder-class="placeholder-text"
+          maxlength="16"
+          @input="clearError"
+        />
+      </view>
+
+      <!-- 密码 -->
+      <view class="input-group">
+        <text class="input-label">密码</text>
+        <input
+          class="input-field"
+          v-model="password"
+          type="password"
+          placeholder="请输入密码"
+          placeholder-class="placeholder-text"
+          maxlength="32"
+          @input="clearError"
+        />
+      </view>
+
+      <!-- 邮箱（仅注册模式，必填） -->
+      <view v-if="!isLoginMode" class="input-group">
+        <text class="input-label">邮箱 <text class="required-mark">*</text></text>
+        <input
+          class="input-field"
+          v-model="email"
+          type="text"
+          placeholder="请输入邮箱地址"
+          placeholder-class="placeholder-text"
+          maxlength="64"
+          @input="clearError"
+        />
+      </view>
+
+      <!-- 昵称（仅注册模式，可选） -->
+      <view v-if="!isLoginMode" class="input-group">
+        <text class="input-label">昵称（可选）</text>
+        <input
+          class="input-field"
+          v-model="nickname"
+          placeholder="给自己起个昵称吧"
           placeholder-class="placeholder-text"
           maxlength="16"
         />
       </view>
 
       <!-- 错误提示 -->
-      <text v-if="error" class="error-text">{{ error }}</text>
+      <view v-if="error" class="error-box">
+        <text class="error-text">{{ error }}</text>
+      </view>
+
+      <!-- 提交按钮 -->
+      <button 
+        class="submit-btn" 
+        :class="{ loading: loading }"
+        :disabled="!isFormValid || loading" 
+        @click="handleSubmit"
+      >
+        <text v-if="loading" class="btn-text">处理中...</text>
+        <text v-else class="btn-text">{{ isLoginMode ? '登录' : '注册' }}</text>
+      </button>
 
       <!-- 提示信息 -->
       <view class="tips">
-        <text class="tip-item">• 支持中文、英文、数字</text>
-        <text class="tip-item">• 长度 2-16 个字符</text>
-        <text class="tip-item">• 创建后可在"我的"页面修改</text>
+        <text v-if="isLoginMode" class="tip-item">• 使用已注册的账号登录</text>
+        <text v-else class="tip-item">• 用户名长度 3-16 个字符</text>
+        <text v-if="!isLoginMode" class="tip-item">• 密码长度至少 6 个字符</text>
+        <text v-if="!isLoginMode" class="tip-item">• 邮箱用于找回密码</text>
       </view>
+    </view>
 
-      <!-- 创建按钮 -->
-      <button class="submit-btn" :disabled="!username" @click="handleCreate">
-        创建账号
-      </button>
+    <!-- 协议提示 -->
+    <view class="agreement-section">
+      <text class="agreement-text">
+        {{ isLoginMode ? '登录' : '注册' }}即表示同意
+        <text class="agreement-link" @click="goToAgreement">《用户协议》</text>
+      </text>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { authService } from '../../services/pin/index'
+import { ref, computed } from 'vue'
+import { pinDataProvider } from '../../services/pin/index'
 
-// 用户名输入
+// 表单数据
 const username = ref('')
-// 错误信息
+const password = ref('')
+const email = ref('')
+const nickname = ref('')
+
+// 状态
+const isLoginMode = ref(true) // true: 登录模式, false: 注册模式
 const error = ref('')
-// 上次登录的用户
-const lastUser = ref<any>(null)
+const loading = ref(false)
 
 /**
- * 页面加载时检查是否有上次登录的用户
+ * 清除错误信息
  */
-onMounted(async () => {
-  const userList = await authService.getUserList()
-  if (userList.length > 0) {
-    // 获取最后一个登录的用户
-    lastUser.value = userList[userList.length - 1]
+const clearError = () => {
+  error.value = ''
+}
+
+/**
+ * 切换登录/注册模式
+ * @param isLogin 是否为登录模式
+ */
+const switchMode = (isLogin: boolean) => {
+  isLoginMode.value = isLogin
+  clearError()
+}
+
+/**
+ * 表单是否有效
+ */
+const isFormValid = computed(() => {
+  if (!username.value || !password.value) return false
+  if (!isLoginMode.value) {
+    // 注册模式下验证
+    if (password.value.length < 6) return false
+    if (username.value.length < 3) return false
+    // 邮箱必填
+    if (!email.value) return false
   }
+  return true
 })
 
 /**
@@ -88,53 +170,154 @@ onMounted(async () => {
  * @returns 是否有效
  */
 const validateUsername = (name: string): boolean => {
-  if (name.length < 2 || name.length > 16) {
-    error.value = '用户名长度需在 2-16 个字符之间'
+  if (name.length < 3 || name.length > 16) {
+    error.value = '用户名长度需在 3-16 个字符之间'
     return false
   }
-  const pattern = /^[\u4e00-\u9fa5a-zA-Z0-9]+$/
+  const pattern = /^[\u4e00-\u9fa5a-zA-Z0-9_]+$/
   if (!pattern.test(name)) {
-    error.value = '用户名只能包含中文、英文、数字'
+    error.value = '用户名只能包含中文、英文、数字和下划线'
     return false
   }
   return true
 }
 
 /**
- * 快速登录（使用上次登录的账号）
+ * 验证密码
+ * @param pwd 密码
+ * @returns 是否有效
  */
-const quickLogin = async () => {
-  if (!lastUser.value) return
-  
-  await authService.quickLogin(lastUser.value)
-  
-  uni.showToast({ title: '登录成功', icon: 'success' })
-  setTimeout(() => {
-    uni.switchTab({ url: '/pages/mine/index' })
-  }, 1500)
+const validatePassword = (pwd: string): boolean => {
+  if (pwd.length < 6) {
+    error.value = '密码长度至少 6 个字符'
+    return false
+  }
+  return true
 }
 
 /**
- * 创建新账号
+ * 验证邮箱
+ * @param mail 邮箱地址
+ * @returns 是否有效
  */
-const handleCreate = async () => {
+const validateEmail = (mail: string): boolean => {
+  if (!mail) {
+    error.value = '请输入邮箱地址'
+    return false
+  }
+  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!pattern.test(mail)) {
+    error.value = '请输入有效的邮箱地址'
+    return false
+  }
+  return true
+}
+
+/**
+ * 处理登录
+ */
+const handleLogin = async () => {
+  loading.value = true
   error.value = ''
   
+  try {
+    const result = await pinDataProvider.login(username.value, password.value)
+    
+    uni.showToast({ title: '登录成功', icon: 'success' })
+    
+    // 保存用户信息到本地
+    uni.setStorageSync('pin_current_user', JSON.stringify(result.user))
+    
+    // 检查是否需要数据迁移
+    setTimeout(() => {
+      checkDataMigration()
+    }, 1500)
+  } catch (e: any) {
+    error.value = e.message || '登录失败，请检查用户名和密码'
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 处理注册
+ */
+const handleRegister = async () => {
+  loading.value = true
+  error.value = ''
+  
+  try {
+    const result = await pinDataProvider.register(
+      username.value, 
+      password.value, 
+      nickname.value || username.value,
+      email.value
+    )
+    
+    uni.showToast({ title: '注册成功', icon: 'success' })
+    
+    // 保存用户信息到本地
+    uni.setStorageSync('pin_current_user', JSON.stringify(result.user))
+    
+    setTimeout(() => {
+      uni.switchTab({ url: '/pages/mine/index' })
+    }, 1500)
+  } catch (e: any) {
+    error.value = e.message || '注册失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 提交表单
+ */
+const handleSubmit = async () => {
+  error.value = ''
+  
+  // 验证用户名
   if (!validateUsername(username.value)) return
   
-  // 检查用户名是否已存在
-  const userList = await authService.getUserList()
-  if (userList.some((u: any) => u.username === username.value)) {
-    error.value = '用户名已被使用'
-    return
-  }
-
-  await authService.register(username.value)
+  // 验证密码
+  if (!validatePassword(password.value)) return
   
-  uni.showToast({ title: '创建成功', icon: 'success' })
-  setTimeout(() => {
+  // 注册模式下验证邮箱
+  if (!isLoginMode.value && !validateEmail(email.value)) return
+  
+  if (isLoginMode.value) {
+    await handleLogin()
+  } else {
+    await handleRegister()
+  }
+}
+
+/**
+ * 检查是否需要数据迁移
+ * 首次登录云端后，检测本地是否有历史数据
+ */
+const checkDataMigration = () => {
+  try {
+    // 检查本地是否有项目数据
+    const localProjects = uni.getStorageSync('pin_projects')
+    const hasLocalData = localProjects && JSON.parse(localProjects).length > 0
+    
+    if (hasLocalData) {
+      // 跳转到数据迁移页面
+      uni.navigateTo({ url: '/pages/migration/index' })
+    } else {
+      // 直接跳转到我的页面
+      uni.switchTab({ url: '/pages/mine/index' })
+    }
+  } catch {
     uni.switchTab({ url: '/pages/mine/index' })
-  }, 1500)
+  }
+}
+
+/**
+ * 跳转到用户协议页面
+ */
+const goToAgreement = () => {
+  uni.navigateTo({ url: '/pages/agreement/index' })
 }
 </script>
 
@@ -142,140 +325,115 @@ const handleCreate = async () => {
 .login-page {
   min-height: 100vh;
   background-color: var(--color-bg-panel);
-  padding: 48rpx 40rpx;
+  padding: 32rpx 40rpx;
 }
 
-/* 顶部标题区 */
-.header-section {
-  margin-bottom: 64rpx;
-  padding-top: 40rpx;
-}
-
-.title {
-  display: block;
-  font-size: 48rpx;
-  color: var(--color-text-primary);
-  font-weight: 600;
-  margin-bottom: 16rpx;
-}
-
-.subtitle {
-  display: block;
-  font-size: 28rpx;
-  color: var(--color-text-tertiary);
-}
-
-/* 上次登录区域 */
-.last-user-section {
-  margin-bottom: 48rpx;
-}
-
-.section-label {
-  display: block;
-  font-size: 26rpx;
-  color: var(--color-text-secondary);
-  margin-bottom: 24rpx;
-}
-
-.last-user-card {
+/* 品牌区域 */
+.brand-section {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  background-color: var(--color-bg-page);
-  border-radius: var(--radius-lg);
-  padding: 28rpx 32rpx;
-  box-shadow: var(--shadow-md);
+  padding: 48rpx 0 40rpx;
 }
 
-.user-avatar {
-  width: 88rpx;
-  height: 88rpx;
-  border-radius: 44rpx;
-  background-color: var(--color-text-primary);
+.brand-icon {
+  width: 120rpx;
+  height: 120rpx;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-soft) 100%);
+  border-radius: 32rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--shadow-md);
 }
 
-.avatar-text {
-  font-size: 36rpx;
-  color: var(--color-bg-panel);
-  font-weight: 500;
+.brand-emoji {
+  font-size: 64rpx;
 }
 
-.user-info {
-  flex: 1;
-}
-
-.user-name {
-  display: block;
-  font-size: 30rpx;
+.brand-title {
+  font-size: 44rpx;
   color: var(--color-text-primary);
-  font-weight: 500;
-  margin-bottom: 4rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
 }
 
-.user-id {
-  display: block;
-  font-size: 24rpx;
+.brand-subtitle {
+  font-size: 26rpx;
   color: var(--color-text-tertiary);
-}
-
-.login-arrow {
-  font-size: 36rpx;
-  color: var(--color-text-disabled);
-}
-
-/* 分隔线 */
-.divider {
-  display: flex;
-  align-items: center;
-  margin-top: 40rpx;
-}
-
-.divider-line {
-  flex: 1;
-  height: 2rpx;
-  background-color: var(--color-border);
-}
-
-.divider-text {
-  font-size: 24rpx;
-  color: var(--color-text-disabled);
-  padding: 0 24rpx;
 }
 
 /* 表单区域 */
 .form-section {
-  margin-top: 16rpx;
+  margin-top: 24rpx;
+}
+
+/* 模式切换标签 */
+.mode-tabs {
+  display: flex;
+  margin-bottom: 40rpx;
+  background-color: var(--color-bg-page);
+  border-radius: 16rpx;
+  padding: 8rpx;
+}
+
+.mode-tab {
+  flex: 1;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12rpx;
+  transition: all 0.2s ease;
+}
+
+.mode-tab.active {
+  background-color: var(--color-bg-panel);
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-text {
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+}
+
+.mode-tab.active .tab-text {
+  color: var(--color-text-primary);
+  font-weight: 500;
 }
 
 .input-group {
-  margin-bottom: 24rpx;
+  margin-bottom: 28rpx;
 }
 
 .input-label {
   display: block;
-  font-size: 28rpx;
+  font-size: 26rpx;
   color: var(--color-text-primary);
   font-weight: 500;
-  margin-bottom: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.required-mark {
+  color: var(--color-error);
 }
 
 .input-field {
   width: 100%;
-  height: 96rpx;
+  height: 88rpx;
   background-color: var(--color-bg-page);
-  border-radius: 20rpx;
-  padding: 0 32rpx;
-  font-size: 30rpx;
+  border-radius: 16rpx;
+  padding: 0 28rpx;
+  font-size: 28rpx;
   color: var(--color-text-primary);
   border: 2rpx solid transparent;
   box-sizing: border-box;
+  transition: all 0.2s ease;
 }
 
 .input-field:focus {
-  border-color: var(--color-text-primary);
+  border-color: var(--color-primary);
   background-color: var(--color-bg-panel);
 }
 
@@ -283,16 +441,24 @@ const handleCreate = async () => {
   color: var(--color-text-disabled);
 }
 
-.error-text {
-  display: block;
-  font-size: 26rpx;
-  color: var(--color-error);
+/* 错误提示 */
+.error-box {
+  background-color: var(--color-error);
+  background-color: rgba(207, 92, 77, 0.1);
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
   margin-bottom: 24rpx;
+}
+
+.error-text {
+  font-size: 24rpx;
+  color: var(--color-error);
 }
 
 /* 提示信息 */
 .tips {
-  margin-bottom: 48rpx;
+  margin-top: 32rpx;
+  padding: 0 8rpx;
 }
 
 .tip-item {
@@ -307,7 +473,7 @@ const handleCreate = async () => {
   width: 100%;
   height: 96rpx;
   background-color: var(--color-primary);
-  color: var(--color-bg-panel);
+  color: var(--color-text-inverse);
   font-size: 32rpx;
   font-weight: 500;
   border-radius: 48rpx;
@@ -315,9 +481,40 @@ const handleCreate = async () => {
   align-items: center;
   justify-content: center;
   border: none;
+  margin-top: 40rpx;
+  transition: all 0.2s ease;
+}
+
+.submit-btn:active {
+  background-color: var(--color-primary-dark);
+  transform: scale(0.98);
 }
 
 .submit-btn[disabled] {
   background-color: var(--color-text-disabled);
+  color: var(--color-bg-panel);
+}
+
+.submit-btn.loading {
+  opacity: 0.7;
+}
+
+.btn-text {
+  color: inherit;
+}
+
+/* 协议区域 */
+.agreement-section {
+  margin-top: 48rpx;
+  text-align: center;
+}
+
+.agreement-text {
+  font-size: 24rpx;
+  color: var(--color-text-tertiary);
+}
+
+.agreement-link {
+  color: var(--color-primary);
 }
 </style>

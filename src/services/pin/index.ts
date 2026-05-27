@@ -450,7 +450,9 @@ export const createPinServices = (options: {
   return services
 }
 
-export const pinServices = createPinServices()
+// 默认使用云端模式（AliyunPinDataProvider）
+// 如需本地模式，可调用 createPinServices({ target: 'local' })
+export const pinServices = createPinServices({ target: 'aliyun' })
 export const {
   provider: pinDataProvider,
   authService,
