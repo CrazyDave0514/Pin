@@ -16,6 +16,9 @@ const ACCESS_KEY_SECRET = process.env.ALIYUN_ACCESS_KEY_SECRET || ''
 
 const SERVICE_NAME = 'pin-api'
 const FUNCTION_NAME = 'pin-app-http'
+const TABLESTORE_ENDPOINT = process.env.ALIYUN_TABLESTORE_ENDPOINT || 'https://pin-app.cn-hangzhou.ots.aliyuncs.com'
+const TABLESTORE_INSTANCE = process.env.ALIYUN_TABLESTORE_INSTANCE || 'pin-app'
+const JWT_SECRET = process.env.DEPLOY_JWT_SECRET || 'pin-api-prod-secret-key-2026'
 
 async function deploy() {
   console.log('=== 开始部署 ===')
@@ -47,6 +50,7 @@ async function deploy() {
       },
       handler: 'index.handler',
       runtime: 'nodejs18',
+      // 不更新 environmentVariables，保持 FC 控制台手动配置
     })
 
     console.log('✅ 部署成功！')

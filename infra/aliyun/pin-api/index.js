@@ -30,52 +30,32 @@ const fail = (statusCode, message) => buildResponse(statusCode, {
 })
 
 // ============================================
-// 请求解析工具
+const { safeJsonParse } = require('./utils')
+
 // ============================================
 
-const safeJsonParse = (value) => {
-  if (typeof value !== 'string' || !value) return null
-
-  try {
-    return JSON.parse(value)
-  } catch (error) {
-    return null
-  }
-}
-
 const normalizeEventSource = (event) => {
+  // handler 层已做 Buffer → 对象解析，此处仅处理字符串/边界情况
   if (typeof event === 'string') {
-    return safeJsonParse(event) || { body: event }
+    return safeJsonParse(event, { body: event })
   }
-
-  if (typeof Buffer !== 'undefined' && Buffer.isBuffer(event)) {
-    const text = event.toString('utf8')
-    return safeJsonParse(text) || { body: text }
-  }
-
-  if (event instanceof Uint8Array) {
-    const text = Buffer.from(event).toString('utf8')
-    return safeJsonParse(text) || { body: text }
-  }
-
   return event || {}
 }
 
 const getRuntimeConfig = () => ({
   region: process.env.ALIYUN_REGION || '',
-  ossBucket: process.env.ALIYUN_OSS_BUCKET || '',
   tablestoreInstance: process.env.ALIYUN_TABLESTORE_INSTANCE || '',
   apiStage: process.env.PIN_API_STAGE || 'dev',
 })
 
+const API_PATH_PREFIX = process.env.PIN_API_PATH_PREFIX || '/pin'
+
 const normalizeRoutePath = (path) => {
   const normalized = String(path || '/').trim() || '/'
-
-  if (normalized === '/pin') return '/'
-  if (normalized.startsWith('/pin/')) {
-    return normalized.slice(4) || '/'
+  if (normalized === API_PATH_PREFIX) return '/'
+  if (normalized.startsWith(API_PATH_PREFIX + '/')) {
+    return normalized.slice(API_PATH_PREFIX.length) || '/'
   }
-
   return normalized
 }
 
@@ -176,8 +156,26 @@ const normalizeRequest = (event) => {
 // JWT 认证工具（内联实现，避免额外依赖）
 // ============================================
 
-const JWT_SECRET = process.env.JWT_SECRET || 'pin-api-default-secret-change-in-production'
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d'
+// JWT_SECRET 生产环境务必通过 FC 环境变量配置
+// 此默认值仅用于开发/测试，且会在运行时记录警告
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.warn('[SECURITY] JWT_SECRET not configured, using default (INSECURE for production)')
+  return 'pin-api-default-secret-change-in-production'
+})()
+// 解析过期时间（支持 7d / 24h / 3600 等格式）
+const JWT_EXPIRES_IN_SECONDS = (() => {
+  const raw = process.env.JWT_EXPIRES_IN || '7d'
+  const match = raw.match(/^(\d+)([dhms])$/)
+  if (!match) return 7 * 24 * 60 * 60 // 默认 7 天
+  const num = parseInt(match[1], 10)
+  switch (match[2]) {
+    case 'd': return num * 86400
+    case 'h': return num * 3600
+    case 'm': return num * 60
+    case 's': return num
+    default: return 7 * 86400
+  }
+})()
 
 /**
  * 简单的 Base64 编码（用于 JWT）
@@ -200,11 +198,21 @@ const base64UrlDecode = (str) => {
 }
 
 /**
- * HMAC SHA256 签名
+ * HMAC SHA256 签名（返回 raw Buffer，由调用方编码）
  */
 const hmacSha256 = (secret, message) => {
   const crypto = require('crypto')
-  return crypto.createHmac('sha256', secret).update(message).digest('base64')
+  return crypto.createHmac('sha256', secret).update(message).digest()
+}
+
+/**
+ * Raw Buffer 转 Base64URL（单次编码，避免双重编码）
+ */
+const bufferToBase64Url = (buf) => {
+  return buf.toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '')
 }
 
 /**
@@ -216,9 +224,9 @@ const generateToken = (payload) => {
   const encodedPayload = base64UrlEncode(JSON.stringify({
     ...payload,
     iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60), // 7 天
+    exp: Math.floor(Date.now() / 1000) + JWT_EXPIRES_IN_SECONDS,
   }))
-  const signature = base64UrlEncode(hmacSha256(JWT_SECRET, `${encodedHeader}.${encodedPayload}`))
+  const signature = bufferToBase64Url(hmacSha256(JWT_SECRET, `${encodedHeader}.${encodedPayload}`))
   return `${encodedHeader}.${encodedPayload}.${signature}`
 }
 
@@ -232,7 +240,7 @@ const verifyToken = (token) => {
   }
 
   const [encodedHeader, encodedPayload, signature] = parts
-  const expectedSignature = base64UrlEncode(hmacSha256(JWT_SECRET, `${encodedHeader}.${encodedPayload}`))
+  const expectedSignature = bufferToBase64Url(hmacSha256(JWT_SECRET, `${encodedHeader}.${encodedPayload}`))
 
   if (signature !== expectedSignature) {
     throw new Error('Invalid token signature')
@@ -269,7 +277,7 @@ const authController = {
    * 用户注册
    * P0: 邮箱必填验证 + 注册赠送100积分
    */
-  async register(request) {
+  async register(request, store) {
     const { username, password, email, nickname } = request.body || {}
 
     // 输入验证
@@ -296,8 +304,6 @@ const authController = {
       throw createError(400, '邮箱格式不正确', 'VALIDATION_ERROR')
     }
 
-    const store = new PinTablestoreStore()
-
     // 检查用户名是否已存在
     const userList = await store.getUserList()
     if (userList.some(u => u.username === username)) {
@@ -321,8 +327,8 @@ const authController = {
       following: [],
     }
 
-    userList.push(newUser)
-    await store.setUserList(userList)
+    // 单行写入（避免全量读写 userList）
+    await store.addUser(newUser)
 
     // 注册赠送 100 积分（传入新用户 uid）
     await store.setPoints(100, newUser.uid)
@@ -346,14 +352,11 @@ const authController = {
   /**
    * 用户登录
    */
-  async login(request) {
+  async login(request, store) {
     const { username, password } = request.body || {}
-
     if (!username || !password) {
       throw createError(400, '用户名和密码不能为空', 'VALIDATION_ERROR')
     }
-
-    const store = new PinTablestoreStore()
     const userList = await store.getUserList()
     const user = userList.find(u => u.username === username)
 
@@ -379,16 +382,13 @@ const authController = {
   /**
    * 获取当前用户
    */
-  async getCurrentUser(request) {
+  async getCurrentUser(request, store) {
     const { token } = request
-
     if (!token) {
       throw createError(401, '未提供认证令牌', 'UNAUTHORIZED')
     }
-
     try {
       const decoded = verifyToken(token)
-      const store = new PinTablestoreStore()
       const userList = await store.getUserList()
       const user = userList.find(u => u.uid === decoded.uid)
 
@@ -413,21 +413,30 @@ const authController = {
 // ============================================
 
 /**
- * 验证 token 并返回 uid
+ * 验证 token 并返回 uid，区分错误类型
+ * @returns {{ uid: string|null, errorCode: string|null }}
  */
 const extractUidFromToken = (token) => {
-  if (!token) return null
+  if (!token) return { uid: null, errorCode: 'NO_TOKEN' }
   try {
     const decoded = verifyToken(token)
-    return decoded.uid
+    return { uid: decoded.uid, errorCode: null }
   } catch (error) {
-    return null
+    if (error.code === 'TOKEN_EXPIRED') {
+      return { uid: null, errorCode: 'TOKEN_EXPIRED' }
+    }
+    return { uid: null, errorCode: 'TOKEN_INVALID' }
   }
 }
 
 const route = async (request) => {
   try {
     const { method, path, body, token } = request
+
+  // CORS 预检请求
+  if (method === 'OPTIONS') {
+    return buildResponse(204, null)
+  }
 
   // 健康检查
   if (path === '/health' && method === 'GET') {
@@ -440,40 +449,29 @@ const route = async (request) => {
     })
   }
 
-  // 临时 debug：查看用户原始数据
-  if (path === '/debug/user-raw' && method === 'GET') {
-    const store = new PinTablestoreStore()
-    const rawRows = await store.listSingleKeyTable('pin_users', 'uid')
-    const target = rawRows.find(r => r.uid === 'UMPNO9CBH')
-    return success({
-      found: !!target,
-      rawKeys: target ? Object.keys(target) : [],
-      rawData: target ? JSON.stringify(target).substring(0, 1000) : null,
-      password: target ? target.password : 'NOT_FOUND',
-      username: target ? target.username : 'NOT_FOUND',
-    })
-  }
-
   // 认证路由（无需 token 或自行处理 token）
+  // 共享 store 实例，避免重复创建
+  const store = new PinTablestoreStore()
+
   if (path === '/auth/register' && method === 'POST') {
-    return success(await authController.register(request))
+    return success(await authController.register(request, store))
   }
 
   if (path === '/auth/login' && method === 'POST') {
-    return success(await authController.login(request))
+    return success(await authController.login(request, store))
   }
 
   if (path === '/auth/me' && method === 'GET') {
-    return success(await authController.getCurrentUser(request))
+    return success(await authController.getCurrentUser(request, store))
   }
 
   // 业务路由 - 需要验证 token 并设置 session
-  const uid = extractUidFromToken(token)
+  const { uid, errorCode } = extractUidFromToken(token)
   if (!uid) {
-    throw createError(401, '未提供认证令牌或令牌无效', 'UNAUTHORIZED')
+    const message = errorCode === 'TOKEN_EXPIRED' ? '令牌已过期' : '未提供认证令牌或令牌无效'
+    throw createError(401, message, errorCode)
   }
 
-  const store = new PinTablestoreStore()
   // 设置当前用户 session（让 store 方法能获取到 uid）
   await store.setCurrentUser({ uid })
 
@@ -800,9 +798,9 @@ exports.handler = async (event, context) => {
     const request = normalizeRequest(eventObj)
 
     const response = await route(request)
-    // FC 3.0 HTTP Trigger: 返回 JSON 字符串，runtime 将其作为 response body(HTTP 200)
-    // HTTP 状态码由 API Gateway 统一管理
-    return JSON.stringify(response)
+    // FC 3.0 HTTP Trigger: route() 返回 buildResponse 对象
+    // 提取 body 字符串直接返回，避免外层 JSON.stringify 导致双重编码
+    return response.body || JSON.stringify(response)
   } catch (error) {
     // 仅在 route 也崩溃时才会到这里（真正的意外错误）
     console.error('Unexpected handler error:', error)
@@ -811,6 +809,6 @@ exports.handler = async (event, context) => {
         message: 'Internal server error',
         code: 'FATAL',
       })
-      return JSON.stringify(fatalResponse)
+      return fatalResponse.body || JSON.stringify(fatalResponse)
   }
 }
