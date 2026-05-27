@@ -8,11 +8,11 @@ const FCClient = require('@alicloud/fc2')
 const fs = require('fs')
 const path = require('path')
 
-// 阿里云配置
-const ACCOUNT_ID = '1541417015708449'
-const REGION = 'cn-hangzhou'
-const ACCESS_KEY_ID = '$ALIYUN_ACCESS_KEY_ID'
-const ACCESS_KEY_SECRET = '$ALIYUN_ACCESS_KEY_SECRET'
+// 阿里云配置（从环境变量读取，避免密钥泄露）
+const ACCOUNT_ID = process.env.ALIYUN_ACCOUNT_ID || '1541417015708449'
+const REGION = process.env.ALIYUN_REGION || 'cn-hangzhou'
+const ACCESS_KEY_ID = process.env.ALIYUN_ACCESS_KEY_ID || ''
+const ACCESS_KEY_SECRET = process.env.ALIYUN_ACCESS_KEY_SECRET || ''
 
 const SERVICE_NAME = 'pin-api'
 const FUNCTION_NAME = 'pin-app-http'
