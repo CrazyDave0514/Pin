@@ -80,6 +80,11 @@ class PinTablestoreStore {
       .map(([key, value]) => ({ [key]: value }))
   }
 
+  /**
+   * 将 Tablestore 行数据转换为普通对象
+   * Tablestore SDK 5.x 返回的列格式: { columnName: "col_name", columnValue: "col_value", timestamp: ... }
+   * 旧格式或简写: { columnName: "value" }
+   */
   rowToObject(row) {
     if (!row) return null
 
@@ -87,14 +92,38 @@ class PinTablestoreStore {
     const primaryKeyColumns = safeArray(row.primaryKey)
     const attributeColumns = safeArray(row.attributes || row.attributeColumns)
 
+    const extractColumnValue = (item) => {
+      if (!item) return null
+      // Tablestore SDK 5.x 标准格式: { columnName: "col", columnValue: "val" }
+      if (item.columnName !== undefined && item.columnValue !== undefined) {
+        return [item.columnName, item.columnValue]
+      }
+      // 兼容其他格式: { name: "col", value: "val" }
+      if (item.name !== undefined && item.value !== undefined) {
+        return [item.name, item.value]
+      }
+      // 旧格式: { columnName: "value" } (只有一个 key-value)
+      const entries = Object.entries(item)
+      if (entries.length > 0) {
+        return entries[0]
+      }
+      return null
+    }
+
     primaryKeyColumns.forEach((item) => {
-      const [key, value] = Object.entries(item)[0] || []
-      if (key) result[key] = value
+      const extracted = extractColumnValue(item)
+      if (extracted) {
+        const [key, value] = extracted
+        if (key) result[key] = value
+      }
     })
 
     attributeColumns.forEach((item) => {
-      const [key, value] = Object.entries(item)[0] || []
-      if (key) result[key] = value
+      const extracted = extractColumnValue(item)
+      if (extracted) {
+        const [key, value] = extracted
+        if (key) result[key] = value
+      }
     })
 
     return result
@@ -186,12 +215,18 @@ class PinTablestoreStore {
     return uid
   }
 
+  /**
+   * 标准化用户行数据（包含认证字段）
+   */
   normalizeUserRow(row) {
     if (!row) return null
     return {
       uid: String(row.uid || ''),
       username: String(row.username || ''),
+      email: String(row.email || ''),
+      nickname: String(row.nickname || ''),
       avatar: String(row.avatar || ''),
+      password: String(row.password || ''),
       createdAt: Number(row.createdAt || 0),
       following: safeJsonParse(row.followingJson, []),
       bio: row.bio ? String(row.bio) : undefined,
@@ -298,7 +333,10 @@ class PinTablestoreStore {
     for (const user of users) {
       await this.putRow('pin_users', { uid: user.uid }, {
         username: user.username,
+        email: user.email || '',
+        nickname: user.nickname || user.username,
         avatar: user.avatar,
+        password: user.password || '',
         createdAt: user.createdAt,
         followingJson: JSON.stringify(safeArray(user.following)),
         bio: user.bio || '',

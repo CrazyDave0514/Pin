@@ -12,6 +12,17 @@ interface AliyunApiResponse<T> {
   message?: string
 }
 
+/**
+ * 认证响应数据结构
+ */
+interface AuthResponse {
+  user: UserProfile
+  token: string
+}
+
+/**
+ * 获取 uni 对象
+ */
 const getUni = () => {
   const uniInstance = (globalThis as { uni?: {
     request: (options: Record<string, unknown>) => void
@@ -24,6 +35,9 @@ const getUni = () => {
   return uniInstance
 }
 
+/**
+ * 标准化 baseUrl
+ */
 const normalizeBaseUrl = (value?: string) => {
   const normalized = String(value || '').trim().replace(/\/+$/, '')
   return normalized
@@ -33,6 +47,7 @@ export class AliyunPinDataProvider implements PinDataProvider {
   private readonly localProvider: PinDataProvider
   private readonly storageAdapter: StorageAdapter
   private readonly configResolver: () => AliyunPinApiConfig
+  private _token: string | null = null
 
   constructor(
     storageAdapter: StorageAdapter = getStorageAdapter(),
@@ -41,6 +56,9 @@ export class AliyunPinDataProvider implements PinDataProvider {
     this.storageAdapter = storageAdapter
     this.configResolver = configResolver
     this.localProvider = new LocalPinDataProvider(this.storageAdapter)
+
+    // 从存储恢复 Token
+    this.loadToken()
   }
 
   private get config() {
@@ -55,6 +73,53 @@ export class AliyunPinDataProvider implements PinDataProvider {
     return normalizeBaseUrl(this.config.baseUrl)
   }
 
+  /**
+   * 加载存储的 Token
+   */
+  private loadToken() {
+    try {
+      const token = this.storageAdapter.getItem('pin_auth_token')
+      if (token && typeof token === 'string') {
+        this._token = token
+      }
+    } catch (e) {
+      console.warn('Failed to load token:', e)
+    }
+  }
+
+  /**
+   * 保存 Token 到存储
+   */
+  private saveToken(token: string | null) {
+    this._token = token
+    try {
+      if (token) {
+        this.storageAdapter.setItem('pin_auth_token', token)
+      } else {
+        this.storageAdapter.removeItem('pin_auth_token')
+      }
+    } catch (e) {
+      console.warn('Failed to save token:', e)
+    }
+  }
+
+  /**
+   * 获取当前 Token
+   */
+  getToken(): string | null {
+    return this._token
+  }
+
+  /**
+   * 检查是否已认证
+   */
+  isAuthenticated(): boolean {
+    return !!this._token
+  }
+
+  /**
+   * 构建请求头
+   */
   private buildHeaders() {
     const headers: Record<string, string> = {
       'content-type': 'application/json',
@@ -64,9 +129,17 @@ export class AliyunPinDataProvider implements PinDataProvider {
       headers['x-pin-api-key'] = this.config.apiKey
     }
 
+    // 添加认证 Token
+    if (this._token) {
+      headers['Authorization'] = `Bearer ${this._token}`
+    }
+
     return headers
   }
 
+  /**
+   * 发起请求
+   */
   private async request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
     if (!this.baseUrl) {
       throw new Error('AliyunPinDataProvider baseUrl is not configured')
@@ -123,6 +196,82 @@ export class AliyunPinDataProvider implements PinDataProvider {
       return await localTask()
     }
   }
+
+  // ============================================
+  // 认证相关方法
+  // ============================================
+
+  /**
+   * 用户注册
+   * @param username 用户名
+   * @param password 密码
+   * @param email 邮箱（可选）
+   */
+  async register(username: string, password: string, email?: string): Promise<UserProfile> {
+    const response = await this.request<AuthResponse>('POST', '/auth/register', {
+      username,
+      password,
+      email,
+    })
+
+    // 保存 Token
+    this.saveToken(response.token)
+
+    // 设置当前用户到本地存储（兼容本地模式）
+    await this.localProvider.setCurrentUser(response.user)
+
+    return response.user
+  }
+
+  /**
+   * 用户登录
+   * @param username 用户名
+   * @param password 密码
+   */
+  async login(username: string, password: string): Promise<UserProfile> {
+    const response = await this.request<AuthResponse>('POST', '/auth/login', {
+      username,
+      password,
+    })
+
+    // 保存 Token
+    this.saveToken(response.token)
+
+    // 设置当前用户到本地存储（兼容本地模式）
+    await this.localProvider.setCurrentUser(response.user)
+
+    return response.user
+  }
+
+  /**
+   * 用户登出
+   */
+  async logout(): Promise<void> {
+    this.saveToken(null)
+    await this.localProvider.removeCurrentUser()
+  }
+
+  /**
+   * 获取当前用户（通过 Token 验证）
+   */
+  async getCurrentUserByToken(): Promise<UserProfile | null> {
+    if (!this._token) {
+      return null
+    }
+
+    try {
+      const response = await this.request<{ user: UserProfile }>('GET', '/auth/me')
+      return response.user
+    } catch (error) {
+      // Token 无效或过期
+      this.saveToken(null)
+      return null
+    }
+  }
+
+  // ============================================
+  // 数据操作方法（原有）
+  // ============================================
 
   getCurrentUser(): Promise<UserProfile | null> {
     return this.withFallback(
