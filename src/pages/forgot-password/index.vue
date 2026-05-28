@@ -213,7 +213,7 @@ const sendVerifyCode = async () => {
   try {
     await pinDataProvider.request('POST', '/auth/send-code', { 
       email: email.value,
-      type: 'reset-password'
+      purpose: 'reset-password'
     })
     
     uni.showToast({ title: '验证码已发送', icon: 'success' })

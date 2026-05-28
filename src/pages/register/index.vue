@@ -207,8 +207,8 @@ const sendVerifyCode = async () => {
   error.value = ''
 
   try {
-    // 调用后端发送验证码接口
-    await pinDataProvider.request('POST', '/auth/send-code', { email: email.value })
+    // 调用后端发送验证码接口（注册场景）
+    await pinDataProvider.request('POST', '/auth/send-code', { email: email.value, purpose: 'register' })
     
     uni.showToast({ title: '验证码已发送', icon: 'success' })
     

@@ -281,19 +281,50 @@ const showMoreActions = () => {
 }
 
 /**
- * 举报作品 - 需要登录
+ * 举报原因选项
+ */
+const reportReasons = ['色情低俗', '政治敏感', '暴力恐怖', '垃圾广告', '侵权抄袭', '其他']
+
+/**
+ * 举报作品 - 需要登录（弹窗实现）
  */
 const reportArtwork = () => {
   if (!artwork.value) return
-  
+
   // 检查登录状态
   if (!checkLogin({ message: '举报需要登录后才能操作' })) {
     return
   }
-  
-  // 跳转到举报页面
-  uni.navigateTo({
-    url: `/pages/report/index?type=artwork&id=${artwork.value.id}&creator=${artwork.value.creatorName}`
+
+  // 使用 uni.showActionSheet 选择举报原因
+  uni.showActionSheet({
+    title: '选择举报原因',
+    itemList: reportReasons,
+    success: (res) => {
+      const reason = reportReasons[res.tapIndex]
+      // 显示输入框让用户填写详细描述（可选）
+      uni.showModal({
+        title: '补充说明（可选）',
+        editable: true,
+        placeholderText: '请简要描述举报原因，帮助我们更快处理',
+        confirmText: '提交',
+        cancelText: '取消',
+        success: async (modalRes) => {
+          if (modalRes.confirm) {
+            try {
+              await pinDataProvider.request('POST', '/report', {
+                artworkId: artwork.value!.id,
+                reason: reason,
+                description: modalRes.content || undefined
+              })
+              uni.showToast({ title: '举报已提交', icon: 'success' })
+            } catch (e) {
+              uni.showToast({ title: '举报失败', icon: 'none' })
+            }
+          }
+        }
+      })
+    }
   })
 }
 
@@ -302,12 +333,18 @@ const reportArtwork = () => {
  */
 const blockCreator = () => {
   if (!artwork.value) return
-  
+
   // 检查登录状态
   if (!checkLogin({ message: '拉黑需要登录后才能操作' })) {
     return
   }
-  
+
+  // 需要 creatorUid 才能拉黑
+  if (!artwork.value.creatorUid) {
+    uni.showToast({ title: '无法获取创作者信息', icon: 'none' })
+    return
+  }
+
   uni.showModal({
     title: '确认拉黑',
     content: `确定要拉黑 ${artwork.value.creatorName} 吗？拉黑后将不再看到该创作者的作品。`,
@@ -317,7 +354,10 @@ const blockCreator = () => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          await communityService.blockCreator(artwork.value!.creatorName)
+          await pinDataProvider.request('POST', '/relations/block', {
+            creatorUid: artwork.value!.creatorUid,
+            creatorName: artwork.value!.creatorName
+          })
           isBlocked.value = true
           isFollowing.value = false // 拉黑自动取消关注
           uni.showToast({ title: '已拉黑', icon: 'success' })

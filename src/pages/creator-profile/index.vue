@@ -124,6 +124,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '@/utils/avatar-presets'
 import { pinDataProvider, communityService } from '../../services/pin/index'
 import type { CommunityArtwork, UserProfile } from '../../services/pin/types'
+import { checkLogin } from '@/utils/auth-guard'
 
 // 创作者信息
 const creator = ref<UserProfile | null>(null)
@@ -245,7 +246,10 @@ const toggleFollow = async () => {
  */
 const toggleBlock = async () => {
   if (!creator.value) return
-  
+
+  // 检查登录状态
+  if (!checkLogin({ message: '拉黑需要登录后才能操作' })) return
+
   if (isBlocked.value) {
     // 取消拉黑
     uni.showModal({
@@ -256,7 +260,7 @@ const toggleBlock = async () => {
       success: async (res) => {
         if (res.confirm) {
           try {
-            await communityService.unblockCreator(creator.value!.username)
+            await pinDataProvider.request('DELETE', `/relations/block/${creator.value!.username}`)
             isBlocked.value = false
             uni.showToast({ title: '已移除黑名单', icon: 'success' })
           } catch (e) {
@@ -275,7 +279,10 @@ const toggleBlock = async () => {
       success: async (res) => {
         if (res.confirm) {
           try {
-            await communityService.blockCreator(creator.value!.username)
+            await pinDataProvider.request('POST', '/relations/block', {
+              creatorUid: creator.value!.uid,
+              creatorName: creator.value!.username
+            })
             isBlocked.value = true
             isFollowing.value = false // 拉黑自动取消关注
             uni.showToast({ title: '已拉黑', icon: 'success' })

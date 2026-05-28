@@ -45,7 +45,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { communityService } from '../../services/pin/index'
+import { pinDataProvider } from '../../services/pin/index'
 import { getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '@/utils/avatar-presets'
 
 interface BlockedCreator {
@@ -70,26 +70,9 @@ onMounted(() => {
 const loadBlocklist = async () => {
   loading.value = true
   try {
-    // 获取拉黑的用户名列表
-    const usernames = await communityService.getBlockedCreators()
-    
-    // 获取每个创作者的详细信息
-    const creators: BlockedCreator[] = []
-    for (const username of usernames) {
-      try {
-        const profile = await communityService.getCreatorProfile(username)
-        creators.push({
-          username,
-          nickname: profile.nickname,
-          avatar: profile.avatar
-        })
-      } catch (e) {
-        // 如果获取失败，至少显示用户名
-        creators.push({ username })
-      }
-    }
-    
-    blockedCreators.value = creators
+    // 获取拉黑的用户列表（后端返回包含详细信息的列表）
+    const creators = await pinDataProvider.request<BlockedCreator[]>('GET', '/relations/blocked-creators')
+    blockedCreators.value = creators || []
   } catch (e) {
     uni.showToast({ title: '加载失败', icon: 'none' })
   } finally {
@@ -109,7 +92,7 @@ const unblockCreator = async (creator: BlockedCreator) => {
     success: async (res) => {
       if (res.confirm) {
         try {
-          await communityService.unblockCreator(creator.username)
+          await pinDataProvider.request('DELETE', `/relations/block/${creator.username}`)
           // 从列表中移除
           blockedCreators.value = blockedCreators.value.filter(c => c.username !== creator.username)
           uni.showToast({ title: '已移除', icon: 'success' })
