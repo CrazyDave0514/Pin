@@ -40,6 +40,9 @@
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
+| FC 环境变量配置 | AI后端 | ✅ 已完成 | pin-app-http 函数 | EMAIL_SMTP_HOST/PORT/USER/PASS/FROM_NAME、Tablestore、JWT_SECRET |
+| `pin_verification_codes` 表 | AI后端 | ✅ 已完成 | Tablestore pin-main 实例 | 单主键 email(STRING)，TTL=-1，MaxVersions=1 |
+| 邮件服务模块 | AI后端 | ✅ 已完成 | email-service.js | nodemailer + 飞书 SMTP，支持验证码发送 |
 | `src/config/version.ts` | AI前端 | 待开始 | 版本配置文件 | 统一管理版本号 |
 | `src/utils/auth-guard.ts` | AI前端 | 待开始 | 登录检查工具 | 统一登录检查，未登录弹窗引导 |
 | 网页 icon 集成 | AI前端 | 待开始 | index.html | 网页标签页显示应用 icon |
@@ -61,10 +64,10 @@
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `POST /auth/send-code` | AI后端 | 待开始 | 发送邮箱验证码 | |
-| `POST /auth/verify-code` | AI后端 | 待开始 | 校验验证码 | |
-| `POST /auth/reset-password` | AI后端 | 待开始 | 重置密码 | 忘记密码 |
-| `POST /auth/change-password` | AI后端 | 待开始 | 修改密码 | 已登录用户 |
+| `POST /auth/send-code` | AI后端 | ✅ 已完成 | index.js | 飞书SMTP发送6位验证码，5分钟过期，60秒限频 |
+| `POST /auth/verify-code` | AI后端 | ✅ 已完成 | index.js | 校验验证码有效性，使用后自动删除 |
+| `POST /auth/reset-password` | AI后端 | ✅ 已完成 | index.js | 邮箱验证+新密码，bcrypt加密存储 |
+| `POST /auth/change-password` | AI后端 | ✅ 已完成 | index.js | 旧密码+邮箱验证+新密码，需JWT认证 |
 | **前端页面** | | | | |
 | `pages/register/index.vue` | AI前端 | 待开始 | 独立注册页 | 邮箱+验证码+昵称+密码+确认密码 |
 | `pages/forgot-password/index.vue` | AI前端 | 待开始 | 忘记密码页 | 邮箱验证+重设密码 |
@@ -85,10 +88,10 @@
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `POST /report` | AI后端 | 待开始 | 提交举报 | |
-| `POST /relations/block` | AI后端 | 待开始 | 拉黑作者 | |
-| `DELETE /relations/block/:creatorName` | AI后端 | 待开始 | 移除黑名单 | |
-| `GET /relations/blocked-creators` | AI后端 | 待开始 | 获取黑名单 | |
+| `POST /report` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 提交举报，存入 pin_relations 表 |
+| `POST /relations/block` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 拉黑作者，自动解除关注 |
+| `DELETE /relations/block/:creatorName` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 移除黑名单 |
+| `GET /relations/blocked-creators` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 获取黑名单列表，需JWT认证 |
 | **前端功能** | | | | |
 | `artwork-detail/index.vue` 改造 | AI前端 | 待开始 | 作品详情页 | 增加举报按钮、拉黑按钮 |
 | `pages/settings/blocklist.vue` | AI前端 | 待开始 | 黑名单管理页 | 新增页面 |
@@ -99,8 +102,8 @@
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `GET /users/:uid/profile` | AI后端 | 待开始 | 创作者公开信息 | |
-| `GET /users/:uid/artworks` | AI后端 | 待开始 | 创作者作品列表 | |
+| `GET /users/:uid/profile` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 创作者公开信息（头像/昵称/简介/统计/关注状态） |
+| `GET /users/:uid/artworks` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 创作者作品列表（分页，含点赞/收藏状态） |
 | **前端页面** | | | | |
 | `pages/creator-profile/index.vue` | AI前端 | 待开始 | 创作者主页 | 头像+简介+统计+作品列表+关注/拉黑 |
 
@@ -117,7 +120,7 @@
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `GET /config/version` | AI后端 | 待开始 | 版本号接口 | |
+| `GET /config/version` | AI后端 | ✅ 已完成 | index.js | 返回版本号、构建时间、环境信息 |
 | **前端功能** | | | | |
 | 离线编辑支持 | AI前端 | 待开始 | 相关服务 | 离线队列 + 联网同步 |
 | 冲突解决机制 | AI前端 | 待开始 | 相关服务 | 多端冲突提示和解决（P2） |
@@ -159,7 +162,7 @@
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| 后端部署 | AI后端 | 待开始 | 阿里云线上 | 新增接口部署 |
+| 后端部署 | AI后端 | ✅ 已完成 | 阿里云 FC cn-hangzhou | pin-app-http 函数，11个新接口已部署 |
 | 前端部署 | AI前端 | 待开始 | GitHub Pages | |
 | 线上回归测试 | AI测试 | 待开始 | 回归结论 | 发布后验证核心流程 |
 
@@ -264,6 +267,8 @@
 | 2026-05-28 | 根据需求文档详细拆解任务，细化为开发阶段各子任务 |
 | 2026-05-28 | AI设计师完成：V0.2.1 UI/UE设计规范（5个新增页面、6个改造页面、2个新组件、权限控制交互规范） |
 | 2026-05-28 | AI设计师完成：网页icon重新设计（SVG矢量拼豆"P"字母，暖金色调，全尺寸生成） |
+| 2026-05-28 | AI后端完成：V0.2.1 全部11个接口开发与部署（邮箱验证码4个、举报拉黑4个、创作者主页2个、版本号1个） |
+| 2026-05-28 | AI后端完成：FC环境变量配置（飞书SMTP）、pin_verification_codes 表创建、email-service.js 邮件模块 |
 
 ---
 

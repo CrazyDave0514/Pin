@@ -55,7 +55,7 @@
         v-for="(item, index) in functionList"
         :key="index"
         class="function-item"
-        @click="handleFunctionClick(item.path)"
+        @click="handleFunctionClick(item)"
       >
         <view class="function-icon-wrap">
           <image class="function-icon" :src="item.icon" mode="aspectFit" />
@@ -123,6 +123,7 @@ import { computed, ref, onMounted } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { DEFAULT_PRESET_AVATAR, getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue, normalizeAvatarValue } from '../../utils/avatar-presets'
 import { authService, communityService, pinDataProvider } from '../../services/pin/index'
+import { checkLogin } from '../../utils/auth-guard'
 
 const user = ref<any>(null)
 const defaultAvatar = DEFAULT_PRESET_AVATAR
@@ -141,12 +142,7 @@ const tempAvatar = ref('')
 // 旋转角度
 const rotation = ref(0)
 
-const functionList = [
-  { icon: '/static/assets/v015/icons/points-active.png', name: '积分中心', path: '/pages/points/index' },
-  { icon: '/static/assets/v015/icons/bead-inventory-active.png', name: '豆仓管理', path: '/pages/bead-inventory/index' },
-  { icon: '/static/assets/v015/icons/favorite-active.png', name: '联系作者', path: '/pages/contact/index' },
-  { icon: '/static/assets/v015/icons/settings-active.png', name: '更多设置', path: '/pages/settings/index' },
-]
+
 
 onMounted(() => {
   void loadUser()
@@ -304,14 +300,36 @@ const rotateRight = () => {
 
 
 /**
- * 处理功能点击
- * @param path - 页面路径
+ * 功能列表配置（带权限要求）
  */
-const handleFunctionClick = (path: string) => {
-  uni.navigateTo({ url: path })
+const functionList = [
+  { icon: '/static/assets/v015/icons/points-active.png', name: '积分中心', path: '/pages/points/index', requireAuth: true },
+  { icon: '/static/assets/v015/icons/bead-inventory-active.png', name: '豆仓管理', path: '/pages/bead-inventory/index', requireAuth: true },
+  { icon: '/static/assets/v015/icons/favorite-active.png', name: '联系作者', path: '/pages/contact/index', requireAuth: false },
+  { icon: '/static/assets/v015/icons/settings-active.png', name: '更多设置', path: '/pages/settings/index', requireAuth: false },
+]
+
+/**
+ * 处理功能点击 - 带权限检查
+ * @param item - 功能项
+ */
+const handleFunctionClick = (item: typeof functionList[0]) => {
+  // 检查是否需要登录
+  if (item.requireAuth && !checkLogin({ message: `${item.name}需要登录后才能使用` })) {
+    return
+  }
+  uni.navigateTo({ url: item.path })
 }
 
+/**
+ * 处理统计项点击 - 需要登录
+ */
 const handleStatClick = (type: 'purchases' | 'favorites' | 'likes') => {
+  // 检查登录状态
+  if (!checkLogin({ message: '该功能需要登录后才能查看' })) {
+    return
+  }
+
   if (type === 'purchases') {
     uni.showToast({ title: '购买作品页面下一期完善', icon: 'none' })
     return

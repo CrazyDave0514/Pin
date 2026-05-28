@@ -299,6 +299,7 @@ import {
 import { downloadBlob, exportBlueprintAsBlob } from '../../utils/blueprint-export'
 import { getJsZip } from '../../utils/jszip'
 import { communityService, projectService } from '../../services/pin/index'
+import { checkLogin } from '../../utils/auth-guard'
 import type { FolderRecord, ProjectRecord } from '../../services/pin/types'
 
 const projects = ref<ProjectRecord[]>([])
@@ -449,7 +450,14 @@ const goToSearch = () => {
   uni.navigateTo({ url: '/pages/search/index?mode=project' })
 }
 
+/**
+ * 创建画布 - 需要登录
+ */
 const createCanvas = (type: 'blank' | 'image' | 'blueprint') => {
+  // 检查登录状态
+  if (!checkLogin({ message: '创建项目需要登录后才能操作' })) {
+    return
+  }
   closeCreateSheet()
   if (type === 'blank') {
     uni.navigateTo({ url: '/pages/canvas-settings/index?type=blank&folderId=' + currentFolderId.value })
@@ -477,7 +485,14 @@ const askFolderName = (title: string, onConfirm: (name: string) => void) => {
   })
 }
 
+/**
+ * 创建文件夹 - 需要登录
+ */
 const createFolder = () => {
+  // 检查登录状态
+  if (!checkLogin({ message: '创建文件夹需要登录后才能操作' })) {
+    return
+  }
   closeCreateSheet()
   askFolderName('新建文件夹', (name) => {
     const duplicated = folders.value.some((item) => item.parentId === currentFolderId.value && item.name === name)
