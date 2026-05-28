@@ -293,6 +293,7 @@
 | 2026-05-28 | AI后端完成：FC环境变量配置（飞书SMTP）、pin_verification_codes 表创建、email-service.js 邮件模块 |
 | 2026-05-28 | AI前端完成：V0.2.1 全部前端开发任务（基础设施、登录注册、社区功能、权限控制） |
 | 2026-05-28 | 更新任务看板，阶段4前端任务全部标记为已完成，阶段5联调测试标记为进行中 |
+| 2026-05-28 | 修复后端接口调用问题：/auth/send-code 增加 purpose 参数、/relations/block 传入 creatorUid + creatorName、举报改为弹窗实现 |
 
 ---
 
