@@ -9,6 +9,9 @@
       <view class="nav-placeholder"></view>
     </view>
 
+    <!-- 冲突通知 -->
+    <ConflictNotification />
+
     <!-- 未登录提示 -->
     <view v-if="!isLoggedIn" class="login-banner" @click="goToLogin">
       <view class="banner-content">
@@ -240,6 +243,7 @@ import { ref, onMounted } from 'vue'
 import { authService } from '../../services/pin/index'
 import { checkLogin } from '../../utils/auth-guard'
 import { APP_VERSION } from '../../config/version'
+import ConflictNotification from '../../components/ConflictNotification.vue'
 
 // 应用版本号
 const version = ref(APP_VERSION)

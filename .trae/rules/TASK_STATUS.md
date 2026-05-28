@@ -123,7 +123,7 @@
 | `GET /config/version` | AI后端 | ✅ 已完成 | index.js | 返回版本号、构建时间、环境信息 |
 | **前端功能** | | | | |
 | 离线编辑支持 | AI前端 | ✅ 已完成 | `services/sync/offline-queue.ts` | 离线队列 + 联网同步（P1） |
-| 冲突解决机制 | AI前端 | ⏸️ 待开始 | 相关服务 | 多端冲突提示和解决（P2） |
+| 冲突解决机制 | AI前端 | ✅ 已完成 | `services/sync/conflict-resolver.ts` | 多端冲突提示和解决（P2） |
 | 自动同步优化 | AI前端 | ✅ 已完成 | `services/sync/auto-sync.ts` | 登录全量同步 + 增量同步（P1） |
 
 #### 4.9 其他优化（P1/P2）

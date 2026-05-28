@@ -149,6 +149,20 @@
         "navigationBarTitleText": "修改密码",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/settings/conflicts",
+      "style": {
+        "navigationBarTitleText": "数据冲突",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/guide/index",
+      "style": {
+        "navigationBarTitleText": "新手引导",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {
