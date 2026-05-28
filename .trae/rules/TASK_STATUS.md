@@ -100,15 +100,25 @@
 | 前端部署 | AI前端 | ✅ 已完成 | GitHub Pages | 已通过 GitHub Actions 自动部署到 pindou.picsync.cn |
 | 线上回归测试 | AI测试 | ✅ 已完成 | [飞书文档](https://www.feishu.cn/docx/WzUkdozkbopOBXxndrGc4Xeqn7e) | API 全部通过，但前端线上发现 P0 Bug：注册报错 uni.request unavailable |
 
-### ⚠️ 线上 P0 Bug：待修复后重新发布
+### ✅ 线上 Bug 修复完成（2026-05-28）
 
 | Bug ID | 严重度 | 描述 | 负责人 | 状态 |
 |--------|--------|------|--------|------|
-| BUG-008 | P0 | `uni.request is not available in the current runtime` | AI前端 | 待开始 |
+| BUG-008 | P0 | `uni.request is not available in the current runtime` | AI前端 | ✅ 已修复 |
+| BUG-009 | P0 | `setStorageSync is not a function` | AI前端 | ✅ 已修复 |
+| BUG-010 | P0 | 注册参数错位：email 传成 nickname | AI前端 | ✅ 已修复 |
+| BUG-011 | P1 | 首页社区数据全是假数据（未接入后端 API） | AI前端 | ✅ 已修复 |
+| BUG-012 | P1 | 项目数据登录前后不隔离（共享 localStorage） | AI前端 | ✅ 已修复 |
 
-**根因**：`aliyun-provider.ts:26-36` 通过 `globalThis.uni` 获取 uni 对象，H5 生产构建中 `uni` 未挂载在 `globalThis` 上
+**修复内容**：
+- **BUG-008/009**: 新增 `h5-adapter.ts` 模块，提供 H5 生产构建中 uni API 不可用时 fallback 到原生浏览器 API（fetch/localStorage）的能力
+- **BUG-010**: 参数顺序实际正确，问题由 BUG-008/009 导致
+- **BUG-011**: 修改 `communityService.ensureArtworks()` 优先调用后端 `/artworks` API，失败时 fallback 到本地假数据
+- **BUG-012**: 重构 `storage-keys.ts`，实现用户隔离的存储键（`pin_projects:{uid}`），登录/登出时自动切换
 
-**修复方案**：直接使用 `uni` 全局变量替代 `globalThis.uni`。
+**变更文件**：
+- 新增：`src/services/pin/h5-adapter.ts`
+- 修改：`src/services/pin/storage-adapter.ts`、`aliyun-provider.ts`、`local-provider.ts`、`storage-keys.ts`、`index.ts`
 
 ---
 

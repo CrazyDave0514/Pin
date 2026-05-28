@@ -286,6 +286,20 @@ export const createPinServices = (options: {
 
   const communityService: PinCommunityService = {
     async ensureArtworks() {
+      // 优先从后端 API 获取作品数据（云端模式）
+      try {
+        const remoteArtworks = await provider.getArtworks()
+        if (Array.isArray(remoteArtworks) && remoteArtworks.length > 0) {
+          // 合并本地发布的项目作品
+          const merged = syncPublishedProjectsWithArtworks(remoteArtworks)
+          saveCommunityArtworks(merged)
+          return merged
+        }
+      } catch (error) {
+        // API 调用失败时 fallback 到本地数据
+        console.warn('Failed to fetch artworks from API, fallback to local:', error)
+      }
+      // Fallback 到本地假数据
       return ensureCommunityArtworks()
     },
     async replaceArtworks(artworks: CommunityArtwork[]) {

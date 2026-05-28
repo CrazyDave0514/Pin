@@ -1,3 +1,11 @@
+import {
+  h5GetStorageSync,
+  h5SetStorageSync,
+  h5RemoveStorageSync,
+  h5ClearStorageSync,
+  h5GetStorageInfoSync,
+} from './h5-adapter.ts'
+
 export interface StorageAdapter {
   getSync<T>(key: string): T | undefined
   setSync<T>(key: string, value: T): void
@@ -14,34 +22,30 @@ const cloneValue = <T>(value: T): T => {
   return JSON.parse(JSON.stringify(value)) as T
 }
 
-declare const uni: {
-  getStorageSync: (key: string) => unknown
-  setStorageSync: (key: string, value: unknown) => void
-  removeStorageSync: (key: string) => void
-  clearStorageSync: () => void
-  getStorageInfoSync?: () => { keys: string[] }
-}
-
+/**
+ * UniStorageAdapter - 使用 uni API 的存储适配器
+ * 在 H5 生产构建中自动 fallback 到 localStorage
+ */
 export class UniStorageAdapter implements StorageAdapter {
   getSync<T>(key: string): T | undefined {
-    const value = uni.getStorageSync(key)
+    const value = h5GetStorageSync(key)
     return value === '' || value === undefined ? undefined : (value as T)
   }
 
   setSync<T>(key: string, value: T): void {
-    uni.setStorageSync(key, value)
+    h5SetStorageSync(key, value)
   }
 
   removeSync(key: string): void {
-    uni.removeStorageSync(key)
+    h5RemoveStorageSync(key)
   }
 
   clearSync(): void {
-    uni.clearStorageSync()
+    h5ClearStorageSync()
   }
 
   keysSync(): string[] {
-    const info = uni.getStorageInfoSync?.()
+    const info = h5GetStorageInfoSync()
     return Array.isArray(info?.keys) ? info.keys : []
   }
 }

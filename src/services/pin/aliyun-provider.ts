@@ -1,6 +1,8 @@
 import { getAliyunPinApiConfig, type AliyunPinApiConfig } from './aliyun-config.ts'
+import { h5Request } from './h5-adapter.ts'
 import { LocalPinDataProvider } from './local-provider.ts'
 import type { PinDataProvider } from './provider.ts'
+import { setCurrentUserUid } from './storage-keys.ts'
 import { getStorageAdapter, type StorageAdapter } from './storage-adapter.ts'
 import type { CommunityArtwork, FolderRecord, PointsRecord, ProjectRecord, RecentImportRecord, SettingsRecord, UserProfile } from './types.ts'
 
@@ -18,17 +20,6 @@ interface AliyunApiResponse<T> {
 interface AuthResponse {
   user: UserProfile
   token: string
-}
-
-/**
- * uni-app 全局对象引用
- * 注意：uni-app 生产构建中 uni 是全局变量，不挂载在 globalThis 上
- */
-declare const uni: {
-  request: (options: Record<string, unknown>) => void
-  getStorageSync: (key: string) => string | null
-  setStorageSync: (key: string, value: string) => void
-  removeStorageSync: (key: string) => void
 }
 
 /**
@@ -135,6 +126,7 @@ export class AliyunPinDataProvider implements PinDataProvider {
 
   /**
    * 发起请求
+   * 使用 h5Request 兼容 H5 生产构建环境
    */
   private async request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
     if (!this.baseUrl) {
@@ -144,18 +136,18 @@ export class AliyunPinDataProvider implements PinDataProvider {
     const url = `${this.baseUrl}${path}`
 
     return await new Promise<T>((resolve, reject) => {
-      uni.request({
+      h5Request({
         url,
         method,
         data: body,
         timeout: this.config.timeoutMs || 10000,
         header: this.buildHeaders(),
-        success: (response: { statusCode?: number; data?: AliyunApiResponse<T> | T }) => {
+        success: (response: { statusCode: number; data: unknown }) => {
           const statusCode = Number(response?.statusCode || 0)
           const payload = response?.data
 
           if (statusCode >= 200 && statusCode < 300) {
-            if (payload && typeof payload === 'object' && 'success' in payload) {
+            if (payload && typeof payload === 'object' && 'success' in (payload as Record<string, unknown>)) {
               const apiPayload = payload as AliyunApiResponse<T>
               if (apiPayload.success === false) {
                 reject(new Error(apiPayload.message || `Aliyun API request failed: ${path}`))
@@ -171,7 +163,7 @@ export class AliyunPinDataProvider implements PinDataProvider {
 
           reject(new Error(`Aliyun API request failed with status ${statusCode}: ${path}`))
         },
-        fail: (error: { errMsg?: string }) => {
+        fail: (error: { errMsg: string }) => {
           reject(new Error(error?.errMsg || `Aliyun API request failed: ${path}`))
         },
       })
@@ -217,6 +209,11 @@ export class AliyunPinDataProvider implements PinDataProvider {
     // 设置当前用户到本地存储（兼容本地模式）
     await this.localProvider.setCurrentUser(response.user)
 
+    // 设置用户 UID 用于存储隔离
+    if (response.user?.uid) {
+      setCurrentUserUid(response.user.uid)
+    }
+
     return response.user
   }
 
@@ -237,6 +234,11 @@ export class AliyunPinDataProvider implements PinDataProvider {
     // 设置当前用户到本地存储（兼容本地模式）
     await this.localProvider.setCurrentUser(response.user)
 
+    // 设置用户 UID 用于存储隔离
+    if (response.user?.uid) {
+      setCurrentUserUid(response.user.uid)
+    }
+
     return response.user
   }
 
@@ -246,6 +248,8 @@ export class AliyunPinDataProvider implements PinDataProvider {
   async logout(): Promise<void> {
     this.saveToken(null)
     await this.localProvider.removeCurrentUser()
+    // 清除用户 UID，恢复未登录状态的存储键
+    setCurrentUserUid(null)
   }
 
   /**

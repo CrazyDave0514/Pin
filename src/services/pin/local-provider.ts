@@ -1,4 +1,4 @@
-import { PIN_STORAGE_KEYS } from './storage-keys.ts'
+import { PIN_STORAGE_KEYS, setCurrentUserUid } from './storage-keys.ts'
 import type { PinDataProvider } from './provider.ts'
 import type { CommunityArtwork, FolderRecord, PointsRecord, ProjectRecord, RecentImportRecord, SettingsRecord, UserProfile } from './types.ts'
 import type { StorageAdapter } from './storage-adapter.ts'
@@ -11,6 +11,18 @@ export class LocalPinDataProvider implements PinDataProvider {
 
   constructor(storageAdapter: StorageAdapter) {
     this.storageAdapter = storageAdapter
+    // 初始化时恢复用户 UID（如果已登录）
+    this.restoreUserUid()
+  }
+
+  /**
+   * 从存储中恢复用户 UID
+   */
+  private restoreUserUid(): void {
+    const user = this.storageAdapter.getSync<UserProfile>(PIN_STORAGE_KEYS.user)
+    if (user?.uid) {
+      setCurrentUserUid(user.uid)
+    }
   }
 
   private getValue<T>(key: string, fallback: T): T {
@@ -29,13 +41,21 @@ export class LocalPinDataProvider implements PinDataProvider {
   async setCurrentUser(user: UserProfile | null): Promise<void> {
     if (!user) {
       this.storageAdapter.removeSync(PIN_STORAGE_KEYS.user)
+      // 清除用户 UID
+      setCurrentUserUid(null)
       return
     }
     this.setValue(PIN_STORAGE_KEYS.user, user)
+    // 设置用户 UID 用于存储隔离
+    if (user.uid) {
+      setCurrentUserUid(user.uid)
+    }
   }
 
   async removeCurrentUser(): Promise<void> {
     this.storageAdapter.removeSync(PIN_STORAGE_KEYS.user)
+    // 清除用户 UID
+    setCurrentUserUid(null)
   }
 
   async getUserList(): Promise<UserProfile[]> {
