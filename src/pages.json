@@ -142,6 +142,13 @@
         "navigationBarTitleText": "黑名单管理",
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/settings/change-password",
+      "style": {
+        "navigationBarTitleText": "修改密码",
+        "navigationStyle": "custom"
+      }
     }
   ],
   "globalStyle": {

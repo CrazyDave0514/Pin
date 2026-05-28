@@ -1,5 +1,5 @@
 <template>
-  <!-- 设置页面 -->
+  <!-- 设置页面 V0.2.1 - 改造版（添加权限控制/登录引导） -->
   <view class="settings-page">
     <view class="page-nav">
       <view class="nav-back" @click="goBack">
@@ -9,19 +9,30 @@
       <view class="nav-placeholder"></view>
     </view>
 
+    <!-- 未登录提示 -->
+    <view v-if="!isLoggedIn" class="login-banner" @click="goToLogin">
+      <view class="banner-content">
+        <text class="banner-title">登录后体验完整功能</text>
+        <text class="banner-desc">同步数据、收藏作品、参与社区互动</text>
+      </view>
+      <view class="banner-btn">
+        <text>去登录</text>
+      </view>
+    </view>
+
     <!-- 账号设置 -->
     <view class="settings-section">
       <view class="section-title">账号设置</view>
       <view class="settings-list">
-        <view class="setting-item" @click="editProfile">
+        <view class="setting-item" :class="{ disabled: !isLoggedIn }" @click="editProfile">
           <text class="item-label">编辑资料</text>
           <text class="item-arrow">›</text>
         </view>
-        <view class="setting-item" @click="changePassword">
+        <view class="setting-item" :class="{ disabled: !isLoggedIn }" @click="changePassword">
           <text class="item-label">修改密码</text>
           <text class="item-arrow">›</text>
         </view>
-        <view class="setting-item" @click="manageDevices">
+        <view class="setting-item" :class="{ disabled: !isLoggedIn }" @click="manageDevices">
           <text class="item-label">设备管理</text>
           <text class="item-arrow">›</text>
         </view>
@@ -32,38 +43,38 @@
     <view class="settings-section">
       <view class="section-title">通知设置</view>
       <view class="settings-list">
-        <view class="setting-item switch-item">
+        <view class="setting-item switch-item" :class="{ disabled: !isLoggedIn }">
           <text class="item-label">接收推送通知</text>
-          <!-- 推送通知开关 - 使用主题主色 -->
           <switch
             :checked="settings.pushEnabled"
+            :disabled="!isLoggedIn"
             @change="toggleSetting('pushEnabled')"
             color="var(--color-primary)"
           />
         </view>
-        <view class="setting-item switch-item">
+        <view class="setting-item switch-item" :class="{ disabled: !isLoggedIn }">
           <text class="item-label">邮件通知</text>
-          <!-- 邮件通知开关 - 使用主题主色 -->
           <switch
             :checked="settings.emailEnabled"
+            :disabled="!isLoggedIn"
             @change="toggleSetting('emailEnabled')"
             color="var(--color-primary)"
           />
         </view>
-        <view class="setting-item switch-item">
+        <view class="setting-item switch-item" :class="{ disabled: !isLoggedIn }">
           <text class="item-label">新粉丝提醒</text>
-          <!-- 新粉丝提醒开关 - 使用主题主色 -->
           <switch
             :checked="settings.followerNotify"
+            :disabled="!isLoggedIn"
             @change="toggleSetting('followerNotify')"
             color="var(--color-primary)"
           />
         </view>
-        <view class="setting-item switch-item">
+        <view class="setting-item switch-item" :class="{ disabled: !isLoggedIn }">
           <text class="item-label">作品被收藏提醒</text>
-          <!-- 作品被收藏提醒开关 - 使用主题主色 -->
           <switch
             :checked="settings.favoriteNotify"
+            :disabled="!isLoggedIn"
             @change="toggleSetting('favoriteNotify')"
             color="var(--color-primary)"
           />
@@ -75,25 +86,25 @@
     <view class="settings-section">
       <view class="section-title">隐私设置</view>
       <view class="settings-list">
-        <view class="setting-item switch-item">
+        <view class="setting-item switch-item" :class="{ disabled: !isLoggedIn }">
           <text class="item-label">公开我的作品</text>
-          <!-- 公开作品开关 - 使用主题主色 -->
           <switch
             :checked="settings.publicWorks"
+            :disabled="!isLoggedIn"
             @change="toggleSetting('publicWorks')"
             color="var(--color-primary)"
           />
         </view>
-        <view class="setting-item switch-item">
+        <view class="setting-item switch-item" :class="{ disabled: !isLoggedIn }">
           <text class="item-label">允许他人私信</text>
-          <!-- 允许私信开关 - 使用主题主色 -->
           <switch
             :checked="settings.allowMessage"
+            :disabled="!isLoggedIn"
             @change="toggleSetting('allowMessage')"
             color="var(--color-primary)"
           />
         </view>
-        <view class="setting-item" @click="manageBlacklist">
+        <view class="setting-item" :class="{ disabled: !isLoggedIn }" @click="manageBlacklist">
           <text class="item-label">黑名单管理</text>
           <text class="item-arrow">›</text>
         </view>
@@ -145,7 +156,7 @@
     </view>
 
     <!-- 账号安全 -->
-    <view class="settings-section">
+    <view v-if="isLoggedIn" class="settings-section">
       <view class="section-title">账号安全</view>
       <view class="settings-list">
         <view class="setting-item" @click="showDeleteAccount">
@@ -227,9 +238,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { authService } from '../../services/pin/index'
+import { checkLogin } from '../../utils/auth-guard'
+import { APP_VERSION } from '../../config/version'
 
 // 应用版本号
-const version = ref('0.1.8')
+const version = ref(APP_VERSION)
 
 // 缓存大小
 const cacheSize = ref('0 MB')
@@ -256,8 +269,10 @@ const settings = ref({
  * 加载设置数据
  */
 const loadSettings = async () => {
-  settings.value = await authService.getSettings()
   isLoggedIn.value = await authService.isLoggedIn()
+  if (isLoggedIn.value) {
+    settings.value = await authService.getSettings()
+  }
   calculateCacheSize()
 }
 
@@ -265,7 +280,6 @@ const loadSettings = async () => {
  * 计算缓存大小
  */
 const calculateCacheSize = () => {
-  // 模拟计算缓存大小
   const size = Math.random() * 100
   cacheSize.value = size.toFixed(1) + ' MB'
 }
@@ -275,6 +289,10 @@ const calculateCacheSize = () => {
  * @param key 设置项键名
  */
 const toggleSetting = async (key: keyof typeof settings.value) => {
+  if (!isLoggedIn.value) {
+    checkLogin({ message: '该设置需要登录后才能修改' })
+    return
+  }
   settings.value[key] = !settings.value[key]
   await authService.setSettings(settings.value)
 }
@@ -283,6 +301,7 @@ const toggleSetting = async (key: keyof typeof settings.value) => {
  * 编辑资料
  */
 const editProfile = () => {
+  if (!checkLogin({ message: '编辑资料需要登录后才能操作' })) return
   uni.navigateTo({ url: '/pages/profile/edit' })
 }
 
@@ -290,13 +309,15 @@ const editProfile = () => {
  * 修改密码
  */
 const changePassword = () => {
-  uni.showToast({ title: '功能开发中', icon: 'none' })
+  if (!checkLogin({ message: '修改密码需要登录后才能操作' })) return
+  uni.navigateTo({ url: '/pages/settings/change-password' })
 }
 
 /**
  * 设备管理
  */
 const manageDevices = () => {
+  if (!checkLogin({ message: '设备管理需要登录后才能操作' })) return
   uni.showToast({ title: '功能开发中', icon: 'none' })
 }
 
@@ -304,7 +325,8 @@ const manageDevices = () => {
  * 黑名单管理
  */
 const manageBlacklist = () => {
-  uni.showToast({ title: '功能开发中', icon: 'none' })
+  if (!checkLogin({ message: '黑名单管理需要登录后才能操作' })) return
+  uni.navigateTo({ url: '/pages/settings/blocklist' })
 }
 
 /**
@@ -403,6 +425,13 @@ const confirmDeleteAccount = async () => {
   }, 1500)
 }
 
+/**
+ * 跳转到登录页
+ */
+const goToLogin = () => {
+  uni.navigateTo({ url: '/pages/login/index' })
+}
+
 onMounted(() => {
   void loadSettings()
 })
@@ -452,6 +481,46 @@ const goBack = () => {
   color: var(--color-text-primary);
 }
 
+/* 登录引导横幅 */
+.login-banner {
+  margin: 24rpx;
+  padding: 32rpx;
+  background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-soft) 100%);
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.banner-content {
+  flex: 1;
+}
+
+.banner-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.banner-desc {
+  font-size: 24rpx;
+  color: var(--color-text-secondary);
+}
+
+.banner-btn {
+  padding: 16rpx 32rpx;
+  background-color: var(--color-primary);
+  border-radius: 32rpx;
+}
+
+.banner-btn text {
+  font-size: 26rpx;
+  color: var(--color-text-inverse);
+  font-weight: 500;
+}
+
 /* 设置区块 */
 .settings-section {
   background: var(--color-bg-panel);
@@ -483,6 +552,10 @@ const goBack = () => {
 
 .setting-item.switch-item {
   padding: 16rpx 0;
+}
+
+.setting-item.disabled {
+  opacity: 0.5;
 }
 
 .item-label {
