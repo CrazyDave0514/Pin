@@ -264,12 +264,11 @@ export const createPinServices = (options: {
     async getRecords() {
       return await provider.getPointsRecords()
     },
+    /**
+     * 获取积分记录（仅返回真实记录，不包含默认数据）
+     */
     async getDisplayRecords() {
-      const records = await provider.getPointsRecords()
-      if (records.length > 0) return records
-      const defaults = DEFAULT_POINTS_RECORDS()
-      await provider.setPointsRecords(defaults)
-      return defaults
+      return await provider.getPointsRecords()
     },
     async addRecord(title: string, amount: number) {
       const records = await provider.getPointsRecords()
@@ -324,6 +323,9 @@ export const createPinServices = (options: {
     },
     async getFollowedCreators() {
       return provider.getFollowedCreators()
+    },
+    async getBlockedCreators() {
+      return provider.getBlockedCreators()
     },
     async getInteractionState(artworkId: string, creatorName: string): Promise<ArtworkInteractionState> {
       const [liked, favorited, purchased, followed] = await Promise.all([

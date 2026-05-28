@@ -154,6 +154,14 @@ export class LocalPinDataProvider implements PinDataProvider {
     this.setValue(PIN_STORAGE_KEYS.followedCreators, Array.from(new Set(creators)))
   }
 
+  async getBlockedCreators(): Promise<string[]> {
+    return safeArray<string>(this.getValue(PIN_STORAGE_KEYS.blockedCreators, []))
+  }
+
+  async setBlockedCreators(creators: string[]): Promise<void> {
+    this.setValue(PIN_STORAGE_KEYS.blockedCreators, Array.from(new Set(creators)))
+  }
+
   async getSearchHistory(): Promise<string[]> {
     return safeArray<string>(this.getValue(PIN_STORAGE_KEYS.searchHistory, []))
   }

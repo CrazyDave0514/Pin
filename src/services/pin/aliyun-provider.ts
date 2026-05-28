@@ -463,6 +463,20 @@ export class AliyunPinDataProvider implements PinDataProvider {
     )
   }
 
+  getBlockedCreators(): Promise<string[]> {
+    return this.withFallback(
+      () => this.request<string[]>('GET', '/relations/blocked-creators'),
+      () => this.localProvider.getBlockedCreators()
+    )
+  }
+
+  setBlockedCreators(creators: string[]): Promise<void> {
+    return this.withFallback(
+      () => this.request<void>('PUT', '/relations/blocked-creators', { creators }),
+      () => this.localProvider.setBlockedCreators(creators)
+    )
+  }
+
   getSearchHistory(): Promise<string[]> {
     return this.withFallback(
       () => this.request<string[]>('GET', '/search-history'),

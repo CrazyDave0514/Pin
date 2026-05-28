@@ -188,6 +188,7 @@ export interface PinCommunityService {
   getFavoritedArtworkIds(): Promise<string[]>
   getPurchasedArtworkIds(): Promise<string[]>
   getFollowedCreators(): Promise<string[]>
+  getBlockedCreators(): Promise<string[]>
   getInteractionState(artworkId: string, creatorName: string): Promise<ArtworkInteractionState>
   toggleLike(artworkId: string): Promise<ArtworkToggleResult>
   toggleFavorite(artworkId: string): Promise<ArtworkToggleResult>

@@ -19,76 +19,91 @@
 
     <!-- 瀑布流内容区 -->
     <scroll-view class="waterfall-container" scroll-y :show-scrollbar="false" @scrolltolower="onLoadMore">
-      <view class="waterfall-list">
-        <view
-          v-for="artwork in displayArtworks"
-          :key="artwork.id"
-          class="artwork-card"
-          @click="goToArtworkDetail(artwork)"
-        >
-          <!-- 封面区域 - Canvas 动态渲染拼豆图案 -->
-          <view class="cover-wrapper">
-            <image
-              v-if="artwork.thumbnail"
-              class="artwork-cover-image"
-              :src="artwork.thumbnail"
-              mode="aspectFit"
-            />
-            <view v-else class="artwork-cover-placeholder">
-              <text class="placeholder-initial">{{ (artwork.name || 'P').slice(0, 1) }}</text>
-            </view>
-            <!-- 积分显示在封面右上角 -->
-            <view class="points-badge">
-              <text class="points-value">{{ artwork.points > 0 ? `${artwork.points} 积分` : '免费' }}</text>
-            </view>
-          </view>
+      <!-- 加载中状态 -->
+      <view v-if="isLoading" class="loading-state">
+        <view class="loading-spinner"></view>
+        <text class="loading-text">加载中...</text>
+      </view>
 
-          <view class="artwork-info">
-            <text class="artwork-name">{{ artwork.name }}</text>
-            <view class="artwork-meta">
-              <view class="creator">
-                <image
-                  v-if="!isPresetAvatarValue(artwork.creatorAvatar) && artwork.creatorAvatar"
-                  class="creator-avatar"
-                  :src="artwork.creatorAvatar"
-                  mode="aspectFill"
-                />
-                <image
-                  v-else-if="getPresetAvatarImage(artwork.creatorAvatar)"
-                  class="creator-avatar"
-                  :src="getPresetAvatarImage(artwork.creatorAvatar)"
-                  mode="aspectFill"
-                />
-                <view
-                  v-else
-                  class="creator-avatar preset"
-                  :style="getPresetAvatarStyle(artwork.creatorAvatar)"
-                >
-                  <text class="creator-avatar-text">{{ getPresetAvatarGlyph(artwork.creatorAvatar) }}</text>
-                </view>
-                <text class="creator-name">{{ artwork.creatorName }}</text>
+      <!-- 空状态展示 -->
+      <view v-else-if="filteredArtworks.length === 0" class="empty-state-container">
+        <image class="empty-icon" src="/static/assets/v015/icons/empty.png" mode="aspectFit" />
+        <text class="empty-title">{{ emptyStateTitle }}</text>
+        <text class="empty-desc">{{ emptyStateDesc }}</text>
+        <view v-if="activeTab === 'following'" class="empty-action" @click="goToDiscover">
+          <text class="empty-action-text">去发现更多作品</text>
+        </view>
+      </view>
+
+      <!-- 作品列表 -->
+      <template v-else>
+        <view class="waterfall-list">
+          <view
+            v-for="artwork in displayArtworks"
+            :key="artwork.id"
+            class="artwork-card"
+            @click="goToArtworkDetail(artwork)"
+          >
+            <!-- 封面区域 - Canvas 动态渲染拼豆图案 -->
+            <view class="cover-wrapper">
+              <image
+                v-if="artwork.thumbnail"
+                class="artwork-cover-image"
+                :src="artwork.thumbnail"
+                mode="aspectFit"
+              />
+              <view v-else class="artwork-cover-placeholder">
+                <text class="placeholder-initial">{{ (artwork.name || 'P').slice(0, 1) }}</text>
               </view>
-              <view class="likes">
-                <image class="like-icon" src="/static/assets/v015/icons/favorite.png" mode="aspectFit" />
-                <text class="like-count">{{ artwork.likes }}</text>
+              <!-- 积分显示在封面右上角 -->
+              <view class="points-badge">
+                <text class="points-value">{{ artwork.points > 0 ? `${artwork.points} 积分` : '免费' }}</text>
+              </view>
+            </view>
+
+            <view class="artwork-info">
+              <text class="artwork-name">{{ artwork.name }}</text>
+              <view class="artwork-meta">
+                <view class="creator">
+                  <image
+                    v-if="!isPresetAvatarValue(artwork.creatorAvatar) && artwork.creatorAvatar"
+                    class="creator-avatar"
+                    :src="artwork.creatorAvatar"
+                    mode="aspectFill"
+                  />
+                  <image
+                    v-else-if="getPresetAvatarImage(artwork.creatorAvatar)"
+                    class="creator-avatar"
+                    :src="getPresetAvatarImage(artwork.creatorAvatar)"
+                    mode="aspectFill"
+                  />
+                  <view
+                    v-else
+                    class="creator-avatar preset"
+                    :style="getPresetAvatarStyle(artwork.creatorAvatar)"
+                  >
+                    <text class="creator-avatar-text">{{ getPresetAvatarGlyph(artwork.creatorAvatar) }}</text>
+                  </view>
+                  <text class="creator-name">{{ artwork.creatorName }}</text>
+                </view>
+                <view class="likes">
+                  <image class="like-icon" src="/static/assets/v015/icons/favorite.png" mode="aspectFit" />
+                  <text class="like-count">{{ artwork.likes }}</text>
+                </view>
               </view>
             </view>
           </view>
         </view>
-      </view>
 
-      <!-- 加载更多 -->
-      <view v-if="displayArtworks.length < artworks.length" class="load-more">
-        <text class="load-more-text">加载更多...</text>
-      </view>
+        <!-- 加载更多 -->
+        <view v-if="displayArtworks.length < filteredArtworks.length" class="load-more">
+          <text class="load-more-text">加载更多...</text>
+        </view>
 
-      <view v-if="displayArtworks.length >= artworks.length && artworks.length > 0" class="load-more">
-        <text class="load-more-text">已经到底啦～</text>
-      </view>
-
-      <view v-if="artworks.length === 0" class="empty-state">
-        <text class="empty-text">暂无作品</text>
-      </view>
+        <view v-if="displayArtworks.length >= filteredArtworks.length && filteredArtworks.length > 0" class="load-more">
+          <text class="load-more-text">已经到底啦～</text>
+        </view>
+      </template>
     </scroll-view>
   </view>
 </template>
@@ -105,12 +120,26 @@ const activeTab = ref('recommend')
 /** 全部作品数据 */
 const artworks = ref<any[]>([])
 const followedCreators = ref<string[]>([])
+const blockedCreators = ref<string[]>([])
+
+/** 加载状态 */
+const isLoading = ref(false)
 
 /** 当前展示的作品数量（分页加载） */
 const pageSize = 20
 const displayCount = ref(pageSize)
 
-/** 当前展示的作品列表 - 按 tab 排序后分页 */
+/**
+ * 过滤后的作品列表（排除黑名单作者）
+ */
+const filteredArtworks = computed(() => {
+  // 过滤掉黑名单作者的作品
+  return artworks.value.filter((item) => !blockedCreators.value.includes(item.creatorName))
+})
+
+/**
+ * 当前展示的作品列表 - 按 tab 排序后分页
+ */
 const displayArtworks = computed(() => {
   const now = Date.now()
   const DAY = 24 * 3600 * 1000
@@ -119,18 +148,18 @@ const displayArtworks = computed(() => {
 
   if (activeTab.value === 'hot') {
     /** 热门：按点赞数降序 */
-    sorted = [...artworks.value].sort((a, b) => b.likes - a.likes)
+    sorted = [...filteredArtworks.value].sort((a, b) => b.likes - a.likes)
   } else if (activeTab.value === 'latest') {
     /** 最新：按创建时间降序 */
-    sorted = [...artworks.value].sort((a, b) => b.createdAt - a.createdAt)
+    sorted = [...filteredArtworks.value].sort((a, b) => b.createdAt - a.createdAt)
   } else if (activeTab.value === 'following') {
     /** 关注：展示已关注创作者的公开作品 */
-    sorted = [...artworks.value]
+    sorted = [...filteredArtworks.value]
       .filter((item) => followedCreators.value.includes(item.creatorName))
       .sort((a, b) => b.createdAt - a.createdAt)
   } else {
     /** 推荐：综合评分 = 点赞数 * 2 + 浏览量 * 0.3 + 新鲜度奖励 */
-    sorted = [...artworks.value].sort((a, b) => {
+    sorted = [...filteredArtworks.value].sort((a, b) => {
       const scoreA = a.likes * 2 + a.viewCount * 0.3 + Math.max(0, 1 - (now - a.createdAt) / (7 * DAY)) * 50
       const scoreB = b.likes * 2 + b.viewCount * 0.3 + Math.max(0, 1 - (now - b.createdAt) / (7 * DAY)) * 50
       return scoreB - scoreA
@@ -138,6 +167,34 @@ const displayArtworks = computed(() => {
   }
 
   return sorted.slice(0, displayCount.value)
+})
+
+/**
+ * 空状态标题
+ */
+const emptyStateTitle = computed(() => {
+  switch (activeTab.value) {
+    case 'following':
+      return '还没有关注任何创作者'
+    case 'hot':
+      return '暂无热门作品'
+    case 'latest':
+      return '暂无最新作品'
+    default:
+      return '暂无推荐作品'
+  }
+})
+
+/**
+ * 空状态描述
+ */
+const emptyStateDesc = computed(() => {
+  switch (activeTab.value) {
+    case 'following':
+      return '关注喜欢的创作者，在这里查看他们的最新作品'
+    default:
+      return '稍后再来看看吧～'
+  }
 })
 
 /** 切换 tab 时重置加载数量 */
@@ -163,11 +220,28 @@ onShow(() => {
 
 /**
  * 加载作品数据
- * 优先从本地存储读取，版本不匹配或无数据时使用预生成的 100 条假数据
+ * 优先从后端 API 获取作品数据，同时加载关注列表和黑名单
  */
 const loadArtworks = async () => {
-  followedCreators.value = await communityService.getFollowedCreators()
-  artworks.value = (await communityService.ensureArtworks()).filter((item: any) => item.isPublic !== false)
+  isLoading.value = true
+  try {
+    // 并行加载关注列表、黑名单和作品数据
+    const [followed, blocked] = await Promise.all([
+      communityService.getFollowedCreators(),
+      communityService.getBlockedCreators(),
+    ])
+    followedCreators.value = followed
+    blockedCreators.value = blocked
+
+    // 加载作品数据（过滤掉非公开作品）
+    const allArtworks = await communityService.ensureArtworks()
+    artworks.value = allArtworks.filter((item: any) => item.isPublic !== false)
+  } catch (error) {
+    console.error('Failed to load artworks:', error)
+    uni.showToast({ title: '加载失败，请重试', icon: 'none' })
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const getPresetAvatarGlyph = (value?: string) => {
@@ -187,8 +261,8 @@ const getPresetAvatarStyle = (value?: string) => {
  * 加载更多作品
  */
 const onLoadMore = () => {
-  if (displayCount.value < artworks.value.length) {
-    displayCount.value = Math.min(displayCount.value + pageSize, artworks.value.length)
+  if (displayCount.value < filteredArtworks.value.length) {
+    displayCount.value = Math.min(displayCount.value + pageSize, filteredArtworks.value.length)
   }
 }
 
@@ -199,8 +273,18 @@ const goToSearch = () => {
   uni.navigateTo({ url: '/pages/search/index' })
 }
 
+/**
+ * 跳转到作品详情页
+ */
 const goToArtworkDetail = (artwork: any) => {
   uni.navigateTo({ url: `/pages/artwork-detail/index?id=${artwork.id}` })
+}
+
+/**
+ * 跳转到发现页（首页推荐）
+ */
+const goToDiscover = () => {
+  activeTab.value = 'recommend'
 }
 </script>
 
@@ -465,7 +549,87 @@ const goToArtworkDetail = (artwork: any) => {
   color: var(--color-text-tertiary);
 }
 
+/** 加载状态容器 */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 400rpx;
+}
+
+/** 加载动画 */
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 4rpx solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/** 加载文字 */
+.loading-text {
+  margin-top: 16rpx;
+  font-size: 28rpx;
+  color: var(--color-text-secondary);
+}
+
 /** 空状态容器 */
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 48rpx;
+}
+
+/** 空状态图标 */
+.empty-icon {
+  width: 160rpx;
+  height: 160rpx;
+  margin-bottom: 32rpx;
+  opacity: 0.6;
+}
+
+/** 空状态标题 */
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin-bottom: 16rpx;
+}
+
+/** 空状态描述 */
+.empty-desc {
+  font-size: 26rpx;
+  color: var(--color-text-secondary);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/** 空状态操作按钮 */
+.empty-action {
+  margin-top: 48rpx;
+  padding: 20rpx 48rpx;
+  background-color: var(--color-primary);
+  border-radius: 32rpx;
+}
+
+/** 空状态操作文字 */
+.empty-action-text {
+  font-size: 28rpx;
+  color: var(--color-text-inverse);
+  font-weight: 600;
+}
+
+/** 旧空状态（兼容） */
 .empty-state {
   display: flex;
   align-items: center;
@@ -473,7 +637,7 @@ const goToArtworkDetail = (artwork: any) => {
   height: 400rpx;
 }
 
-/** 空状态提示文字 */
+/** 旧空状态提示文字 */
 .empty-text {
   font-size: 28rpx;
   color: var(--color-text-tertiary);

@@ -1,14 +1,55 @@
 <script>
+import { initNetworkStatus } from './services/sync/network-status.ts'
+import { initAutoSync } from './services/sync/auto-sync.ts'
+
 export default {
   onLaunch: function () {
     console.log('App Launch')
+    // 初始化网络状态监听
+    initNetworkStatus()
+    // 初始化自动同步服务
+    initAutoSync()
   },
   onShow: function () {
     console.log('App Show')
+    // 检查是否需要显示新手引导
+    this.checkAndShowGuide()
   },
   onHide: function () {
     console.log('App Hide')
   },
+  methods: {
+    // 检查并显示新手引导
+    checkAndShowGuide() {
+      try {
+        const hasCompleted = uni.getStorageSync('pin_guide_completed')
+        const isFirstLaunch = uni.getStorageSync('pin_first_launch')
+
+        // 首次启动标记
+        if (!isFirstLaunch) {
+          uni.setStorageSync('pin_first_launch', true)
+          // 首次启动，显示引导
+          this.showGuide()
+        } else if (!hasCompleted) {
+          // 未完成引导，继续显示
+          this.showGuide()
+        }
+      } catch (e) {
+        console.warn('Check guide status failed:', e)
+      }
+    },
+    // 显示新手引导
+    showGuide() {
+      // 延迟显示，等待页面加载完成
+      setTimeout(() => {
+        uni.navigateTo({
+          url: '/pages/guide/index',
+          animationType: 'fade-in',
+          animationDuration: 300
+        })
+      }, 500)
+    }
+  }
 }
 </script>
 

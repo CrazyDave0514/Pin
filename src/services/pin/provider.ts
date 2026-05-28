@@ -29,6 +29,8 @@ export interface PinDataProvider {
   setPurchasedArtworkIds(ids: string[]): Promise<void>
   getFollowedCreators(): Promise<string[]>
   setFollowedCreators(creators: string[]): Promise<void>
+  getBlockedCreators(): Promise<string[]>
+  setBlockedCreators(creators: string[]): Promise<void>
   getSearchHistory(): Promise<string[]>
   setSearchHistory(history: string[]): Promise<void>
   getSettings(): Promise<Partial<SettingsRecord>>
