@@ -9,6 +9,7 @@ import {
   publishProjectAsArtwork,
   saveCommunityArtworks,
   syncProjectArtwork,
+  syncPublishedProjectsWithArtworks,
   unpublishProjectArtwork,
   updateArtwork,
   type CommunityArtwork,

@@ -65,7 +65,7 @@ export class AliyunPinDataProvider implements PinDataProvider {
    */
   private loadToken() {
     try {
-      const token = this.storageAdapter.getItem('pin_auth_token')
+      const token = this.storageAdapter.getSync<string>('pin_auth_token')
       if (token && typeof token === 'string') {
         this._token = token
       }
@@ -81,9 +81,9 @@ export class AliyunPinDataProvider implements PinDataProvider {
     this._token = token
     try {
       if (token) {
-        this.storageAdapter.setItem('pin_auth_token', token)
+        this.storageAdapter.setSync('pin_auth_token', token)
       } else {
-        this.storageAdapter.removeItem('pin_auth_token')
+        this.storageAdapter.removeSync('pin_auth_token')
       }
     } catch (e) {
       console.warn('Failed to save token:', e)
