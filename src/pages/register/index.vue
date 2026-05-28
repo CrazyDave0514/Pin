@@ -1,12 +1,12 @@
 <template>
-  <!-- 登录页面 V0.2.1 - 改造版 -->
-  <view class="login-page">
+  <!-- 独立注册页面 V0.2.1 -->
+  <view class="register-page">
     <!-- 顶部导航 -->
     <view class="nav-bar">
       <view class="back-btn" @click="goBack">
         <image class="back-icon" src="/static/assets/v015/icons/back.png" mode="aspectFit" />
       </view>
-      <text class="nav-title">登录</text>
+      <text class="nav-title">注册账号</text>
       <view class="nav-placeholder"></view>
     </view>
 
@@ -15,42 +15,101 @@
       <view class="brand-icon">
         <text class="brand-emoji">🎨</text>
       </view>
-      <text class="brand-title">欢迎回来</text>
-      <text class="brand-subtitle">登录 Pin 拼豆创作</text>
+      <text class="brand-title">创建新账号</text>
+      <text class="brand-subtitle">加入 Pin 拼豆创作社区</text>
     </view>
 
     <!-- 表单区域 -->
     <view class="form-section">
       <!-- 用户名 -->
       <view class="input-group">
-        <text class="input-label">用户名</text>
+        <text class="input-label">用户名 <text class="required-mark">*</text></text>
         <input
           class="input-field"
           v-model="username"
-          placeholder="请输入用户名"
+          placeholder="3-16个字符，支持中文、英文、数字和下划线"
           placeholder-class="placeholder-text"
           maxlength="16"
           @input="clearError"
         />
       </view>
 
+      <!-- 邮箱 -->
+      <view class="input-group">
+        <text class="input-label">邮箱 <text class="required-mark">*</text></text>
+        <view class="email-input-wrapper">
+          <input
+            class="input-field email-field"
+            v-model="email"
+            type="text"
+            placeholder="请输入邮箱地址"
+            placeholder-class="placeholder-text"
+            maxlength="64"
+            @input="clearError"
+          />
+          <button 
+            class="code-btn" 
+            :disabled="!isEmailValid || codeCountdown > 0 || sendingCode"
+            @click="sendVerifyCode"
+          >
+            <text v-if="sendingCode" class="code-btn-text">发送中...</text>
+            <text v-else-if="codeCountdown > 0" class="code-btn-text">{{ codeCountdown }}s</text>
+            <text v-else class="code-btn-text">获取验证码</text>
+          </button>
+        </view>
+      </view>
+
+      <!-- 验证码 -->
+      <view class="input-group">
+        <text class="input-label">验证码 <text class="required-mark">*</text></text>
+        <input
+          class="input-field"
+          v-model="verifyCode"
+          placeholder="请输入邮箱验证码"
+          placeholder-class="placeholder-text"
+          maxlength="6"
+          @input="clearError"
+        />
+      </view>
+
+      <!-- 昵称 -->
+      <view class="input-group">
+        <text class="input-label">昵称</text>
+        <input
+          class="input-field"
+          v-model="nickname"
+          placeholder="给自己起个昵称（可选）"
+          placeholder-class="placeholder-text"
+          maxlength="16"
+        />
+      </view>
+
       <!-- 密码 -->
       <view class="input-group">
-        <text class="input-label">密码</text>
+        <text class="input-label">密码 <text class="required-mark">*</text></text>
         <input
           class="input-field"
           v-model="password"
           type="password"
-          placeholder="请输入密码"
+          placeholder="至少6个字符"
           placeholder-class="placeholder-text"
           maxlength="32"
           @input="clearError"
         />
       </view>
 
-      <!-- 忘记密码 -->
-      <view class="forgot-password-row">
-        <text class="forgot-password-link" @click="goToForgotPassword">忘记密码？</text>
+      <!-- 确认密码 -->
+      <view class="input-group">
+        <text class="input-label">确认密码 <text class="required-mark">*</text></text>
+        <input
+          class="input-field"
+          v-model="confirmPassword"
+          type="password"
+          placeholder="再次输入密码"
+          placeholder-class="placeholder-text"
+          maxlength="32"
+          @input="clearError"
+        />
       </view>
 
       <!-- 协议勾选 -->
@@ -71,21 +130,21 @@
         <text class="error-text">{{ error }}</text>
       </view>
 
-      <!-- 登录按钮 -->
+      <!-- 提交按钮 -->
       <button 
         class="submit-btn" 
         :class="{ loading: loading }"
         :disabled="!isFormValid || loading" 
-        @click="handleLogin"
+        @click="handleRegister"
       >
-        <text v-if="loading" class="btn-text">登录中...</text>
-        <text v-else class="btn-text">登录</text>
+        <text v-if="loading" class="btn-text">注册中...</text>
+        <text v-else class="btn-text">注册</text>
       </button>
 
-      <!-- 注册入口 -->
-      <view class="register-link-row">
-        <text class="register-link-text">还没有账号？</text>
-        <text class="register-link" @click="goToRegister">立即注册</text>
+      <!-- 登录入口 -->
+      <view class="login-link-row">
+        <text class="login-link-text">已有账号？</text>
+        <text class="login-link" @click="goToLogin">立即登录</text>
       </view>
     </view>
   </view>
@@ -97,12 +156,18 @@ import { pinDataProvider } from '../../services/pin/index'
 
 // 表单数据
 const username = ref('')
+const email = ref('')
+const verifyCode = ref('')
+const nickname = ref('')
 const password = ref('')
+const confirmPassword = ref('')
 const agreeTerms = ref(false)
 
 // 状态
 const error = ref('')
 const loading = ref(false)
+const sendingCode = ref(false)
+const codeCountdown = ref(0)
 
 /**
  * 清除错误信息
@@ -112,85 +177,151 @@ const clearError = () => {
 }
 
 /**
- * 表单是否有效
+ * 邮箱是否有效
  */
-const isFormValid = computed(() => {
-  return username.value.length >= 3 && password.value.length >= 6 && agreeTerms.value
+const isEmailValid = computed(() => {
+  const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return pattern.test(email.value)
 })
 
 /**
- * 处理登录
+ * 表单是否有效
  */
-const handleLogin = async () => {
+const isFormValid = computed(() => {
+  if (!username.value || username.value.length < 3) return false
+  if (!isEmailValid.value) return false
+  if (!verifyCode.value || verifyCode.value.length < 4) return false
+  if (!password.value || password.value.length < 6) return false
+  if (password.value !== confirmPassword.value) return false
+  if (!agreeTerms.value) return false
+  return true
+})
+
+/**
+ * 发送验证码
+ */
+const sendVerifyCode = async () => {
+  if (!isEmailValid.value || codeCountdown.value > 0 || sendingCode.value) return
+
+  sendingCode.value = true
   error.value = ''
+
+  try {
+    // 调用后端发送验证码接口
+    await pinDataProvider.request('POST', '/auth/send-code', { email: email.value })
+    
+    uni.showToast({ title: '验证码已发送', icon: 'success' })
+    
+    // 开始倒计时
+    codeCountdown.value = 60
+    const timer = setInterval(() => {
+      codeCountdown.value--
+      if (codeCountdown.value <= 0) {
+        clearInterval(timer)
+      }
+    }, 1000)
+  } catch (e: any) {
+    error.value = e.message || '验证码发送失败，请稍后重试'
+  } finally {
+    sendingCode.value = false
+  }
+}
+
+/**
+ * 验证用户名
+ */
+const validateUsername = (): boolean => {
+  if (username.value.length < 3 || username.value.length > 16) {
+    error.value = '用户名长度需在 3-16 个字符之间'
+    return false
+  }
+  const pattern = /^[\u4e00-\u9fa5a-zA-Z0-9_]+$/
+  if (!pattern.test(username.value)) {
+    error.value = '用户名只能包含中文、英文、数字和下划线'
+    return false
+  }
+  return true
+}
+
+/**
+ * 验证密码
+ */
+const validatePassword = (): boolean => {
+  if (password.value.length < 6) {
+    error.value = '密码长度至少 6 个字符'
+    return false
+  }
+  if (password.value !== confirmPassword.value) {
+    error.value = '两次输入的密码不一致'
+    return false
+  }
+  return true
+}
+
+/**
+ * 处理注册
+ */
+const handleRegister = async () => {
+  error.value = ''
+
+  // 验证用户名
+  if (!validateUsername()) return
+
+  // 验证密码
+  if (!validatePassword()) return
 
   // 验证协议
   if (!agreeTerms.value) {
     // 未勾选协议时弹窗确认
     uni.showModal({
       title: '提示',
-      content: '未勾选用户协议，是否同意并继续登录？',
-      confirmText: '同意并登录',
+      content: '未勾选用户协议，是否同意并继续注册？',
+      confirmText: '同意并注册',
       cancelText: '取消',
       success: (res) => {
         if (res.confirm) {
           agreeTerms.value = true
-          doLogin()
+          doRegister()
         }
       }
     })
     return
   }
 
-  await doLogin()
+  await doRegister()
 }
 
 /**
- * 执行登录
+ * 执行注册
  */
-const doLogin = async () => {
-  if (!username.value || !password.value) {
-    error.value = '请输入用户名和密码'
-    return
-  }
-
+const doRegister = async () => {
   loading.value = true
 
   try {
-    const result = await pinDataProvider.login(username.value, password.value)
+    // 先验证验证码
+    await pinDataProvider.request('POST', '/auth/verify-code', {
+      email: email.value,
+      code: verifyCode.value
+    })
 
-    uni.showToast({ title: '登录成功', icon: 'success' })
+    // 执行注册
+    const result = await pinDataProvider.register(
+      username.value,
+      password.value,
+      email.value,
+      nickname.value || username.value
+    )
 
-    // 检查是否需要数据迁移
+    uni.showToast({ title: '注册成功', icon: 'success' })
+
+    // 跳转到我的页面
     setTimeout(() => {
-      checkAndNavigate(result)
+      uni.switchTab({ url: '/pages/mine/index' })
     }, 1500)
   } catch (e: any) {
-    error.value = e.message || '登录失败，请检查用户名和密码'
+    error.value = e.message || '注册失败，请稍后重试'
   } finally {
     loading.value = false
-  }
-}
-
-/**
- * 检查是否需要数据迁移并导航
- */
-const checkAndNavigate = (user: any) => {
-  // 检查本地是否有未同步的数据
-  const localProjects = uni.getStorageSync('pin_projects')
-  const localFolders = uni.getStorageSync('pin_folders')
-  
-  const hasLocalData = (localProjects && JSON.parse(localProjects).length > 0) || 
-                       (localFolders && JSON.parse(localFolders).length > 0)
-
-  if (hasLocalData) {
-    // 有本地数据，跳转到迁移引导页
-    uni.navigateTo({
-      url: '/pages/migration/index'
-    })
-  } else {
-    // 无本地数据，直接跳转到我的页面
-    uni.switchTab({ url: '/pages/mine/index' })
   }
 }
 
@@ -202,17 +333,10 @@ const goBack = () => {
 }
 
 /**
- * 跳转到注册页
+ * 跳转到登录页
  */
-const goToRegister = () => {
-  uni.navigateTo({ url: '/pages/register/index' })
-}
-
-/**
- * 跳转到忘记密码页
- */
-const goToForgotPassword = () => {
-  uni.navigateTo({ url: '/pages/forgot-password/index' })
+const goToLogin = () => {
+  uni.redirectTo({ url: '/pages/login/index' })
 }
 
 /**
@@ -231,7 +355,7 @@ const goToPrivacy = () => {
 </script>
 
 <style scoped>
-.login-page {
+.register-page {
   min-height: 100vh;
   background-color: var(--color-bg-panel);
   padding-bottom: 40rpx;
@@ -322,6 +446,10 @@ const goToPrivacy = () => {
   margin-bottom: 12rpx;
 }
 
+.required-mark {
+  color: var(--color-error);
+}
+
 .input-field {
   width: 100%;
   height: 84rpx;
@@ -344,23 +472,42 @@ const goToPrivacy = () => {
   color: var(--color-text-disabled);
 }
 
-/* 忘记密码 */
-.forgot-password-row {
+/* 邮箱输入区域 */
+.email-input-wrapper {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 24rpx;
+  gap: 16rpx;
 }
 
-.forgot-password-link {
+.email-field {
+  flex: 1;
+}
+
+.code-btn {
+  width: 200rpx;
+  height: 84rpx;
+  background-color: var(--color-primary);
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+}
+
+.code-btn[disabled] {
+  background-color: var(--color-text-disabled);
+}
+
+.code-btn-text {
   font-size: 24rpx;
-  color: var(--color-primary);
+  color: var(--color-text-inverse);
 }
 
 /* 协议勾选 */
 .agreement-row {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 32rpx;
+  margin: 32rpx 0;
 }
 
 .checkbox {
@@ -445,20 +592,20 @@ const goToPrivacy = () => {
   color: inherit;
 }
 
-/* 注册入口 */
-.register-link-row {
+/* 登录入口 */
+.login-link-row {
   display: flex;
   align-items: center;
   justify-content: center;
   margin-top: 40rpx;
 }
 
-.register-link-text {
+.login-link-text {
   font-size: 26rpx;
   color: var(--color-text-secondary);
 }
 
-.register-link {
+.login-link {
   font-size: 26rpx;
   color: var(--color-primary);
   font-weight: 500;
