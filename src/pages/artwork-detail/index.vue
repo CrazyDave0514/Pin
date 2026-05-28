@@ -1,11 +1,15 @@
 <template>
+  <!-- 作品详情页 V0.2.1 - 改造版（添加举报/拉黑/权限控制） -->
   <view class="detail-page" v-if="artwork">
     <view class="page-nav">
       <view class="nav-back" @click="goBack">
         <image class="back-img" src="/static/assets/v015/icons/back.png" mode="aspectFit" />
       </view>
       <text class="nav-title">作品详情</text>
-      <view class="nav-placeholder"></view>
+      <!-- 更多操作按钮 -->
+      <view class="nav-more" @click="showMoreActions">
+        <text class="more-icon">⋯</text>
+      </view>
     </view>
 
     <scroll-view class="detail-scroll" scroll-y :show-scrollbar="false">
@@ -41,13 +45,14 @@
       <view class="info-section">
         <text class="artwork-title">{{ artwork.name }}</text>
         <view class="author-row">
-          <view class="author-main">
+          <view class="author-main" @click="goToCreatorProfile">
             <image v-if="showAvatarImage" class="author-avatar" :src="artwork.creatorAvatar" mode="aspectFill" />
             <image v-else-if="presetAvatarImage" class="author-avatar" :src="presetAvatarImage" mode="aspectFill" />
             <view v-else class="author-avatar preset" :style="presetAvatarStyle">
               <text class="author-avatar-text">{{ presetAvatarGlyph }}</text>
             </view>
             <text class="author-name">@{{ artwork.creatorName }}</text>
+            <text class="author-arrow">›</text>
           </view>
           <view :class="['follow-btn', isFollowing ? 'followed' : '']" @click="toggleFollow">
             <text>{{ isFollowing ? '已关注' : '关注' }}</text>
@@ -110,6 +115,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { getPresetAvatarImage, getPresetAvatarMeta, isPresetAvatarValue } from '@/utils/avatar-presets'
 import { getMardCodeByHex } from '@/utils/mard-colors'
 import { communityService, purchaseService, type CommunityArtwork } from '../../services/pin/index'
+import { checkLogin } from '../../utils/auth-guard'
 
 const instance = getCurrentInstance()
 const artwork = ref<CommunityArtwork | null>(null)
@@ -119,6 +125,7 @@ const isLiked = ref(false)
 const isFavorited = ref(false)
 const isPurchased = ref(false)
 const isFollowing = ref(false)
+const isBlocked = ref(false)
 
 const previewTabs = [
   { key: 'ironed', label: '熨烫效果' },
@@ -170,6 +177,7 @@ const loadArtwork = async () => {
   isFavorited.value = state.isFavorited
   isPurchased.value = state.isPurchased
   isFollowing.value = state.isFollowing
+  isBlocked.value = state.isBlocked || false
   nextTick(() => setTimeout(renderPreview, 120))
 }
 
@@ -178,28 +186,64 @@ const switchPreview = (key: 'ironed' | 'blueprint') => {
   nextTick(() => setTimeout(renderPreview, 80))
 }
 
+/**
+ * 切换点赞 - 需要登录
+ */
 const toggleLike = async () => {
   if (!artwork.value) return
+  
+  // 检查登录状态
+  if (!checkLogin({ message: '点赞需要登录后才能操作' })) {
+    return
+  }
+  
   const { added, artwork: updated } = await communityService.toggleLike(artwork.value.id)
   if (updated) artwork.value = updated
   isLiked.value = added
 }
 
+/**
+ * 切换收藏 - 需要登录
+ */
 const toggleFavorite = async () => {
   if (!artwork.value) return
+  
+  // 检查登录状态
+  if (!checkLogin({ message: '收藏需要登录后才能操作' })) {
+    return
+  }
+  
   const { added, artwork: updated } = await communityService.toggleFavorite(artwork.value.id)
   if (updated) artwork.value = updated
   isFavorited.value = added
 }
 
+/**
+ * 切换关注 - 需要登录
+ */
 const toggleFollow = async () => {
   if (!artwork.value) return
+  
+  // 检查登录状态
+  if (!checkLogin({ message: '关注需要登录后才能操作' })) {
+    return
+  }
+  
   isFollowing.value = await communityService.toggleFollow(artwork.value.creatorName)
   uni.showToast({ title: isFollowing.value ? '已关注' : '已取消关注', icon: 'none' })
 }
 
+/**
+ * 购买作品 - 需要登录
+ */
 const purchaseArtwork = async () => {
   if (!artwork.value || isPurchased.value) return
+  
+  // 检查登录状态
+  if (!checkLogin({ message: '购买需要登录后才能操作' })) {
+    return
+  }
+  
   const result = await purchaseService.purchaseArtwork(artwork.value.id)
   if (!result.success) {
     if (result.reason === 'INSUFFICIENT_POINTS') {
@@ -211,6 +255,92 @@ const purchaseArtwork = async () => {
   if (result.artwork) artwork.value = result.artwork
   isPurchased.value = true
   uni.showToast({ title: '购买成功', icon: 'success' })
+}
+
+/**
+ * 显示更多操作（举报/拉黑）
+ */
+const showMoreActions = () => {
+  if (!artwork.value) return
+  
+  const itemList = ['举报作品']
+  if (!isBlocked.value) {
+    itemList.push('拉黑作者')
+  }
+  
+  uni.showActionSheet({
+    itemList,
+    success: (res) => {
+      if (res.tapIndex === 0) {
+        reportArtwork()
+      } else if (res.tapIndex === 1 && !isBlocked.value) {
+        blockCreator()
+      }
+    }
+  })
+}
+
+/**
+ * 举报作品 - 需要登录
+ */
+const reportArtwork = () => {
+  if (!artwork.value) return
+  
+  // 检查登录状态
+  if (!checkLogin({ message: '举报需要登录后才能操作' })) {
+    return
+  }
+  
+  // 跳转到举报页面
+  uni.navigateTo({
+    url: `/pages/report/index?type=artwork&id=${artwork.value.id}&creator=${artwork.value.creatorName}`
+  })
+}
+
+/**
+ * 拉黑作者 - 需要登录
+ */
+const blockCreator = () => {
+  if (!artwork.value) return
+  
+  // 检查登录状态
+  if (!checkLogin({ message: '拉黑需要登录后才能操作' })) {
+    return
+  }
+  
+  uni.showModal({
+    title: '确认拉黑',
+    content: `确定要拉黑 ${artwork.value.creatorName} 吗？拉黑后将不再看到该创作者的作品。`,
+    confirmText: '拉黑',
+    confirmColor: '#CF5C4D',
+    cancelText: '取消',
+    success: async (res) => {
+      if (res.confirm) {
+        try {
+          await communityService.blockCreator(artwork.value!.creatorName)
+          isBlocked.value = true
+          isFollowing.value = false // 拉黑自动取消关注
+          uni.showToast({ title: '已拉黑', icon: 'success' })
+        } catch (e) {
+          uni.showToast({ title: '操作失败', icon: 'none' })
+        }
+      }
+    }
+  })
+}
+
+/**
+ * 跳转到创作者主页
+ */
+const goToCreatorProfile = () => {
+  if (!artwork.value?.creatorUid) {
+    // 如果没有 UID，尝试通过用户名查找
+    uni.showToast({ title: '暂无法查看创作者主页', icon: 'none' })
+    return
+  }
+  uni.navigateTo({
+    url: `/pages/creator-profile/index?uid=${artwork.value.creatorUid}`
+  })
 }
 
 const renderPreview = () => {
@@ -345,12 +475,25 @@ const goBack = () => {
   justify-content: space-between;
 }
 
-.nav-back,
-.nav-placeholder {
+.nav-back {
   width: 76rpx;
   height: 76rpx;
   display: flex;
   align-items: center;
+}
+
+.nav-more {
+  width: 76rpx;
+  height: 76rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.more-icon {
+  font-size: 40rpx;
+  color: var(--color-text-primary);
+  font-weight: bold;
 }
 
 .back-img {
@@ -362,6 +505,10 @@ const goBack = () => {
   font-size: 34rpx;
   color: var(--color-text-primary);
   font-weight: 800;
+}
+
+.nav-placeholder {
+  width: 76rpx;
 }
 
 .detail-scroll {
@@ -522,6 +669,12 @@ const goBack = () => {
   font-size: 28rpx;
   color: var(--color-text-primary);
   font-weight: 700;
+}
+
+.author-arrow {
+  font-size: 28rpx;
+  color: var(--color-text-tertiary);
+  margin-left: 8rpx;
 }
 
 .follow-btn {
