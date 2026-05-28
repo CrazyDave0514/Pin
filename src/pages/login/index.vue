@@ -112,10 +112,10 @@ const clearError = () => {
 }
 
 /**
- * 表单是否有效
+ * 表单是否可提交（仅检查用户名和密码，协议在 handleLogin 中弹窗确认）
  */
 const isFormValid = computed(() => {
-  return username.value.length >= 3 && password.value.length >= 6 && agreeTerms.value
+  return username.value.length >= 3 && password.value.length >= 6
 })
 
 /**
