@@ -1,4 +1,3 @@
-import { defaultArtworks } from './artworks.js'
 import { normalizeAvatarValue } from './avatar-normalize.ts'
 import { getStorageAdapter } from '../services/pin/storage-adapter.ts'
 import { PIN_STORAGE_KEYS } from '../services/pin/storage-keys.ts'
@@ -6,8 +5,6 @@ import { safeArray } from './array-utils'
 import type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectRecord, ProjectTags, UserProfile } from '../services/pin/types.ts'
 
 export type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectTags } from '../services/pin/types.ts'
-
-export const ARTWORKS_VERSION = 'v017-local-100'
 
 export const TAG_OPTIONS = [
   { primary: '动物', secondary: ['猫咪', '狗狗', '兔子', '小鸟', '鱼类', '恐龙', '熊猫', '其他'] },
@@ -122,27 +119,6 @@ export const normalizeArtwork = (item: Partial<CommunityArtwork> & Record<string
   }
 }
 
-const buildDefaultArtworks = (): CommunityArtwork[] => {
-  return defaultArtworks.slice(0, 100).map((item: Partial<CommunityArtwork> & Record<string, unknown>, index: number) => {
-    const normalized = normalizeArtwork(item, index)
-    const width = 18 + (index % 8) * 2
-    const height = 18 + (index % 6) * 3
-    normalized.points = index % 5 === 0 ? 0 : (index * 7) % 100 + 1
-    normalized.updatedAt = normalized.createdAt + (index % 72) * 3600 * 1000
-    normalized.canvasData = {
-      width,
-      height,
-      backgroundColor: '#FFFDFA',
-      beads: [],
-      beadStyle: 'round',
-      showColorCode: false,
-    }
-    normalized.beadCount = 0
-    normalized.colorTypeCount = 0
-    return normalized
-  })
-}
-
 const getStoredProjects = () => safeArray<ProjectRecord>(storageAdapter().getSync(PIN_STORAGE_KEYS.projects))
 
 const getPublishedProjectArtworkId = (project: Partial<ProjectRecord>) => {
@@ -217,11 +193,11 @@ export const syncPublishedProjectsWithArtworks = (artworksInput?: CommunityArtwo
 
 export const ensureCommunityArtworks = (): CommunityArtwork[] => {
   const cached = storageAdapter().getSync(PIN_STORAGE_KEYS.artworks)
-  const cachedVersion = storageAdapter().getSync(PIN_STORAGE_KEYS.artworksVersion)
 
-  let artworks = !Array.isArray(cached) || cached.length === 0 || cachedVersion !== ARTWORKS_VERSION
-    ? buildDefaultArtworks()
-    : cached.map((item: Partial<CommunityArtwork> & Record<string, unknown>, index: number) => normalizeArtwork(item, index))
+  // BUG-04: 移除假数据 fallback，只使用真实数据
+  let artworks = Array.isArray(cached)
+    ? cached.map((item: Partial<CommunityArtwork> & Record<string, unknown>, index: number) => normalizeArtwork(item, index))
+    : []
 
   artworks = syncPublishedProjectsWithArtworks(artworks)
   saveCommunityArtworks(artworks)

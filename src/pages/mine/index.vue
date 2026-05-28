@@ -65,13 +65,6 @@
       </view>
     </view>
 
-    <!-- 退出登录（已登录时显示） -->
-    <view v-if="user" class="logout-section">
-      <button class="logout-btn" @click="handleLogout">
-        <text class="logout-text">退出登录</text>
-      </button>
-    </view>
-
     <!-- 头像操作菜单 -->
     <view v-if="showAvatarAction" class="modal-overlay" @click="closeAvatarMenu">
       <view class="action-sheet" @click.stop>

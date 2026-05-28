@@ -155,7 +155,7 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "Pin",
     "navigationBarBackgroundColor": "#FFFDFA",
-    "backgroundColor": "#F7F3EC",
+    "backgroundColor": "#FFFDFA",
     "app-plus": {
       "titleNView": {
         "titleColor": "#1A1A1A",
