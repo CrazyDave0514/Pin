@@ -342,14 +342,19 @@ const handleLogout = () => {
     cancelText: '取消',
     success: async (res) => {
       if (res.confirm) {
-        // 清除 Token + 本地用户数据
-        pinDataProvider.logout()
-        // 刷新页面状态
-        user.value = null
-        uni.showToast({ title: '已退出登录', icon: 'success' })
-        setTimeout(() => {
-          uni.navigateTo({ url: '/pages/login/index' })
-        }, 1000)
+        try {
+          // 清除 Token + 本地用户数据
+          await pinDataProvider.logout()
+          // 刷新页面状态
+          user.value = null
+          uni.showToast({ title: '已退出登录', icon: 'success' })
+          setTimeout(() => {
+            uni.reLaunch({ url: '/pages/login/index' })
+          }, 1000)
+        } catch (error) {
+          console.error('退出登录失败:', error)
+          uni.showToast({ title: '退出失败，请重试', icon: 'none' })
+        }
       }
     }
   })
