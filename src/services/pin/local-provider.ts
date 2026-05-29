@@ -16,6 +16,27 @@ export class LocalPinDataProvider implements PinDataProvider {
   }
 
   /**
+   * 通用请求方法（本地模式不支持远程请求）
+   */
+  async request<T>(_method: string, _path: string, _body?: unknown): Promise<T> {
+    throw new Error('本地模式不支持远程 API 请求')
+  }
+
+  /**
+   * 检查是否已认证
+   */
+  isAuthenticated(): boolean {
+    return !!this.storageAdapter.getSync<string>('pin_auth_token')
+  }
+
+  /**
+   * 获取当前 Token
+   */
+  getToken(): string | null {
+    return this.storageAdapter.getSync<string>('pin_auth_token') || null
+  }
+
+  /**
    * 从存储中恢复用户 UID
    */
   private restoreUserUid(): void {

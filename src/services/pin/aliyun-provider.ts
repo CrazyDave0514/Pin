@@ -125,10 +125,10 @@ export class AliyunPinDataProvider implements PinDataProvider {
   }
 
   /**
-   * 发起请求
+   * 发起请求（公开方法）
    * 使用 h5Request 兼容 H5 生产构建环境
    */
-  private async request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
+  async request<T>(method: HttpMethod, path: string, body?: unknown): Promise<T> {
     if (!this.baseUrl) {
       throw new Error('AliyunPinDataProvider baseUrl is not configured')
     }

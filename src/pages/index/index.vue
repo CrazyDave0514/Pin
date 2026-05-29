@@ -221,14 +221,15 @@ onShow(() => {
 /**
  * 加载作品数据
  * 优先从后端 API 获取作品数据，同时加载关注列表和黑名单
+ * 未登录时跳过需要认证的接口，仅加载公开作品
  */
 const loadArtworks = async () => {
   isLoading.value = true
   try {
-    // 并行加载关注列表、黑名单和作品数据
+    // 并行加载关注列表、黑名单（需要认证，失败时忽略）
     const [followed, blocked] = await Promise.all([
-      communityService.getFollowedCreators(),
-      communityService.getBlockedCreators(),
+      communityService.getFollowedCreators().catch(() => [] as string[]),
+      communityService.getBlockedCreators().catch(() => [] as string[]),
     ])
     followedCreators.value = followed
     blockedCreators.value = blocked
@@ -238,7 +239,11 @@ const loadArtworks = async () => {
     artworks.value = allArtworks.filter((item: any) => item.isPublic !== false)
   } catch (error) {
     console.error('Failed to load artworks:', error)
-    uni.showToast({ title: '加载失败，请重试', icon: 'none' })
+    // 仅在非认证错误时提示用户
+    const errMsg = error instanceof Error ? error.message : ''
+    if (!errMsg.includes('401') && !errMsg.includes('认证') && !errMsg.includes('token')) {
+      uni.showToast({ title: '加载失败，请重试', icon: 'none' })
+    }
   } finally {
     isLoading.value = false
   }

@@ -243,11 +243,11 @@ const verifyCodeAndProceed = async () => {
   error.value = ''
 
   try {
-    // 验证验证码
+    // 验证验证码（重置密码场景）
     await pinDataProvider.request('POST', '/auth/verify-code', {
       email: email.value,
       code: verifyCode.value,
-      type: 'reset-password'
+      purpose: 'reset-password',
     })
 
     // 验证通过，进入下一步

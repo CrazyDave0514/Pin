@@ -2,6 +2,19 @@ import { PIN_STORAGE_KEYS } from './storage-keys.ts'
 import type { CommunityArtwork, FolderRecord, PointsRecord, ProjectRecord, RecentImportRecord, SettingsRecord, UserProfile } from './types.ts'
 
 export interface PinDataProvider {
+  /**
+   * 通用请求方法（公开）
+   * 用于调用未封装为具体业务方法的 API 接口
+   */
+  request<T = any>(method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown): Promise<T>
+  /**
+   * 检查是否已认证
+   */
+  isAuthenticated(): boolean
+  /**
+   * 获取当前 Token
+   */
+  getToken(): string | null
   getCurrentUser(): Promise<UserProfile | null>
   setCurrentUser(user: UserProfile | null): Promise<void>
   removeCurrentUser(): Promise<void>

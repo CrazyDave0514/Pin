@@ -672,10 +672,15 @@ const selectFolderTarget = (folderId: string) => {
   uni.showToast({ title: '复制成功', icon: 'success' })
 }
 
+/**
+ * 打开发布弹窗（需登录）
+ */
 const openPublishModal = () => {
   const project = currentProject.value
   showActionSheet.value = false
   if (!project) return
+  // 发布需要登录
+  if (!checkLogin()) return
   publishName.value = project.name || ''
   publishPoints.value = String(project.publishPoints || 0)
   publishTags.value = { ...normalizeProjectTags(project.tags) }

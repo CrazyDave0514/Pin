@@ -298,10 +298,11 @@ const doRegister = async () => {
   loading.value = true
 
   try {
-    // 先验证验证码
+    // 先验证验证码（注册场景）
     await pinDataProvider.request('POST', '/auth/verify-code', {
       email: email.value,
-      code: verifyCode.value
+      code: verifyCode.value,
+      purpose: 'register',
     })
 
     // 执行注册
