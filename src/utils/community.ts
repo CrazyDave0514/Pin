@@ -6,6 +6,9 @@ import type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectRecord, Proje
 
 export type { CanvasBead, CanvasDataLike, CommunityArtwork, ProjectTags } from '../services/pin/types.ts'
 
+/** 作品数据版本号，用于标识数据结构变更 */
+export const ARTWORKS_VERSION = '1.0.0'
+
 export const TAG_OPTIONS = [
   { primary: '动物', secondary: ['猫咪', '狗狗', '兔子', '小鸟', '鱼类', '恐龙', '熊猫', '其他'] },
   { primary: '植物', secondary: ['花朵', '向日葵', '仙人掌', '树木', '多肉', '其他'] },
