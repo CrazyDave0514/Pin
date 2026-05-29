@@ -5,8 +5,8 @@ export interface AliyunPinApiConfig {
   timeoutMs?: number
 }
 
-// 默认 API Gateway 地址（根据 codex 文档配置）
-const DEFAULT_API_GATEWAY = 'https://ee8a7564e6124d75a7e558be596a6e09-cn-hangzhou.alicloudapi.com/pin'
+// FC 公网访问地址（临时方案，域名备案完成后切换回 API Gateway）
+const DEFAULT_API_GATEWAY = 'https://pin-app-http-pin-api-upqapogxgn.cn-hangzhou.fcapp.run'
 
 const DEFAULT_CONFIG: Required<Pick<AliyunPinApiConfig, 'fallbackToLocal' | 'timeoutMs' | 'baseUrl'>> = {
   fallbackToLocal: true,
