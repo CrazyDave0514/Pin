@@ -1,0 +1,1 @@
+import{s as t}from"./index-CMGbDhTw.js";const o=r=>t.get("/admin/artworks",{params:r}),s=r=>t.get(`/admin/artworks/${r}`),a=r=>t.post(`/admin/artworks/${r}/offshelf`),n=r=>t.delete(`/admin/artworks/${r}`);export{o as a,n as d,s as g,a as o};
