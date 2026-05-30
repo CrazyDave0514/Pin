@@ -251,6 +251,44 @@ const verifyToken = (token) => {
 }
 
 /**
+ * 验证请求认证
+ * 从请求头中提取 JWT Token 并验证
+ * @param {Object} request - 请求对象
+ * @param {Object} store - 数据存储对象
+ * @returns {Promise<{success: boolean, user?: Object, message?: string}>}
+ */
+const authenticateRequest = async (request, store) => {
+  try {
+    const rawHeaders = request.headers || {}
+    const authHeader = rawHeaders.authorization || rawHeaders.Authorization || ''
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return { success: false, message: '缺少认证信息' }
+    }
+
+    const token = authHeader.slice(7)
+    const decoded = verifyToken(token)
+
+    if (!decoded.uid) {
+      return { success: false, message: '无效的认证信息' }
+    }
+
+    // 获取用户完整信息
+    const user = await store.getUserByUid(decoded.uid)
+    if (!user) {
+      return { success: false, message: '用户不存在' }
+    }
+
+    return { success: true, user }
+  } catch (error) {
+    if (error.code === 'TOKEN_EXPIRED') {
+      return { success: false, message: '登录已过期，请重新登录' }
+    }
+    return { success: false, message: '认证失败: ' + error.message }
+  }
+}
+
+/**
  * 创建标准化错误
  */
 const createError = (statusCode, message, code) => {
@@ -440,17 +478,38 @@ const route = async (request) => {
     })
   }
 
-  // 临时 debug：查看用户原始数据
-  if (path === '/debug/user-raw' && method === 'GET') {
+  // 临时 debug：查看所有用户数据
+  if (path === '/debug/users' && method === 'GET') {
     const store = new PinTablestoreStore()
     const rawRows = await store.listSingleKeyTable('pin_users', 'uid')
-    const target = rawRows.find(r => r.uid === 'UMPNO9CBH')
+    const users = rawRows.map(r => ({
+      uid: r.uid,
+      username: r.username,
+      nickname: r.nickname,
+      avatar: r.avatar,
+      email: r.email,
+      createdAt: r.createdAt,
+    }))
     return success({
-      found: !!target,
-      rawKeys: target ? Object.keys(target) : [],
-      rawData: target ? JSON.stringify(target).substring(0, 1000) : null,
-      password: target ? target.password : 'NOT_FOUND',
-      username: target ? target.username : 'NOT_FOUND',
+      total: users.length,
+      users: users,
+    })
+  }
+
+  // 临时 debug：查看所有作品数据
+  if (path === '/debug/artworks' && method === 'GET') {
+    const store = new PinTablestoreStore()
+    const rawRows = await store.listSingleKeyTable('pin_artworks', 'artworkId')
+    const artworks = rawRows.map(r => ({
+      id: r.artworkId,
+      name: r.name,
+      creatorName: r.creatorName,
+      creatorAvatar: r.creatorAvatar,
+      createdAt: r.createdAt,
+    }))
+    return success({
+      total: artworks.length,
+      artworks: artworks,
     })
   }
 
@@ -465,6 +524,58 @@ const route = async (request) => {
 
   if (path === '/auth/me' && method === 'GET') {
     return success(await authController.getCurrentUser(request))
+  }
+
+  // 公开接口 - 无需认证
+  if (path === '/config/version' && method === 'GET') {
+    return success({
+      version: '0.2.1',
+      buildTime: new Date().toISOString(),
+      env: process.env.PIN_API_STAGE || 'production'
+    })
+  }
+
+  // GET /artworks - 获取作品列表（支持分页，公开接口）
+  if (path === '/artworks' && method === 'GET') {
+    const store = new PinTablestoreStore()
+    const requestQueries = request.queries || request.queryParameters || {}
+    const page = parseInt(requestQueries.page || '1', 10) || 1
+    const size = parseInt(requestQueries.size || '20', 10) || 20
+    const result = await store.getArtworksPaged(page, size)
+    return success(result)
+  }
+
+  // GET /artworks/:id - 获取单个作品详情（公开接口）
+  if (path.match(/^\/artworks\/[^\/]+$/) && method === 'GET' && !path.endsWith('/like') && !path.endsWith('/favorite') && !path.endsWith('/purchase')) {
+    const store = new PinTablestoreStore()
+    const artworkId = path.split('/')[2]
+    const artwork = await store.getArtworkById(artworkId)
+    if (!artwork) {
+      return fail(404, '作品不存在')
+    }
+    return success(artwork)
+  }
+
+  // GET /users/:uid/profile - 获取创作者公开信息（公开接口）
+  if (path.match(/^\/users\/[^\/]+\/profile$/) && method === 'GET') {
+    const store = new PinTablestoreStore()
+    const uid = path.split('/')[2]
+    const profile = await store.getUserProfile(uid)
+    if (!profile) {
+      return fail(404, '用户不存在')
+    }
+    return success(profile)
+  }
+
+  // GET /users/:uid/artworks - 获取创作者作品列表（公开接口）
+  if (path.match(/^\/users\/[^\/]+\/artworks$/) && method === 'GET') {
+    const store = new PinTablestoreStore()
+    const uid = path.split('/')[2]
+    const requestQueries = request.queries || request.queryParameters || {}
+    const page = parseInt(requestQueries.page || '1', 10) || 1
+    const size = parseInt(requestQueries.size || '20', 10) || 20
+    const result = await store.getUserArtworks(uid, page, size)
+    return success(result)
   }
 
   // 业务路由 - 需要验证 token 并设置 session
@@ -583,8 +694,17 @@ const route = async (request) => {
     return success(null)
   }
 
-  if (path === '/artworks' && method === 'GET') {
-    return success(await store.getArtworks())
+  // POST /artworks - 创建作品（需要登录）
+  if (path === '/artworks' && method === 'POST') {
+    // 验证用户登录
+    const authResult = await authenticateRequest(request, store)
+    if (!authResult.success) {
+      return fail(401, authResult.message || '请先登录')
+    }
+
+    const user = authResult.user
+    const artwork = await store.createArtwork(body, user)
+    return success(artwork)
   }
 
   if (path === '/artworks' && method === 'PUT') {

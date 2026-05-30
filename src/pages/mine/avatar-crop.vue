@@ -86,6 +86,7 @@ const selectPreset = (index: number) => {
 
 /**
  * 从相册选择图片（使用 uni API）
+ * 将图片转为 base64 存储，避免 blob URL 失效问题
  */
 const chooseImage = () => {
   uni.chooseImage({
@@ -93,12 +94,27 @@ const chooseImage = () => {
     sizeType: ['compressed'],
     sourceType: ['album'],
     success: (res) => {
-      // 优先使用本地临时文件路径
       const tempPath = res.tempFilePaths?.[0]
-      if (tempPath) {
-        avatarUrl.value = tempPath
-        selectedPreset.value = -1
+      if (!tempPath) {
+        uni.showToast({ title: '选择图片失败', icon: 'none' })
+        return
       }
+
+      // 读取文件并转为 base64
+      uni.getFileSystemManager().readFile({
+        filePath: tempPath,
+        encoding: 'base64',
+        success: (readRes) => {
+          // 生成 data URL (base64)
+          const base64Url = `data:image/jpeg;base64,${readRes.data}`
+          avatarUrl.value = base64Url
+          selectedPreset.value = -1
+        },
+        fail: (err) => {
+          console.error('读取图片失败:', err)
+          uni.showToast({ title: '图片处理失败', icon: 'none' })
+        }
+      })
     },
     fail: (err) => {
       console.error('选择图片失败:', err)

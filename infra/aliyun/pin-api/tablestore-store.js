@@ -391,6 +391,62 @@ class PinTablestoreStore {
   }
 
   /**
+   * 获取用户公开资料
+   * @param {string} uid - 用户ID
+   * @returns {Promise<Object|null>}
+   */
+  async getUserProfile(uid) {
+    const user = await this.getRow('pin_users', { uid })
+    if (!user) return null
+
+    // 获取用户统计信息
+    const artworks = await this.getArtworks()
+    const userArtworks = artworks.filter(a => a.extensions?.ownerUid === uid)
+
+    return {
+      uid: user.uid,
+      username: user.username,
+      nickname: user.nickname || user.username,
+      avatar: user.avatar || '',
+      bio: user.bio || '',
+      stats: {
+        artworks: userArtworks.length,
+        followers: 0, // TODO: 实现关注功能后更新
+        following: 0,
+      },
+      createdAt: user.createdAt,
+    }
+  }
+
+  /**
+   * 获取用户的作品列表
+   * @param {string} uid - 用户ID
+   * @param {number} page - 页码
+   * @param {number} size - 每页数量
+   * @returns {Promise<{artworks: Array, total: number, page: number, size: number, hasMore: boolean}>}
+   */
+  async getUserArtworks(uid, page = 1, size = 20) {
+    const allArtworks = await this.getArtworks()
+    const userArtworks = allArtworks.filter(a => a.extensions?.ownerUid === uid)
+
+    // 按创建时间倒序排序
+    userArtworks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+
+    const total = userArtworks.length
+    const start = (page - 1) * size
+    const end = start + size
+    const paginatedArtworks = userArtworks.slice(start, end)
+
+    return {
+      artworks: paginatedArtworks,
+      total,
+      page,
+      size,
+      hasMore: end < total
+    }
+  }
+
+  /**
    * 设置积分余额（P0: 积分业务逻辑）
    * 使用 updateRow 只更新 pointsBalance 列，避免覆盖其他字段
    * @param points 积分值
@@ -661,6 +717,99 @@ class PinTablestoreStore {
   async getArtworks() {
     const rows = await this.listSingleKeyTable('pin_artworks', 'artworkId')
     return rows.map((row) => this.normalizeArtworkRow(row))
+  }
+
+  /**
+   * 获取作品列表（支持分页）
+   * @param {number} page - 页码（从1开始）
+   * @param {number} size - 每页数量
+   * @returns {Promise<{artworks: Array, total: number, page: number, size: number, hasMore: boolean}>}
+   */
+  async getArtworksPaged(page = 1, size = 20) {
+    const allRows = await this.listSingleKeyTable('pin_artworks', 'artworkId')
+    const allArtworks = allRows.map((row) => this.normalizeArtworkRow(row))
+
+    // 按创建时间倒序排序
+    allArtworks.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+
+    const total = allArtworks.length
+    const start = (page - 1) * size
+    const end = start + size
+    const paginatedArtworks = allArtworks.slice(start, end)
+
+    return {
+      artworks: paginatedArtworks,
+      total,
+      page,
+      size,
+      hasMore: end < total
+    }
+  }
+
+  /**
+   * 创建作品
+   * @param {Object} payload - 作品数据
+   * @param {Object} user - 当前用户
+   * @returns {Promise<Object>}
+   */
+  async createArtwork(payload, user) {
+    const artworkId = `artwork_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+    const now = Date.now()
+
+    const artwork = {
+      id: artworkId,
+      name: payload.name || '未命名作品',
+      description: payload.description || '',
+      creatorName: user.nickname || user.username || '匿名用户',
+      creatorAvatar: user.avatar || '',
+      creatorUid: user.uid || '',
+      thumbnail: payload.thumbnail || '',
+      canvasData: payload.canvasData || null,
+      tagMeta: payload.tagMeta || null,
+      tags: safeArray(payload.tags),
+      likes: 0,
+      favorites: 0,
+      points: Number(payload.points || 0),
+      viewCount: 0,
+      useCount: 0,
+      isPublic: true,
+      beadCount: Number(payload.beadCount || 0),
+      colorTypeCount: Number(payload.colorTypeCount || 0),
+      cover: payload.cover || null,
+      createdAt: now,
+      updatedAt: now,
+      extensions: {
+        ownerUid: user.uid || '',
+      },
+    }
+
+    // 保存到 Tablestore
+    await this.putRow('pin_artworks', { artworkId }, {
+      projectId: '',
+      ownerUid: user.uid || '',
+      name: artwork.name,
+      creatorName: artwork.creatorName,
+      creatorAvatar: artwork.creatorAvatar,
+      thumbnail: artwork.thumbnail,
+      canvasDataJson: artwork.canvasData ? JSON.stringify(artwork.canvasData) : '',
+      tagMetaJson: artwork.tagMeta ? JSON.stringify(artwork.tagMeta) : '',
+      tagsJson: JSON.stringify(artwork.tags),
+      likes: 0,
+      favorites: 0,
+      points: artwork.points,
+      viewCount: 0,
+      useCount: 0,
+      isPublic: true,
+      description: artwork.description,
+      beadCount: artwork.beadCount,
+      colorTypeCount: artwork.colorTypeCount,
+      coverJson: artwork.cover ? JSON.stringify(artwork.cover) : '',
+      createdAt: now,
+      updatedAt: now,
+      extensionsJson: JSON.stringify(artwork.extensions),
+    })
+
+    return artwork
   }
 
   async setArtworks(artworks) {

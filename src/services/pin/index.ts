@@ -186,12 +186,33 @@ export const createPinServices = (options: {
       await provider.setPoints(DEFAULT_POINTS)
       return newUser
     },
+    /**
+     * 更新当前用户信息
+     * 同时同步到后端服务器
+     */
     async updateCurrentUser(patch: Partial<UserProfile> | ((user: UserProfile) => UserProfile)) {
       const user = await provider.getCurrentUser()
       if (!user) return null
       const nextUser = typeof patch === 'function'
         ? patch(user)
         : { ...user, ...patch }
+
+      // 先同步到后端服务器
+      try {
+        await provider.request('PUT', '/users/current', {
+          profile: {
+            nickname: nextUser.nickname,
+            avatar: nextUser.avatar,
+            bio: nextUser.bio,
+          }
+        })
+        console.log('用户资料已同步到后端')
+      } catch (error) {
+        console.error('同步用户资料到后端失败:', error)
+        // 后端同步失败不影响本地更新，但应该提示用户
+      }
+
+      // 再更新本地存储
       await provider.setCurrentUser(nextUser)
       const userList = await provider.getUserList()
       await provider.setUserList(userList.map((item) => item.uid === nextUser.uid ? nextUser : item))
