@@ -153,6 +153,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { pinDataProvider } from '../../services/pin/index'
+import { syncOnLogin } from '../../services/sync/auto-sync.ts'
 
 // 表单数据
 const username = ref('')
@@ -314,6 +315,15 @@ const doRegister = async () => {
     )
 
     uni.showToast({ title: '注册成功', icon: 'success' })
+
+    // 注册成功后触发数据同步
+    try {
+      await syncOnLogin()
+      console.log('注册后数据同步完成')
+    } catch (syncError) {
+      console.warn('注册后数据同步失败:', syncError)
+      // 同步失败不影响注册流程
+    }
 
     // 跳转到我的页面
     setTimeout(() => {

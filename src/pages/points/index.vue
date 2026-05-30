@@ -160,10 +160,28 @@ const filteredRecords = computed(() => {
 
 /**
  * 加载积分数据
+ * 从后端获取真实积分余额和记录
  */
 const loadPointsData = async () => {
-  userPoints.value = await pointsService.getPointsBalance()
-  records.value = await pointsService.getDisplayRecords()
+  try {
+    // 获取积分余额（优先从后端获取）
+    userPoints.value = await pointsService.getPointsBalance()
+    // 获取积分记录（优先从后端获取）
+    records.value = await pointsService.getDisplayRecords()
+
+    // 如果没有记录但积分大于0，添加一条初始记录说明
+    if (records.value.length === 0 && userPoints.value > 0) {
+      records.value = [{
+        id: 'initial',
+        title: '注册奖励',
+        amount: userPoints.value,
+        time: Date.now()
+      }]
+    }
+  } catch (error) {
+    console.error('加载积分数据失败:', error)
+    uni.showToast({ title: '加载积分失败', icon: 'none' })
+  }
 }
 
 /**

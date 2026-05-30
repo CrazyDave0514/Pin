@@ -24,8 +24,8 @@
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| 技术方案设计 | AI后端 | ✅ 已完成 | [飞书文档](https://www.feishu.cn/docx/JoMJdRwq4oPRtAxsTc7cnenKnqd) | 11个新接口设计、邮箱验证码方案、举报拉黑数据模型、权限控制设计 |
-| API 接口文档 | AI后端 | ✅ 已完成 | [飞书文档](https://www.feishu.cn/docx/JoMJdRwq4oPRtAxsTc7cnenKnqd) | 完整接口定义，含请求/响应格式、业务规则 |
+| 技术方案设计 | AI全栈 | ✅ 已完成 | [飞书文档](https://www.feishu.cn/docx/JoMJdRwq4oPRtAxsTc7cnenKnqd) | 11个新接口设计、邮箱验证码方案、举报拉黑数据模型、权限控制设计 |
+| API 接口文档 | AI全栈 | ✅ 已完成 | [飞书文档](https://www.feishu.cn/docx/JoMJdRwq4oPRtAxsTc7cnenKnqd) | 完整接口定义，含请求/响应格式、业务规则 |
 
 ### 阶段 3：设计阶段
 
@@ -40,106 +40,106 @@
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| FC 环境变量配置 | AI后端 | ✅ 已完成 | pin-app-http 函数 | EMAIL_SMTP_HOST/PORT/USER/PASS/FROM_NAME、Tablestore、JWT_SECRET |
-| `pin_verification_codes` 表 | AI后端 | ✅ 已完成 | Tablestore pin-main 实例 | 单主键 email(STRING)，TTL=-1，MaxVersions=1 |
-| 邮件服务模块 | AI后端 | ✅ 已完成 | email-service.js | nodemailer + 飞书 SMTP，支持验证码发送 |
-| `src/config/version.ts` | AI前端 | ✅ 已完成 | 版本配置文件 | 统一管理版本号 |
-| `src/utils/auth-guard.ts` | AI前端 | ✅ 已完成 | 登录检查工具 | 统一登录检查，未登录弹窗引导 |
-| 网页 icon 集成 | AI前端 | ✅ 已完成 | index.html | 网页标签页显示应用 icon |
+| FC 环境变量配置 | AI全栈 | ✅ 已完成 | pin-app-http 函数 | EMAIL_SMTP_HOST/PORT/USER/PASS/FROM_NAME、Tablestore、JWT_SECRET |
+| `pin_verification_codes` 表 | AI全栈 | ✅ 已完成 | Tablestore pin-main 实例 | 单主键 email(STRING)，TTL=-1，MaxVersions=1 |
+| 邮件服务模块 | AI全栈 | ✅ 已完成 | email-service.js | nodemailer + 飞书 SMTP，支持验证码发送 |
+| `src/config/version.ts` | AI全栈 | ✅ 已完成 | 版本配置文件 | 统一管理版本号 |
+| `src/utils/auth-guard.ts` | AI全栈 | ✅ 已完成 | 登录检查工具 | 统一登录检查，未登录弹窗引导 |
+| 网页 icon 集成 | AI全栈 | ✅ 已完成 | index.html | 网页标签页显示应用 icon |
 
 #### 4.2 Bug 修复
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| BUG-01 版本号统一管理 | AI前端 | ✅ 已完成 | `src/config/version.ts` | 版本号统一管理 + 检查更新功能 |
-| BUG-02 移除退出登录按钮 | AI前端 | ✅ 已完成 | `pages/mine/index.vue` | 移除"我的"页面退出登录按钮 |
-| BUG-03 注销账号登录可见 | AI前端 | ✅ 已完成 | `pages/settings/index.vue` | 注销账号仅登录状态可见 |
-| BUG-04 首页移除假数据 | AI前端 | ✅ 已完成 | `src/utils/community.ts` | 移除假数据 fallback，删除 artworks.js |
-| BUG-05 作品不受作者状态影响 | AI前端 | ✅ 已完成 | - | 前端通过 isPublic 判断，已符合要求 |
-| BUG-06 页面颜色统一 | AI前端 | ✅ 已完成 | `pages.json` | 页面顶部与导航栏颜色统一为 #FFFDFA |
-| BUG-07 网页 icon | AI前端 | ✅ 已完成 | `index.html` | 网页标签页添加应用 icon |
+| BUG-01 版本号统一管理 | AI全栈 | ✅ 已完成 | `src/config/version.ts` | 版本号统一管理 + 检查更新功能 |
+| BUG-02 移除退出登录按钮 | AI全栈 | ✅ 已完成 | `pages/mine/index.vue` | 移除"我的"页面退出登录按钮 |
+| BUG-03 注销账号登录可见 | AI全栈 | ✅ 已完成 | `pages/settings/index.vue` | 注销账号仅登录状态可见 |
+| BUG-04 首页移除假数据 | AI全栈 | ✅ 已完成 | `src/utils/community.ts` | 移除假数据 fallback，删除 artworks.js |
+| BUG-05 作品不受作者状态影响 | AI全栈 | ✅ 已完成 | - | 前端通过 isPublic 判断，已符合要求 |
+| BUG-06 页面颜色统一 | AI全栈 | ✅ 已完成 | `pages.json` | 页面顶部与导航栏颜色统一为 #FFFDFA |
+| BUG-07 网页 icon | AI全栈 | ✅ 已完成 | `index.html` | 网页标签页添加应用 icon |
 
 #### 4.3 注册/登录改造
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `POST /auth/send-code` | AI后端 | ✅ 已完成 | index.js | 飞书SMTP发送6位验证码，5分钟过期，60秒限频 |
-| `POST /auth/verify-code` | AI后端 | ✅ 已完成 | index.js | 校验验证码有效性，使用后自动删除 |
-| `POST /auth/reset-password` | AI后端 | ✅ 已完成 | index.js | 邮箱验证+新密码，bcrypt加密存储 |
-| `POST /auth/change-password` | AI后端 | ✅ 已完成 | index.js | 旧密码+邮箱验证+新密码，需JWT认证 |
+| `POST /auth/send-code` | AI全栈 | ✅ 已完成 | index.js | 飞书SMTP发送6位验证码，5分钟过期，60秒限频 |
+| `POST /auth/verify-code` | AI全栈 | ✅ 已完成 | index.js | 校验验证码有效性，使用后自动删除 |
+| `POST /auth/reset-password` | AI全栈 | ✅ 已完成 | index.js | 邮箱验证+新密码，bcrypt加密存储 |
+| `POST /auth/change-password` | AI全栈 | ✅ 已完成 | index.js | 旧密码+邮箱验证+新密码，需JWT认证 |
 | **前端页面** | | | | |
-| `pages/register/index.vue` | AI前端 | ✅ 已完成 | 独立注册页 | 邮箱+验证码+昵称+密码+确认密码 |
-| `pages/forgot-password/index.vue` | AI前端 | ✅ 已完成 | 忘记密码页 | 邮箱验证+重设密码 |
-| `pages/login/index.vue` 改造 | AI前端 | ✅ 已完成 | 登录页 | 移除内嵌注册、忘记密码入口、协议勾选 |
-| `pages/settings/change-password.vue` | AI前端 | ✅ 已完成 | 修改密码页 | 旧密码+邮箱验证+新密码 |
+| `pages/register/index.vue` | AI全栈 | ✅ 已完成 | 独立注册页 | 邮箱+验证码+昵称+密码+确认密码 |
+| `pages/forgot-password/index.vue` | AI全栈 | ✅ 已完成 | 忘记密码页 | 邮箱验证+重设密码 |
+| `pages/login/index.vue` 改造 | AI全栈 | ✅ 已完成 | 登录页 | 移除内嵌注册、忘记密码入口、协议勾选 |
+| `pages/settings/change-password.vue` | AI全栈 | ✅ 已完成 | 修改密码页 | 旧密码+邮箱验证+新密码 |
 
 #### 4.4 权限控制
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| `artwork-detail/index.vue` | AI前端 | ✅ 已完成 | 作品详情页 | 点赞/收藏/关注/购买增加登录检查 |
-| `mine/index.vue` | AI前端 | ✅ 已完成 | 我的页面 | 积分中心/豆仓/收藏列表/点赞列表增加登录检查 |
-| `project/index.vue` | AI前端 | ✅ 已完成 | 项目页 | 创建项目增加登录检查 |
-| `settings/index.vue` | AI前端 | ✅ 已完成 | 设置页 | 未登录隐藏账号相关区块、登录引导 |
+| `artwork-detail/index.vue` | AI全栈 | ✅ 已完成 | 作品详情页 | 点赞/收藏/关注/购买增加登录检查 |
+| `mine/index.vue` | AI全栈 | ✅ 已完成 | 我的页面 | 积分中心/豆仓/收藏列表/点赞列表增加登录检查 |
+| `project/index.vue` | AI全栈 | ✅ 已完成 | 项目页 | 创建项目增加登录检查 |
+| `settings/index.vue` | AI全栈 | ✅ 已完成 | 设置页 | 未登录隐藏账号相关区块、登录引导 |
 
 #### 4.5 举报/拉黑功能
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `POST /report` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 提交举报，存入 pin_relations 表 |
-| `POST /relations/block` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 拉黑作者，自动解除关注 |
-| `DELETE /relations/block/:creatorName` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 移除黑名单 |
-| `GET /relations/blocked-creators` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 获取黑名单列表，需JWT认证 |
+| `POST /report` | AI全栈 | ✅ 已完成 | index.js + tablestore-store.js | 提交举报，存入 pin_relations 表 |
+| `POST /relations/block` | AI全栈 | ✅ 已完成 | index.js + tablestore-store.js | 拉黑作者，自动解除关注 |
+| `DELETE /relations/block/:creatorName` | AI全栈 | ✅ 已完成 | index.js + tablestore-store.js | 移除黑名单 |
+| `GET /relations/blocked-creators` | AI全栈 | ✅ 已完成 | index.js + tablestore-store.js | 获取黑名单列表，需JWT认证 |
 | **前端功能** | | | | |
-| `artwork-detail/index.vue` 改造 | AI前端 | ✅ 已完成 | 作品详情页 | 增加举报按钮、拉黑按钮 |
-| `pages/settings/blocklist.vue` | AI前端 | ✅ 已完成 | 黑名单管理页 | 新增页面 |
-| `index/index.vue` 改造 | AI前端 | ✅ 已完成 | 首页 | 黑名单作者过滤（P1） |
+| `artwork-detail/index.vue` 改造 | AI全栈 | ✅ 已完成 | 作品详情页 | 增加举报按钮、拉黑按钮 |
+| `pages/settings/blocklist.vue` | AI全栈 | ✅ 已完成 | 黑名单管理页 | 新增页面 |
+| `index/index.vue` 改造 | AI全栈 | ✅ 已完成 | 首页 | 黑名单作者过滤（P1） |
 
 #### 4.6 创作者主页
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `GET /users/:uid/profile` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 创作者公开信息（头像/昵称/简介/统计/关注状态） |
-| `GET /users/:uid/artworks` | AI后端 | ✅ 已完成 | index.js + tablestore-store.js | 创作者作品列表（分页，含点赞/收藏状态） |
+| `GET /users/:uid/profile` | AI全栈 | ✅ 已完成 | index.js + tablestore-store.js | 创作者公开信息（头像/昵称/简介/统计/关注状态） |
+| `GET /users/:uid/artworks` | AI全栈 | ✅ 已完成 | index.js + tablestore-store.js | 创作者作品列表（分页，含点赞/收藏状态） |
 | **前端页面** | | | | |
-| `pages/creator-profile/index.vue` | AI前端 | ✅ 已完成 | 创作者主页 | 头像+简介+统计+作品列表+关注/拉黑 |
+| `pages/creator-profile/index.vue` | AI全栈 | ✅ 已完成 | 创作者主页 | 头像+简介+统计+作品列表+关注/拉黑 |
 
 #### 4.7 新手引导（P0）
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| 引导组件/库 | AI前端 | ✅ 已完成 | `pages/guide/index.vue` | 5步引导页面 |
-| 引导步骤配置 | AI前端 | ✅ 已完成 | `pages/guide/index.vue` | 5步引导配置 |
-| 引导触发逻辑 | AI前端 | ✅ 已完成 | `App.vue` | 首次登录触发 |
+| 引导组件/库 | AI全栈 | ✅ 已完成 | `pages/guide/index.vue` | 5步引导页面 |
+| 引导步骤配置 | AI全栈 | ✅ 已完成 | `pages/guide/index.vue` | 5步引导配置 |
+| 引导触发逻辑 | AI全栈 | ✅ 已完成 | `App.vue` | 首次登录触发 |
 
 #### 4.8 数据同步优化（P1/P2）
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
 | **后端接口** | | | | |
-| `GET /config/version` | AI后端 | ✅ 已完成 | index.js | 返回版本号、构建时间、环境信息 |
+| `GET /config/version` | AI全栈 | ✅ 已完成 | index.js | 返回版本号、构建时间、环境信息 |
 | **前端功能** | | | | |
-| 离线编辑支持 | AI前端 | ✅ 已完成 | `services/sync/offline-queue.ts` | 离线队列 + 联网同步（P1） |
-| 冲突解决机制 | AI前端 | ✅ 已完成 | `services/sync/conflict-resolver.ts` | 多端冲突提示和解决（P2） |
-| 自动同步优化 | AI前端 | ✅ 已完成 | `services/sync/auto-sync.ts` | 登录全量同步 + 增量同步（P1） |
+| 离线编辑支持 | AI全栈 | ✅ 已完成 | `services/sync/offline-queue.ts` | 离线队列 + 联网同步（P1） |
+| 冲突解决机制 | AI全栈 | ✅ 已完成 | `services/sync/conflict-resolver.ts` | 多端冲突提示和解决（P2） |
+| 自动同步优化 | AI全栈 | ✅ 已完成 | `services/sync/auto-sync.ts` | 登录全量同步 + 增量同步（P1） |
 
 #### 4.9 其他优化（P1/P2）
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| 加载优化 | AI前端 | ✅ 已完成 | `pages/index/index.vue` | 加载状态、首屏优化（P2） |
-| 错误提示优化 | AI前端 | ✅ 已完成 | `utils/error-handler.ts` | 统一错误提示（P2） |
-| 积分中心改造 | AI前端 | ✅ 已完成 | `services/pin/index.ts` | 仅展示真实行为记录（P1） |
-| 首页空状态 | AI前端 | ✅ 已完成 | `pages/index/index.vue` | 空状态展示（P1） |
+| 加载优化 | AI全栈 | ✅ 已完成 | `pages/index/index.vue` | 加载状态、首屏优化（P2） |
+| 错误提示优化 | AI全栈 | ✅ 已完成 | `utils/error-handler.ts` | 统一错误提示（P2） |
+| 积分中心改造 | AI全栈 | ✅ 已完成 | `services/pin/index.ts` | 仅展示真实行为记录（P1） |
+| 首页空状态 | AI全栈 | ✅ 已完成 | `pages/index/index.vue` | 空状态展示（P1） |
 
 ### 阶段 5：联调阶段
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| 前后端联调 | AI前端 + AI后端 | ✅ 已完成 | 联调报告 | 11个新接口联调验证，前端Bug修复完成 |
+| 前后端联调 | AI全栈 | ✅ 已完成 | 联调报告 | 11个新接口联调验证，前端Bug修复完成 |
 
 ### 阶段 6：测试阶段（测试环境）
 
@@ -152,6 +152,23 @@
 | 回归测试 | AI测试 | 待开始 | 回归报告 | 确保原有功能不受影响 |
 | 测试报告 | AI测试 | 待开始 | 飞书 04-测试文档 | |
 
+### 阶段 6.5：Bug 修复（测试发现）
+
+> 测试阶段发现的 Bug，按优先级排列
+
+| 任务 | 负责角色 | 状态 | 交付物 | 备注 |
+|------|----------|------|--------|------|
+| **BUG-08 ARTWORKS_VERSION 未定义** | AI全栈 | ✅ 已完成 | `src/utils/community.ts` | 三个问题的共同根因，导致首页加载失败、发布失败、退出异常 |
+| **BUG-09 pinDataProvider.request 是 private** | AI全栈 | ✅ 已完成 | `provider.ts`、`aliyun-provider.ts`、`local-provider.ts` | 注册/忘记密码页面无法调用 send-code/verify-code |
+| **BUG-10 verify-code 缺少 purpose 参数** | AI全栈 | ✅ 已完成 | `register/index.vue`、`forgot-password/index.vue` | 后端要求 purpose 字段，前端未传 |
+| **BUG-11 首页加载未做错误隔离** | AI全栈 | ✅ 已完成 | `pages/index/index.vue` | 未登录时 getFollowedCreators/getBlockedCreators 失败导致整体报错 |
+| **BUG-12 发布弹窗缺少登录检查** | AI全栈 | ✅ 已完成 | `pages/project/index.vue` | 未登录点击发布无反应 |
+| **BUG-13 退出登录未 await** | AI全栈 | ✅ 已完成 | `pages/mine/index.vue` | logout 异步操作未等待完成，token 未清除 |
+| **BUG-14 前端发布作品不走后端 API** | AI全栈 | 待开始 | `pages/project/index.vue` | `confirmPublish` 调用本地函数，未调用后端 POST /projects/:id/publish，作品只存本地 |
+| **BUG-15 后端发布接口字段不匹配** | AI全栈 | 待开始 | `tablestore-store.js` | `publishProjectAsArtwork` 缺少 name/creatorName/creatorAvatar/thumbnail/tags/canvasData/points 等字段 |
+| **BUG-16 头像无同步机制** | AI全栈 | 待开始 | `pages/project/index.vue` | 发布作品时 creatorAvatar 从本地缓存读取，不从后端获取最新值 |
+| **BUG-17 GET /artworks 无分页** | AI全栈 | 待开始 | `tablestore-store.js` | 全量扫描 pin_artworks 表（limit=500），无分页/排序/过滤 |
+
 ### 阶段 7：验收
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
@@ -162,8 +179,8 @@
 
 | 任务 | 负责角色 | 状态 | 交付物 | 备注 |
 |------|----------|------|--------|------|
-| 后端部署 | AI后端 | ✅ 已完成 | 阿里云 FC cn-hangzhou | pin-app-http 函数，11个新接口已部署 |
-| 前端部署 | AI前端 | ✅ 已完成 | GitHub Pages | 已通过 GitHub Actions 自动部署 |
+| 后端部署 | AI全栈 | ✅ 已完成 | 阿里云 FC cn-hangzhou | pin-app-http 函数，11个新接口已部署 |
+| 前端部署 | AI全栈 | ✅ 已完成 | GitHub Pages | 已通过 GitHub Actions 自动部署 |
 | 线上回归测试 | AI测试 | 待开始 | 回归结论 | 发布后验证核心流程 |
 
 ---
@@ -264,14 +281,14 @@
 完整后端迁移，将现有本地功能迁移到云端
 
 ### V0.2.0 关键里程碑
-- ✅ 2026-05-27：AI后端完成 JWT认证、用户注册/登录、业务CRUD接口
+- ✅ 2026-05-27：AI全栈完成 JWT认证、用户注册/登录、业务CRUD接口
 - ✅ 2026-05-27：AI产品经理完成 V0.2.0 需求文档
-- ✅ 2026-05-27：AI前端完成 JWT Token管理、AliyunProvider接入、登录/注册页面
+- ✅ 2026-05-27：AI全栈完成 JWT Token管理、AliyunProvider接入、登录/注册页面
 - ✅ 2026-05-27：AI设计师完成 V0.2.0 UI/UE设计规范
-- ✅ 2026-05-27：AI后端修复登录Bug、/auth/me 字段缺失
+- ✅ 2026-05-27：AI全栈修复登录Bug、/auth/me 字段缺失
 - ✅ 2026-05-27：测试完成，27用例覆盖，6 Bug发现，5修复1降级
 - ✅ 2026-05-27：验收通过，V0.2.0 发布！
-- ✅ 2026-05-27：AI前端部署到 GitHub Pages，线上站点验证正常
+- ✅ 2026-05-27：AI全栈部署到 GitHub Pages，线上站点验证正常
 - ✅ 2026-05-28：线上 Bug 修复完成（5个Bug全部修复）
 
 **完整记录**：见历史版本文档
@@ -289,13 +306,16 @@
 | 2026-05-28 | 根据需求文档详细拆解任务，细化为开发阶段各子任务 |
 | 2026-05-28 | AI设计师完成：V0.2.1 UI/UE设计规范（5个新增页面、6个改造页面、2个新组件、权限控制交互规范） |
 | 2026-05-28 | AI设计师完成：网页icon重新设计（SVG矢量拼豆"P"字母，暖金色调，全尺寸生成） |
-| 2026-05-28 | AI后端完成：V0.2.1 全部11个接口开发与部署（邮箱验证码4个、举报拉黑4个、创作者主页2个、版本号1个） |
-| 2026-05-28 | AI后端完成：FC环境变量配置（飞书SMTP）、pin_verification_codes 表创建、email-service.js 邮件模块 |
-| 2026-05-28 | AI前端完成：V0.2.1 全部前端开发任务（基础设施、登录注册、社区功能、权限控制） |
+| 2026-05-28 | AI全栈完成：V0.2.1 全部11个接口开发与部署（邮箱验证码4个、举报拉黑4个、创作者主页2个、版本号1个） |
+| 2026-05-28 | AI全栈完成：FC环境变量配置（飞书SMTP）、pin_verification_codes 表创建、email-service.js 邮件模块 |
+| 2026-05-28 | AI全栈完成：V0.2.1 全部前端开发任务（基础设施、登录注册、社区功能、权限控制） |
 | 2026-05-28 | 更新任务看板，阶段4前端任务全部标记为已完成，阶段5联调测试标记为进行中 |
 | 2026-05-28 | 修复后端接口调用问题：/auth/send-code 增加 purpose 参数、/relations/block 传入 creatorUid + creatorName、举报改为弹窗实现 |
 | 2026-05-28 | 修复 BUG-01~BUG-07：版本号管理、移除退出登录按钮、注销账号登录可见、移除假数据、作品公开逻辑、页面颜色统一、网页icon |
+| 2026-05-29 | 修复 BUG-08~BUG-13：ARTWORKS_VERSION未定义、request公开化、verify-code补充purpose、首页错误隔离、发布登录检查、退出登录await |
+| 2026-05-29 | 排查后端数据存储问题：发现发布不走后端API、后端发布字段不匹配、头像无同步、artworks无分页（BUG-14~BUG-17待修复） |
+| 2026-05-30 | 角色合并：AI前端 + AI后端 → AI全栈，简化协作流程 |
 
 ---
 
-**最后更新：2026-05-28**
+**最后更新：2026-05-30**

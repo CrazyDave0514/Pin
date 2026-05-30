@@ -371,15 +371,21 @@ const blockCreator = () => {
 
 /**
  * 跳转到创作者主页
+ * 优先使用 creatorUid，如果没有则尝试使用 creatorName 作为备选
  */
 const goToCreatorProfile = () => {
-  if (!artwork.value?.creatorUid) {
-    // 如果没有 UID，尝试通过用户名查找
+  const uid = artwork.value?.creatorUid
+  const name = artwork.value?.creatorName
+
+  if (!uid && !name) {
     uni.showToast({ title: '暂无法查看创作者主页', icon: 'none' })
     return
   }
+
+  // 优先使用 uid，如果没有则使用 name
+  const queryParam = uid ? `uid=${uid}` : `name=${encodeURIComponent(name!)}`
   uni.navigateTo({
-    url: `/pages/creator-profile/index?uid=${artwork.value.creatorUid}`
+    url: `/pages/creator-profile/index?${queryParam}`
   })
 }
 

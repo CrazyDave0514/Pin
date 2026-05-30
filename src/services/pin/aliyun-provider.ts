@@ -246,7 +246,15 @@ export class AliyunPinDataProvider implements PinDataProvider {
    * 用户登出
    */
   async logout(): Promise<void> {
+    // 先调用后端登出，清除服务端会话
+    try {
+      await this.request<void>('DELETE', '/users/current')
+    } catch (error) {
+      console.warn('Remote logout failed:', error)
+    }
+    // 清除本地 token
     this.saveToken(null)
+    // 清除本地用户数据
     await this.localProvider.removeCurrentUser()
     // 清除用户 UID，恢复未登录状态的存储键
     setCurrentUserUid(null)

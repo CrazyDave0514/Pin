@@ -97,6 +97,7 @@ export const DELETE_ACCOUNT_KEYS = [
 export const LOGOUT_KEYS = [
   PIN_STORAGE_BASE_KEYS.user,
   PIN_STORAGE_BASE_KEYS.points,
+  'pin_auth_token', // 清除认证 Token，防止自动重新登录
 ] as const
 
 /**

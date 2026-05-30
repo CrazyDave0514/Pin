@@ -94,6 +94,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { pinDataProvider } from '../../services/pin/index'
+import { syncOnLogin } from '../../services/sync/auto-sync.ts'
 
 // 表单数据
 const username = ref('')
@@ -160,6 +161,15 @@ const doLogin = async () => {
     const result = await pinDataProvider.login(username.value, password.value)
 
     uni.showToast({ title: '登录成功', icon: 'success' })
+
+    // 登录成功后触发数据同步
+    try {
+      await syncOnLogin()
+      console.log('登录后数据同步完成')
+    } catch (syncError) {
+      console.warn('登录后数据同步失败:', syncError)
+      // 同步失败不影响登录流程
+    }
 
     // 检查是否需要数据迁移
     setTimeout(() => {

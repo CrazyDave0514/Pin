@@ -86,6 +86,7 @@ export interface CommunityArtwork {
   name: string
   creatorName: string
   creatorAvatar: string
+  creatorUid?: string // 创作者 UID，用于跳转到创作者主页
   likes: number
   favorites: number
   points: number

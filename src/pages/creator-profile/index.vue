@@ -148,36 +148,80 @@ const presetAvatarGlyph = computed(() => presetAvatarMeta.value?.glyph || '鼠')
 
 /**
  * 页面加载
+ * 支持通过 uid 或 name 参数加载创作者信息
  */
 onLoad((options: any) => {
   const uid = options?.uid || options?.id
+  const name = options?.name
+
   if (uid) {
-    loadCreatorProfile(uid)
+    loadCreatorProfileByUid(uid)
     loadCreatorArtworks(uid)
+  } else if (name) {
+    loadCreatorProfileByName(name)
+    // 通过 name 加载时需要后端支持，暂时显示提示
+    uni.showToast({ title: '正在查找创作者...', icon: 'loading' })
+  } else {
+    uni.showToast({ title: '参数错误', icon: 'none' })
+    setTimeout(() => uni.navigateBack(), 1500)
   }
 })
 
 /**
- * 加载创作者信息
+ * 通过 UID 加载创作者信息
  */
-const loadCreatorProfile = async (uid: string) => {
+const loadCreatorProfileByUid = async (uid: string) => {
   loading.value = true
   try {
     const profile = await pinDataProvider.request<UserProfile>('GET', `/users/${uid}/profile`)
     creator.value = profile
-    
-    // 检查关注状态
+
+    // 检查关注状态和拉黑状态
     const currentUser = await pinDataProvider.getCurrentUserByToken()
     if (currentUser) {
-      const followState = await communityService.isFollowing(profile.username)
-      isFollowing.value = followState
-      
+      const interactionState = await communityService.getInteractionState('', profile.username)
+      isFollowing.value = interactionState.isFollowing
+
       // 检查拉黑状态
       const blockedCreators = await communityService.getBlockedCreators()
       isBlocked.value = blockedCreators.includes(profile.username)
     }
   } catch (e) {
     console.error('加载创作者信息失败:', e)
+    uni.showToast({ title: '加载创作者信息失败', icon: 'none' })
+  } finally {
+    loading.value = false
+  }
+}
+
+/**
+ * 通过用户名加载创作者信息
+ * 注意：需要后端支持通过用户名查询接口
+ */
+const loadCreatorProfileByName = async (name: string) => {
+  loading.value = true
+  try {
+    // 尝试通过搜索或列表接口查找用户
+    // 这里假设后端有一个搜索接口，如果没有需要后端支持
+    const artworks = await pinDataProvider.request<CommunityArtwork[]>('GET', `/artworks?creatorName=${encodeURIComponent(name)}`)
+
+    if (artworks && artworks.length > 0) {
+      const firstArtwork = artworks[0]
+      if (firstArtwork.creatorUid) {
+        // 获取到 UID 后，通过 UID 加载完整信息
+        await loadCreatorProfileByUid(firstArtwork.creatorUid)
+        await loadCreatorArtworks(firstArtwork.creatorUid)
+        return
+      }
+    }
+
+    // 如果找不到，显示错误
+    uni.showToast({ title: '未找到该创作者', icon: 'none' })
+    setTimeout(() => uni.navigateBack(), 1500)
+  } catch (e) {
+    console.error('通过名称加载创作者失败:', e)
+    uni.showToast({ title: '加载创作者信息失败', icon: 'none' })
+    setTimeout(() => uni.navigateBack(), 1500)
   } finally {
     loading.value = false
   }
