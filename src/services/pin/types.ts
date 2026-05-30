@@ -177,8 +177,35 @@ export interface PinPointsService {
   addRecord(title: string, amount: number): Promise<PointsRecord>
 }
 
+export interface PublishArtworkPayload {
+  name: string
+  description?: string
+  points: number
+  tags?: string[]
+  tagMeta?: ProjectTags
+  canvasData: CanvasDataLike
+  thumbnail?: string
+  beadCount: number
+  colorTypeCount: number
+}
+
+export interface ArtworkListResult {
+  artworks: CommunityArtwork[]
+  total: number
+  page: number
+  size: number
+  hasMore: boolean
+}
+
 export interface PinCommunityService {
   ensureArtworks(): Promise<CommunityArtwork[]>
+  /**
+   * 获取作品列表（支持分页）
+   * @param page 页码（从1开始）
+   * @param size 每页数量
+   * @returns 作品列表结果
+   */
+  getArtworks(page?: number, size?: number): Promise<ArtworkListResult>
   replaceArtworks(artworks: CommunityArtwork[]): Promise<CommunityArtwork[]>
   getArtworkById(id: string): Promise<CommunityArtwork | null>
   updateArtwork(
@@ -195,7 +222,20 @@ export interface PinCommunityService {
   toggleFavorite(artworkId: string): Promise<ArtworkToggleResult>
   toggleFollow(creatorName: string): Promise<boolean>
   getCollection(type: 'favorites' | 'likes'): Promise<CommunityArtwork[]>
+  /**
+   * 发布作品到社区
+   * @param project 项目数据
+   * @param points 积分
+   * @returns 发布的作品
+   * @deprecated 使用 publishArtwork 替代，直接调用后端 API
+   */
   publishProjectAsArtwork(project: ProjectRecord, points: number): Promise<CommunityArtwork>
+  /**
+   * 发布作品到社区（调用后端 API）
+   * @param payload 发布数据
+   * @returns 发布的作品
+   */
+  publishArtwork(payload: PublishArtworkPayload): Promise<CommunityArtwork>
   syncProjectArtwork(project: ProjectRecord): Promise<CommunityArtwork | null>
   unpublishProjectArtwork(projectId: string): Promise<CommunityArtwork | null>
 }

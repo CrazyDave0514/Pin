@@ -387,10 +387,22 @@ export class AliyunPinDataProvider implements PinDataProvider {
     )
   }
 
-  getArtworks(): Promise<CommunityArtwork[]> {
+  /**
+   * 获取作品列表（支持分页）
+   * @param page 页码（从1开始）
+   * @param size 每页数量
+   * @returns 作品列表结果
+   */
+  getArtworks(page = 1, size = 20): Promise<{ artworks: CommunityArtwork[]; total: number; page: number; size: number; hasMore: boolean }> {
     return this.withFallback(
-      () => this.request<CommunityArtwork[]>('GET', '/artworks'),
-      () => this.localProvider.getArtworks()
+      () => this.request<{ artworks: CommunityArtwork[]; total: number; page: number; size: number; hasMore: boolean }>('GET', `/artworks?page=${page}&size=${size}`),
+      () => this.localProvider.getArtworks().then(artworks => ({
+        artworks,
+        total: artworks.length,
+        page: 1,
+        size: artworks.length,
+        hasMore: false
+      }))
     )
   }
 

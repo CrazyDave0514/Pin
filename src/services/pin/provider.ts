@@ -30,7 +30,13 @@ export interface PinDataProvider {
   setFolders(folders: FolderRecord[]): Promise<void>
   getRecentImports(): Promise<RecentImportRecord[]>
   setRecentImports(records: RecentImportRecord[]): Promise<void>
-  getArtworks(): Promise<CommunityArtwork[]>
+  /**
+   * 获取作品列表（支持分页）
+   * @param page 页码（从1开始）
+   * @param size 每页数量
+   * @returns 作品列表结果
+   */
+  getArtworks(page?: number, size?: number): Promise<{ artworks: CommunityArtwork[]; total: number; page: number; size: number; hasMore: boolean }>
   setArtworks(artworks: CommunityArtwork[]): Promise<void>
   getArtworksVersion(): Promise<string>
   setArtworksVersion(version: string): Promise<void>

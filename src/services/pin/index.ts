@@ -288,10 +288,10 @@ export const createPinServices = (options: {
     async ensureArtworks() {
       // 优先从后端 API 获取作品数据（云端模式）
       try {
-        const remoteArtworks = await provider.getArtworks()
-        if (Array.isArray(remoteArtworks) && remoteArtworks.length > 0) {
+        const result = await provider.getArtworks(1, 50)
+        if (result && Array.isArray(result.artworks) && result.artworks.length > 0) {
           // 合并本地发布的项目作品
-          const merged = syncPublishedProjectsWithArtworks(remoteArtworks)
+          const merged = syncPublishedProjectsWithArtworks(result.artworks)
           saveCommunityArtworks(merged)
           return merged
         }
@@ -301,6 +301,15 @@ export const createPinServices = (options: {
       }
       // Fallback 到本地假数据
       return ensureCommunityArtworks()
+    },
+    /**
+     * 获取作品列表（支持分页）
+     * @param page 页码（从1开始）
+     * @param size 每页数量
+     * @returns 作品列表结果
+     */
+    async getArtworks(page = 1, size = 20) {
+      return await provider.getArtworks(page, size)
     },
     async replaceArtworks(artworks: CommunityArtwork[]) {
       saveCommunityArtworks(artworks)
@@ -381,6 +390,26 @@ export const createPinServices = (options: {
     },
     async publishProjectAsArtwork(project: ProjectRecord, points: number) {
       return publishProjectAsArtwork(project, points)
+    },
+    /**
+     * 发布作品到社区（调用后端 API）
+     * @param payload 发布数据
+     * @returns 发布的作品
+     */
+    async publishArtwork(payload) {
+      // 调用后端 API 发布作品
+      const artwork = await provider.request<CommunityArtwork>('POST', '/artworks', {
+        name: payload.name,
+        description: payload.description || '',
+        points: payload.points,
+        tags: payload.tags || [],
+        tagMeta: payload.tagMeta,
+        canvasData: payload.canvasData,
+        thumbnail: payload.thumbnail,
+        beadCount: payload.beadCount,
+        colorTypeCount: payload.colorTypeCount,
+      })
+      return artwork
     },
     async syncProjectArtwork(project: ProjectRecord) {
       return syncProjectArtwork(project)

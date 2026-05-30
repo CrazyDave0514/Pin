@@ -127,8 +127,24 @@ export class LocalPinDataProvider implements PinDataProvider {
     this.setValue(PIN_STORAGE_KEYS.recentImports, records)
   }
 
-  async getArtworks(): Promise<CommunityArtwork[]> {
-    return safeArray<CommunityArtwork>(this.getValue(PIN_STORAGE_KEYS.artworks, []))
+  /**
+   * 获取作品列表（支持分页）
+   * @param page 页码（从1开始）
+   * @param size 每页数量
+   * @returns 作品列表结果
+   */
+  async getArtworks(page = 1, size = 20): Promise<{ artworks: CommunityArtwork[]; total: number; page: number; size: number; hasMore: boolean }> {
+    const allArtworks = safeArray<CommunityArtwork>(this.getValue(PIN_STORAGE_KEYS.artworks, []))
+    const start = (page - 1) * size
+    const end = start + size
+    const paginatedArtworks = allArtworks.slice(start, end)
+    return {
+      artworks: paginatedArtworks,
+      total: allArtworks.length,
+      page,
+      size,
+      hasMore: end < allArtworks.length
+    }
   }
 
   async setArtworks(artworks: CommunityArtwork[]): Promise<void> {

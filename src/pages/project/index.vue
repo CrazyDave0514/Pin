@@ -295,6 +295,8 @@ import {
   buildProjectThumbnail,
   normalizeProjectTags,
   projectTagsToList,
+  getBeadCount,
+  getColorTypeCount,
 } from '../../utils/community'
 import { downloadBlob, exportBlueprintAsBlob } from '../../utils/blueprint-export'
 import { getJsZip } from '../../utils/jszip'
@@ -698,6 +700,10 @@ const selectPrimaryTag = (primary: string) => {
   }
 }
 
+/**
+ * 确认发布作品
+ * 调用后端 API 发布作品到社区
+ */
 const confirmPublish = async () => {
   const project = currentProject.value
   if (!project) return
@@ -712,23 +718,47 @@ const confirmPublish = async () => {
     return
   }
 
-  const updatedProject = {
-    ...project,
-    name,
-    tags: normalizeProjectTags(publishTags.value),
-    publishPoints: Math.floor(points),
-    isPublished: true,
-    isOffShelf: false,
-    status: 'saved',
-    thumbnail: safeProjectThumbnail(project),
-    updatedAt: Date.now(),
+  // 显示加载中
+  uni.showLoading({ title: '发布中...' })
+
+  try {
+    // 调用后端 API 发布作品
+    const artwork = await communityService.publishArtwork({
+      name,
+      description: '',
+      points: Math.floor(points),
+      tags: projectTagsToList(normalizeProjectTags(publishTags.value)),
+      tagMeta: normalizeProjectTags(publishTags.value),
+      canvasData: project.canvasData,
+      thumbnail: safeProjectThumbnail(project),
+      beadCount: getBeadCount(project.canvasData),
+      colorTypeCount: getColorTypeCount(project.canvasData),
+    })
+
+    // 更新本地项目状态
+    const updatedProject = {
+      ...project,
+      name,
+      tags: normalizeProjectTags(publishTags.value),
+      publishPoints: Math.floor(points),
+      isPublished: true,
+      isOffShelf: false,
+      status: 'saved',
+      thumbnail: safeProjectThumbnail(project),
+      updatedAt: Date.now(),
+      publishedArtworkId: artwork.id,
+    }
+
+    await saveProjects(projects.value.map((item) => (item.id === project.id ? updatedProject : item)))
+    currentProject.value = updatedProject
+    closePublishModal()
+    uni.showToast({ title: '发布成功', icon: 'success' })
+  } catch (error: any) {
+    console.error('发布作品失败:', error)
+    uni.showToast({ title: error.message || '发布失败，请重试', icon: 'none' })
+  } finally {
+    uni.hideLoading()
   }
-  const artwork = await communityService.publishProjectAsArtwork(updatedProject, updatedProject.publishPoints)
-  updatedProject.publishedArtworkId = artwork.id
-  await saveProjects(projects.value.map((item) => (item.id === project.id ? updatedProject : item)))
-  currentProject.value = updatedProject
-  closePublishModal()
-  uni.showToast({ title: '发布成功', icon: 'success' })
 }
 
 const unpublishProject = () => {
